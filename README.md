@@ -145,41 +145,47 @@ they lose focus.
 ## Layout
 
 ```
-manifest.json       Plugin manifest
-Panel.qml           Bar gear; loads the window on first use
-SettingsWindow.qml  The settings window: sidebar, sections, shared row types
-bin/omasettings     Everything that touches the system
+manifest.json          Plugin manifest
+Panel.qml              Bar gear; loads the window on first use
+SettingsWindow.qml     The window: sidebar, routing, and the state pages read
+
+ui/                    Presentation, with no idea what a setting is
+  Palette.qml            Colours and type, once (a singleton)
+  SettingRow.qml         Label left, control right — the shape every row shares
+  SwitchRow, PickerRow, TextRow, NumberRow, PercentRow, FactorRow,
+  MinutesRow, ActionRow, ReadingRow, BrandingRow
+  BindingRow.qml         A keybinding and the one action that fits it
+  WifiRow.qml            A network, its signal, and its passphrase prompt
+
+sections/              One file per page, handed the window as `app`
+  AppearanceSection.qml  BarSection.qml          WindowsSection.qml
+  KeyboardSection.qml    BindingsSection.qml     PointerSection.qml
+  DisplaysSection.qml    IdleSection.qml         PluginsSection.qml
+  ComposeSection.qml     DateTimeSection.qml     NetworkSection.qml
+  DefaultsSection.qml    HerdrSection.qml        TmuxSection.qml
+  NvimSection.qml
+
+bin/omasettings        Subcommand routing; every module is sourced from lib/
+lib/                   One module per thing being configured
+  core.sh                paths, file writing, first-touch backups
+  store.sh               OmaSettings' own store of what it has set
+  hypr.sh                Hyprland options, live and in a generated config
+  shell_config.sh        ~/.config/omarchy/shell.json
+  compose.sh             ~/.XCompose
+  plugins.sh             installed shell plugins
+  menu.sh                the Omarchy menu: groups, actions, icon fonts
+  herdr.sh  tmux.sh  neovim.sh    per-application configs
+  bindings.sh            Hyprland keybindings
+  wifi.sh                NetworkManager
+  setters.sh             the `set` subcommand's routing
+  state.sh               one JSON document assembled from all of the above
 ```
 
-`bin/omasettings` is a normal script and is usable on its own:
-
-```bash
-bin/omasettings state | jq .
-bin/omasettings set theme "Tokyo Night"
-bin/omasettings set gaps-in 8
-bin/omasettings set idle-lock 600
-bin/omasettings plugin disable io.github.twiking.omatop
-bin/omasettings compose add '<Multi_key> <s> <e>' 'hello'
-bin/omasettings compose remove '<Multi_key> <s> <e>'
-bin/omasettings agents list
-bin/omasettings agents run codex
-bin/omasettings menu run update.timezone
-bin/omasettings herdr state | jq .
-bin/omasettings herdr set ui.pane_gaps true
-bin/omasettings tmux set mouse true
-bin/omasettings nvim set relativenumber false
-bin/omasettings keys list | jq .
-bin/omasettings keys add "SUPER + SHIFT + R" "SSH box" "alacritty -e ssh myserver"
-bin/omasettings keys disable "SUPER + SHIFT + X"
-bin/omasettings keys remove "SUPER + SHIFT + R"
-bin/omasettings wifi list | jq .
-bin/omasettings wifi connect "Some Network" "passphrase"
-```
-
-It needs `jq`, `hyprctl`, and the `omarchy` command line, all of which Omarchy
-ships. Environment overrides (`OMASETTINGS_STORE`, `OMASETTINGS_HYPR_DIR`,
-`OMASETTINGS_XCOMPOSE`, `OMARCHY_SHELL_JSON`) point it at a sandbox for
-testing.
+Three rules keep it that way. A `ui/` component knows how a control looks and
+says what happened through a signal; it never knows which setting it is
+editing. A `sections/` page knows what its settings mean and calls `app` to
+read and write them; it never shells out. `lib/` shells out and never knows
+what any of it looks like.
 
 ## License
 

@@ -54,6 +54,8 @@ Item {
   readonly property var datetime: state.datetime !== undefined ? state.datetime : ({})
   readonly property var groups: state.groups !== undefined ? state.groups : ({})
 
+  readonly property var audio: state.audio !== undefined ? state.audio : ({})
+
   readonly property var battery: state.battery !== undefined ? state.battery : ({})
 
   // Like Wi-Fi: the Bluetooth page keeps its own list current while it is on
@@ -328,6 +330,7 @@ Item {
     { id: "network", title: "Network", icon: "\uf1eb", source: "/etc/systemd/resolved.conf.d" },
     { id: "bluetooth", title: "Bluetooth", icon: "\uf294", source: "bluetoothctl" },
     { id: "battery", title: "Battery", icon: "\uf240", source: "powerprofilesctl" },
+    { id: "audio", title: "Audio", icon: "\uf028", source: "pactl" },
 
     { id: "apps", title: "Applications", icon: "\uf085", children: [
       { id: "apps.defaults", title: "Defaults", source: "~/.config/omarchy/defaults" },
@@ -418,6 +421,7 @@ Item {
     case "network": return "sections/NetworkSection.qml"
     case "bluetooth": return "sections/BluetoothSection.qml"
     case "battery": return "sections/BatterySection.qml"
+    case "audio": return "sections/AudioSection.qml"
     case "apps.defaults": return "sections/DefaultsSection.qml"
     case "apps.tmux": return "sections/TmuxSection.qml"
     case "apps.nvim": return "sections/NvimSection.qml"

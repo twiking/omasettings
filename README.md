@@ -22,6 +22,7 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 | Compose Keys | Your `<Multi_key>` sequences: list, add, remove | `~/.XCompose` |
 | Date & Time | Timezone and system time resync | Omarchy menu Update → Timezone / Time |
 | Network | Wi-Fi networks, address and gateway, band, DNS resolver, Wi-Fi QR code | NetworkManager / `omarchy-network-band` / Omarchy menu Setup → Network |
+| Audio | Output and input device, volume and mute for each | `pactl` |
 | Battery | Charge, time remaining, draw, health, and the power profile per power source | `upower` / `omarchy-powerprofiles-set` |
 | Bluetooth | Adapter power, paired and nearby devices, connect, pair, forget | `omarchy-bluetooth-power` / `omarchy-bluetooth-device` |
 | Applications → Defaults | Browser, terminal, editor, coding agent | Omarchy menu Setup → Defaults |
@@ -162,6 +163,8 @@ ui/                    Presentation, with no idea what a setting is
   SwitchRow, PickerRow, TextRow, NumberRow, PercentRow, FactorRow,
   MinutesRow, ActionRow, ReadingRow, BrandingRow
   BindingRow.qml         A keybinding and the one action that fits it
+  ChoiceRow.qml          A handful of short choices, side by side
+  PickableRow.qml        One thing in a list you pick from
   DeviceRow.qml          A Bluetooth device, its battery, and what applies
   WifiRow.qml            A network, its signal, and its passphrase prompt
 
@@ -188,6 +191,7 @@ lib/                   One module per thing being configured
   wifi.sh                NetworkManager
   bluetooth.sh           BlueZ, through Omarchy's power and device wrappers
   battery.sh             battery reading and the per-source power profile
+  audio.sh               outputs, inputs, volume and mute
   setters.sh             the `set` subcommand's routing
   state.sh               one JSON document assembled from all of the above
 ```

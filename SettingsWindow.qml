@@ -53,6 +53,27 @@ Item {
   readonly property var datetime: state.datetime !== undefined ? state.datetime : ({})
   readonly property var groups: state.groups !== undefined ? state.groups : ({})
 
+  readonly property var bindings: state.bindings !== undefined ? state.bindings : ({})
+  property string bindingFilter: ""
+
+  // Matching on keys and description together is what people actually search
+  // by: "super f" for the chord, "screenshot" for the thing it does.
+  readonly property var visibleBindings: {
+    var items = bindings.items !== undefined ? bindings.items : []
+    var needle = bindingFilter.trim().toLowerCase()
+    if (needle === "") return items
+    var words = needle.split(/\s+/)
+    var out = []
+    for (var i = 0; i < items.length; i++) {
+      var hay = (String(items[i].keys) + " " + String(items[i].description) + " " + String(items[i].command)).toLowerCase()
+      var all = true
+      for (var w = 0; w < words.length; w++)
+        if (hay.indexOf(words[w]) === -1) { all = false; break }
+      if (all) out.push(items[i])
+    }
+    return out
+  }
+
   readonly property var herdr: state.herdr !== undefined ? state.herdr : ({})
   readonly property var herdrValues: herdr.values !== undefined ? herdr.values : ({})
 
@@ -198,6 +219,7 @@ Item {
     { id: "bar", title: "Bar", icon: "\uf0ca", source: "~/.config/omarchy/shell.json" },
     { id: "windows", title: "Windows", icon: "\uf2d0", source: "~/.config/hypr/looknfeel.lua" },
     { id: "keyboard", title: "Keyboard", icon: "\uf11c", source: "~/.config/hypr/input.lua" },
+    { id: "bindings", title: "Keybindings", icon: "\uf11c", source: "~/.config/hypr/bindings.lua" },
     { id: "pointer", title: "Mouse & Touchpad", icon: "\uf245", source: "~/.config/hypr/input.lua" },
     { id: "displays", title: "Displays", icon: "\uf108", source: "~/.config/hypr/monitors.lua" },
     { id: "idle", title: "Idle & Lock", icon: "\uf023", source: "~/.config/omarchy/shell.json" },
@@ -283,6 +305,7 @@ Item {
     case "bar": return barSection
     case "windows": return windowsSection
     case "keyboard": return keyboardSection
+    case "bindings": return bindingsSection
     case "pointer": return pointerSection
     case "displays": return displaysSection
     case "idle": return idleSection
@@ -1014,6 +1037,96 @@ Item {
               foreground: root.foreground
               onClicked: root.run(["compose", "remove", modelData.keys])
             }
+          }
+        }
+      }
+    }
+  }
+
+  Component {
+    id: bindingsSection
+    SectionBody {
+      SettingGroup {
+        title: "Add a binding"
+        note: "Keys as Hyprland spells them: SUPER, SHIFT, CTRL, ALT, and a key. Binding a combination that is already taken replaces it."
+
+        Row {
+          width: parent.width
+          spacing: Style.space(8)
+
+          TextField {
+            id: keysField
+            width: (parent.width - addBindingButton.width - Style.space(24)) * 0.3
+            placeholderText: "SUPER + SHIFT + R"
+            foreground: root.foreground
+            accent: root.accent
+          }
+
+          TextField {
+            id: bindingDescriptionField
+            width: (parent.width - addBindingButton.width - Style.space(24)) * 0.25
+            placeholderText: "what it does"
+            foreground: root.foreground
+            accent: root.accent
+          }
+
+          TextField {
+            id: commandField
+            width: (parent.width - addBindingButton.width - Style.space(24)) * 0.45
+            placeholderText: "command to run"
+            foreground: root.foreground
+            accent: root.accent
+          }
+
+          Button {
+            id: addBindingButton
+            text: "Add"
+            bordered: true
+            foreground: root.foreground
+            accent: root.accent
+            fontFamily: root.fontFamily
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: {
+              if (keysField.text.trim() === "" || commandField.text.trim() === "") return
+              root.run(["keys", "add", keysField.text.trim(),
+                        bindingDescriptionField.text.trim(), commandField.text.trim()])
+              keysField.text = ""
+              bindingDescriptionField.text = ""
+              commandField.text = ""
+            }
+          }
+        }
+      }
+
+      SettingGroup {
+        title: "Every binding"
+
+        TextField {
+          width: parent.width
+          placeholderText: "Search keys or actions…"
+          text: root.bindingFilter
+          foreground: root.foreground
+          accent: root.accent
+          onTextChanged: root.bindingFilter = text
+        }
+
+        Text {
+          width: parent.width
+          text: root.visibleBindings.length + " of " + (root.bindings.items !== undefined ? root.bindings.items.length : 0)
+          color: root.muted
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+        }
+
+        Repeater {
+          model: root.visibleBindings
+          delegate: BindingRow {
+            required property var modelData
+            width: parent.width
+            keys: modelData.keys
+            description: modelData.description
+            command: modelData.command
+            source: modelData.source
           }
         }
       }
@@ -1989,6 +2102,93 @@ Item {
         accent: root.accent
         fontFamily: root.fontFamily
         onClicked: root.run(["menu", "run", brandingRow.entryPrefix + ".default"])
+      }
+    }
+  }
+
+  // One binding: what you press, what it does, and the one action that makes
+  // sense for where it came from — yours can be removed, Omarchy's can be
+  // turned off, and a turned-off one can come back.
+  component BindingRow: Item {
+    id: bindingRow
+    property string keys: ""
+    property string description: ""
+    property string command: ""
+    property string source: "omarchy"
+
+    readonly property bool mine: source === "yours"
+    readonly property bool off: source === "disabled"
+
+    width: parent ? parent.width : 0
+    implicitHeight: Math.max(Style.spacing.controlHeight, keysText.implicitHeight + Style.space(6))
+    opacity: off ? 0.5 : 1
+
+    Rectangle {
+      anchors.fill: parent
+      radius: Style.cornerRadius
+      color: bindingMouse.containsMouse
+        ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.06)
+        : "transparent"
+    }
+
+    MouseArea {
+      id: bindingMouse
+      anchors.fill: parent
+      hoverEnabled: true
+    }
+
+    Text {
+      id: keysText
+      anchors.left: parent.left
+      anchors.leftMargin: Style.space(8)
+      anchors.verticalCenter: parent.verticalCenter
+      width: parent.width * 0.3
+      elide: Text.ElideRight
+      text: bindingRow.keys
+      color: bindingRow.mine ? root.accent : root.foreground
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.body
+    }
+
+    Text {
+      anchors.left: parent.left
+      anchors.leftMargin: parent.width * 0.32
+      anchors.verticalCenter: parent.verticalCenter
+      width: parent.width * 0.32
+      elide: Text.ElideRight
+      text: bindingRow.description
+      color: root.foreground
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.body
+    }
+
+    Text {
+      anchors.left: parent.left
+      anchors.leftMargin: parent.width * 0.65
+      anchors.verticalCenter: parent.verticalCenter
+      width: parent.width * 0.22
+      elide: Text.ElideRight
+      visible: bindingRow.command !== ""
+      text: bindingRow.command
+      color: root.muted
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
+    }
+
+    Button {
+      anchors.right: parent.right
+      anchors.rightMargin: Style.space(4)
+      anchors.verticalCenter: parent.verticalCenter
+      visible: bindingMouse.containsMouse || bindingRow.off
+      text: bindingRow.mine ? "Remove" : (bindingRow.off ? "Restore" : "Turn off")
+      bordered: true
+      foreground: root.foreground
+      accent: root.accent
+      fontFamily: root.fontFamily
+      fontSize: Style.font.caption
+      onClicked: {
+        if (bindingRow.mine || bindingRow.off) root.run(["keys", "remove", bindingRow.keys])
+        else root.run(["keys", "disable", bindingRow.keys])
       }
     }
   }

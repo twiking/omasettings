@@ -14,6 +14,7 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 | Bar | Position, transparency, centred widget | `~/.config/omarchy/shell.json` |
 | Windows | Gaps, border, rounding, window opacity, dim, animations, blur | Hyprland |
 | Keyboard | Layouts, variant, XKB options, repeat rate and delay, num lock | Hyprland |
+| Keybindings | Every binding, searchable; add your own, turn Omarchy's off, put them back | `~/.config/hypr/bindings.lua` |
 | Mouse & Touchpad | Sensitivity, acceleration, focus-follows-mouse, natural scroll, tap to click, two-finger right click, disable-while-typing, scroll speed | Hyprland |
 | Displays | Per-monitor scale | Hyprland |
 | Idle & Lock | Screensaver and lock timeouts | `~/.config/omarchy/shell.json` |
@@ -61,6 +62,13 @@ in its own terms: Herdr with `herdr config check`, tmux by applying the option
 to the running server, and Neovim by compiling the Lua — and rolled back if
 the check fails. Because a tmux config is a script where the last assignment
 wins, it is the last one that gets rewritten.
+
+Keybindings work the same way from the other end: what you add or turn off is
+kept in OmaSettings' store and rendered into a marked block at the end of your
+`bindings.lua`, so the bindings you wrote by hand are never parsed or rewritten.
+Adding a combination that is already taken emits an `hl.unbind` before the
+`o.bind`, which is what makes an override actually win. Remove everything and
+the block disappears, leaving the file exactly as it was.
 
 **Anything hand-written is backed up before the first touch.** The first time
 OmaSettings writes to a file you could have edited yourself — `hyprland.lua`,
@@ -152,6 +160,10 @@ bin/omasettings herdr state | jq .
 bin/omasettings herdr set ui.pane_gaps true
 bin/omasettings tmux set mouse true
 bin/omasettings nvim set relativenumber false
+bin/omasettings keys list | jq .
+bin/omasettings keys add "SUPER + SHIFT + R" "SSH box" "alacritty -e ssh myserver"
+bin/omasettings keys disable "SUPER + SHIFT + X"
+bin/omasettings keys remove "SUPER + SHIFT + R"
 ```
 
 It needs `jq`, `hyprctl`, and the `omarchy` command line, all of which Omarchy

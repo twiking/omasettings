@@ -9,7 +9,6 @@ import "../ui" as Ui
 Ui.SectionBody {
   property var app: null
   Ui.SettingGroup {
-    title: "Wi-Fi"
 
     Ui.SwitchRow {
       label: "Wi-Fi"
@@ -43,10 +42,15 @@ Ui.SectionBody {
       onPicked: function(next) { app.run(["wifi", "band", next]) }
     }
 
+  }
+
+  Ui.SettingGroup {
+    title: "Networks"
+    visible: app.wifi.enabled === true
+
     Item {
       width: parent.width
       implicitHeight: rescanButton.implicitHeight
-      visible: app.wifi.enabled === true
 
       Text {
         anchors.left: parent.left

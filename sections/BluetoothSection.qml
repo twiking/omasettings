@@ -25,44 +25,22 @@ Ui.SectionBody {
   readonly property var pairedDevices: devicesWhere(function(d) { return d.paired === true && d.connected !== true })
   readonly property var nearbyDevices: devicesWhere(function(d) { return d.paired !== true })
 
-  Ui.SettingGroup {
-    title: "Bluetooth"
-
-    Ui.SwitchRow {
-      label: "Bluetooth"
-      description: app.bluetoothSummary
+  // The adapter governs the whole page, so its switch sits beside the page
+  // name and the summary replaces the file path under it.
+  property Component headerControl: Component {
+    ToggleSwitch {
       checked: bluetooth.powered === true
-      onRequested: function(next) { app.run(["bluetooth", "power", next ? "on" : "off"]) }
+      foreground: Ui.Palette.foreground
+      accent: Ui.Palette.accent
+      onToggled: app.run(["bluetooth", "power", bluetooth.powered === true ? "off" : "on"])
     }
+  }
 
-    Item {
-      width: parent.width
-      implicitHeight: scanButton.implicitHeight
-      visible: bluetooth.powered === true
-
-      Text {
-        anchors.left: parent.left
-        anchors.verticalCenter: parent.verticalCenter
-        text: devices.length === 1 ? "1 device" : devices.length + " devices"
-        color: Ui.Palette.muted
-        font.family: Ui.Palette.fontFamily
-        font.pixelSize: Style.font.caption
-      }
-
-      Button {
-        id: scanButton
-        anchors.right: parent.right
-        text: app.busy ? "Scanning…" : "Scan"
-        enabled: !app.busy
-        bordered: true
-        foreground: Ui.Palette.foreground
-        accent: Ui.Palette.accent
-        fontFamily: Ui.Palette.fontFamily
-        fontSize: Style.font.caption
-        onClicked: app.run(["bluetooth", "scan"])
-      }
-    }
-
+  // The lists below say what is connected; the header only says whether the
+  // adapter is on at all.
+  readonly property string headerNote: {
+    if (bluetooth.available === false) return "No adapter"
+    return bluetooth.powered === true ? "" : "Off"
   }
 
   Ui.SettingGroup {
@@ -88,8 +66,39 @@ Ui.SectionBody {
 
   Ui.SettingGroup {
     title: "Nearby"
-    note: nearbyDevices.length === 0 ? "Nothing else in range. Scan to look again." : ""
     visible: bluetooth.powered === true
+
+    Item {
+      width: parent.width
+      implicitHeight: scanButton.implicitHeight
+
+      Text {
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        width: parent.width - scanButton.width - Style.space(12)
+        elide: Text.ElideRight
+        text: nearbyDevices.length === 0
+          ? "Nothing else in range."
+          : (nearbyDevices.length === 1 ? "1 device found" : nearbyDevices.length + " devices found")
+        color: Ui.Palette.muted
+        font.family: Ui.Palette.fontFamily
+        font.pixelSize: Style.font.caption
+      }
+
+      Button {
+        id: scanButton
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        text: app.busy ? "Scanning…" : "Scan"
+        enabled: !app.busy
+        bordered: true
+        foreground: Ui.Palette.foreground
+        accent: Ui.Palette.accent
+        fontFamily: Ui.Palette.fontFamily
+        fontSize: Style.font.caption
+        onClicked: app.run(["bluetooth", "scan"])
+      }
+    }
 
     Repeater {
       model: nearbyDevices

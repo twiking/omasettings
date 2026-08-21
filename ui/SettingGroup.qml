@@ -13,6 +13,7 @@ Column {
   spacing: Style.space(10)
 
   Text {
+    visible: group.title !== ""
     text: group.title
     color: Local.Palette.foreground
     font.family: Local.Palette.fontFamily

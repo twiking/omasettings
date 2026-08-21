@@ -140,6 +140,38 @@ first.
 - `qmllint` exits 255 with no output when it cannot resolve `qs.*`. The
   authoritative check is the shell loading the file.
 
+## Design
+
+The window is a settings app, so it follows what settings apps have settled on.
+
+**Name a thing once.** A page called Bluetooth should not then contain a group
+called Bluetooth containing a row called Bluetooth. If a heading and the thing
+under it would carry the same word, the heading goes.
+
+**A control that governs the whole page belongs in the header.** Pages can
+declare `property Component headerControl` and `property string headerNote`;
+the window renders the control beside the page name and the note under it, in
+place of the file path. The Bluetooth adapter switch and its state live there.
+Anything that governs only part of a page stays a row.
+
+**Group by the question being asked, not by the data.** Bluetooth devices are
+Connected, Paired and Nearby — three headings — because those answer *what am I
+using*, *what do I own*, *what else is here*. One list sorted by state makes the
+reader infer the boundaries from the buttons on each row.
+
+**A heading earns its place or disappears.** `SettingGroup` renders no heading
+when its title is empty, which is right for a page with a single group; the
+page name is already the heading.
+
+**Say what a setting does, never what it runs.** Notes and descriptions are for
+the reader — "Off lets the terminal handle clicks, so links stay clickable",
+not "runs omarchy-bar transparent toggle". Implementation belongs in code
+comments and the README.
+
+**Don't repeat state that is visible below.** The header says whether Bluetooth
+is on, not which devices are connected — the Connected group is already saying
+that, three rows down.
+
 ## Shell conventions
 
 Bash with `set -uo pipefail` (not `-e`; several reads exit non-zero normally).

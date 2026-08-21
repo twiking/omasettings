@@ -9,7 +9,6 @@ import "../ui" as Ui
 Ui.SectionBody {
   property var app: null
   Ui.SettingGroup {
-    title: "Installed plugins"
     note: "A bar widget also needs a slot in the bar before it shows up there."
 
     Repeater {

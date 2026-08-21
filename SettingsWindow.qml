@@ -253,6 +253,11 @@ Item {
   property string pageId: "appearance"
   onPageIdChanged: bodyLoader.setSource(sectionSource(pageId), { app: root })
 
+  // A page may say something truer about itself than its file path — what the
+  // adapter is connected to, say. When it does, that is what the header shows.
+  readonly property string pageHeaderNote: bodyLoader.item && bodyLoader.item.headerNote !== undefined
+    ? String(bodyLoader.item.headerNote) : ""
+
   readonly property var sections: [
     { id: "appearance", title: "Appearance", icon: "\uf1fc", source: "~/.config/omarchy/shell.toml" },
     { id: "bar", title: "Bar", icon: "\uf0ca", source: "~/.config/omarchy/shell.json" },
@@ -498,25 +503,38 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: Style.space(56)
 
-            Text {
+            // The page names itself once, here. Where a page has a control
+            // that governs everything below it — the Bluetooth adapter, the
+            // Wi-Fi radio — that control belongs beside the name rather than
+            // repeated as the first row of the body.
+            Column {
               anchors.left: parent.left
               anchors.leftMargin: Style.spacing.panelPadding
               anchors.verticalCenter: parent.verticalCenter
-              text: root.pageFor(root.pageId).title
-              color: root.foreground
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.heading
-              font.bold: true
+              spacing: Style.space(2)
+
+              Text {
+                text: root.pageFor(root.pageId).title
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.heading
+                font.bold: true
+              }
+
+              Text {
+                text: root.pageHeaderNote !== "" ? root.pageHeaderNote : (root.pageFor(root.pageId).source || "")
+                color: root.muted
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
             }
 
-            Text {
+            Loader {
               anchors.right: parent.right
               anchors.rightMargin: Style.spacing.panelPadding
               anchors.verticalCenter: parent.verticalCenter
-              text: root.pageFor(root.pageId).source || ""
-              color: root.muted
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.caption
+              sourceComponent: bodyLoader.item && bodyLoader.item.headerControl
+                ? bodyLoader.item.headerControl : null
             }
           }
 

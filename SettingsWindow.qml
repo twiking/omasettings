@@ -51,6 +51,22 @@ Item {
   readonly property var plugins: state.plugins !== undefined ? state.plugins : []
   readonly property var agentsState: state.agents !== undefined ? state.agents : ({})
 
+  // Menu entries can ask for Omarchy's own icon font. Asking Qt for the family
+  // by name is not enough — a stale user-installed omarchy.ttf with a single
+  // glyph shadows the complete system copy, and the icons come out blank — so
+  // the helper resolves which file actually carries the glyphs and this loads
+  // that file directly. Falling back to the family name keeps a system without
+  // fontconfig from losing the icons entirely.
+  readonly property string omarchyFontPath: state.iconFonts && state.iconFonts.omarchy
+    ? String(state.iconFonts.omarchy) : ""
+  readonly property string omarchyFontFamily: omarchyFontLoader.status === FontLoader.Ready
+    && omarchyFontLoader.font.family !== "" ? omarchyFontLoader.font.family : "omarchy"
+
+  FontLoader {
+    id: omarchyFontLoader
+    source: root.omarchyFontPath !== "" ? "file://" + root.omarchyFontPath : ""
+  }
+
   function hyprValue(key, fallback) {
     var value = hypr ? hypr[key] : undefined
     return value === undefined || value === null ? fallback : value
@@ -906,7 +922,7 @@ Item {
             width: parent.width
             label: modelData.label
             glyph: modelData.icon
-            glyphFont: modelData.iconFont === "omarchy" ? "omarchy" : root.fontFamily
+            glyphFont: modelData.iconFont === "omarchy" ? root.omarchyFontFamily : root.fontFamily
             current: modelData.checked === true
             onChosen: root.run(["agents", "run", modelData.id])
           }

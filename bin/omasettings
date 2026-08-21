@@ -443,6 +443,61 @@ agents_cmd() {
   esac
 }
 
+# Menu entries can name a custom icon font ("omarchy"), and asking Qt for that
+# family by name is not enough: an old user-installed omarchy.ttf carrying a
+# single glyph shadows the complete system one, and the icons come out blank —
+# which is exactly what happens in the Omarchy menu itself when that copy is
+# present. Resolve the file instead, picking whichever copy actually carries
+# the glyphs the entries use, and hand the window a path to load directly.
+icon_font_file() {
+    local family=$1
+    shift
+    local needed=("$@") file best="" best_score=-1 charset score
+
+    while read -r file; do
+      [[ -n $file ]] || continue
+      charset=$(fc-query -f '%{charset}' "$file" 2>/dev/null)
+      score=$(COVER_CHARSET="$charset" awk -v want="${needed[*]}" '
+        BEGIN {
+          n = split(ENVIRON["COVER_CHARSET"], tokens, /[ \t\n]+/)
+          for (t = 1; t <= n; t++) {
+            if (tokens[t] ~ /-/) {
+              split(tokens[t], range, "-")
+              lo = strtonum("0x" range[1]); hi = strtonum("0x" range[2])
+            } else if (tokens[t] != "") {
+              lo = hi = strtonum("0x" tokens[t])
+            } else continue
+            for (c = lo; c <= hi; c++) have[c] = 1
+          }
+          w = split(want, wanted, / /)
+          for (i = 1; i <= w; i++)
+            if (wanted[i] != "" && have[strtonum("0x" wanted[i])]) covered++
+          print covered + 0
+        }')
+      if ((score > best_score)); then
+        best_score=$score
+        best=$file
+      fi
+    done < <(fc-list ":family=$family" file 2>/dev/null | sed 's/: *$//')
+
+    [[ $best_score -gt 0 ]] && echo "$best"
+}
+
+# The codepoints the current agent entries actually need, so the check follows
+# the menu rather than a list of glyphs frozen in here.
+icon_font_state() {
+  local codepoints path
+  codepoints=$(agent_entries | jq -r '.[] | select(.iconFont == "omarchy") | .icon' \
+    | while read -r glyph; do
+        [[ -n $glyph ]] && printf '%x\n' "'$glyph"
+      done)
+  # No custom-font entries means nothing to resolve.
+  [[ -n $codepoints ]] || { echo '{}'; return; }
+  # shellcheck disable=SC2086
+  path=$(icon_font_file omarchy $codepoints)
+  jq -cn --arg path "${path:-}" '{ omarchy: $path }'
+}
+
 # ------------------------------------------------------------------- state
 
 nightlight_enabled() {
@@ -453,7 +508,7 @@ nightlight_enabled() {
 }
 
 state() {
-  local cfg themes fonts theme font nightlight hypr monitors compose plugins agents textscale
+  local cfg themes fonts theme font nightlight hypr monitors compose plugins agents iconfonts textscale
   cfg=$(read_shell_json)
   # omarchy-theme-list finds every directory under the theme folders, dotted
   # ones included, so anything a stray tool left behind there shows up as a
@@ -468,6 +523,7 @@ state() {
   compose=$(compose_entries)
   plugins=$(plugins_state)
   agents=$(agents_state)
+  iconfonts=$(icon_font_state)
   textscale=$(omarchy display text size 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)?' | head -n1)
 
   jq -cn \
@@ -482,6 +538,7 @@ state() {
     --argjson compose "${compose:-[]}" \
     --argjson plugins "${plugins:-[]}" \
     --argjson agents "${agents:-null}" \
+    --argjson iconFonts "${iconfonts:-{\}}" \
     --arg textScale "${textscale:-1}" \
     '{
       theme: $theme,
@@ -503,7 +560,8 @@ state() {
       monitors: $monitors,
       compose: $compose,
       plugins: $plugins,
-      agents: $agents
+      agents: $agents,
+      iconFonts: $iconFonts
     }'
 }
 

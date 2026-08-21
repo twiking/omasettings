@@ -58,21 +58,25 @@ Values are read back from the live system (`hyprctl getoption`, `omarchy
 theme current`, …), not from the store, so settings changed elsewhere show up
 correctly the next time the window opens.
 
-### If the agent icons are blank
+### Icons from Omarchy's own font
 
 Five agents (Codex, Grok, omp, OpenCode, Pi) draw their icon from Omarchy's
-own `omarchy` icon font rather than a Nerd Font. If they render blank here —
-they will be blank in the Omarchy menu too, so check there first — look for a
-second font of the same family shadowing the complete one:
+`omarchy` icon font rather than a Nerd Font. Asking Qt for that family by name
+is fragile: more than one file can claim the family (an old user-installed
+`~/.local/share/fonts/omarchy.ttf` carries a single glyph), and a stale
+fontconfig cache can hand back the wrong one — which is why those icons
+sometimes render blank in the Omarchy menu itself.
+
+OmaSettings does not rely on the family name. The helper asks fontconfig which
+file actually carries the codepoints the entries use:
 
 ```bash
-fc-list | grep -i omarchy
+fc-list ':family=omarchy:charset=e905' file
 ```
 
-An old `~/.local/share/fonts/omarchy.ttf` left over from an earlier Omarchy
-version carries only the first glyph, and Qt can pick it over the full
-`/usr/share/fonts/omarchy/omarchy.ttf`. Remove the stale copy and run
-`fc-cache -f`.
+and the window loads that file with a `FontLoader`, so the icons render even
+when another copy shadows it. If they are blank in the Omarchy menu but fine
+here, that is the difference — `fc-cache -f` usually settles the menu too.
 
 ## Install
 

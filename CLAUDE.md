@@ -169,6 +169,12 @@ its note and its rows under a title, so membership is a matter of looking
 rather than of reading. A group with no title indents nothing — there is
 nothing to belong to.
 
+**A handful of short choices go side by side, not in a dropdown.** `ChoiceRow`
+wraps the kit's `ButtonGroup` — the same pills the bar's network widget uses —
+so DNS providers are all visible at once. A dropdown is for lists that are long
+(themes, fonts) or whose labels are sentences; opening one to discover there
+were only four options is a wasted click.
+
 **A heading earns its place or disappears.** `SettingGroup` renders no heading
 when its title is empty, which is right for a page with a single group; the
 page name is already the heading.

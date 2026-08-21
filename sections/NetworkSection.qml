@@ -83,10 +83,8 @@ Ui.SectionBody {
   }
 
   Ui.SettingGroup {
-    title: "DNS"
-
-    Ui.PickerRow {
-      label: "Resolver"
+    Ui.ChoiceRow {
+      label: "DNS provider"
       value: app.group("dns").current
       options: app.groupOptions("dns")
       onPicked: function(next) { app.run(["menu", "run", "setup.network.dns." + next]) }

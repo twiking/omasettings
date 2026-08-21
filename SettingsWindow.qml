@@ -132,26 +132,51 @@ Item {
     ] }
   ]
 
-  // One flat list the sidebar Repeater can walk: headings for parents, pages
-  // for everything selectable, each carrying the depth it renders at.
+  // Which parents are open. A parent holding the current page is always
+  // open — collapsing the branch you are looking at would leave the sidebar
+  // with nothing highlighted.
+  property var expandedSections: ({})
+
+  function isExpanded(section) {
+    var children = section.children || []
+    for (var c = 0; c < children.length; c++)
+      if (children[c].id === pageId) return true
+    return expandedSections[section.id] === true
+  }
+
+  function toggleSection(id) {
+    var next = ({})
+    for (var k in expandedSections) next[k] = expandedSections[k]
+    next[id] = !next[id]
+    expandedSections = next
+  }
+
+  // One flat list the sidebar Repeater can walk: parents that open and close,
+  // pages for everything selectable, each carrying the depth it renders at.
   readonly property var sidebarRows: {
     var rows = []
     for (var i = 0; i < sections.length; i++) {
       var section = sections[i]
       var children = section.children || []
+      var open = children.length > 0 && isExpanded(section)
       rows.push({
         id: section.id,
         title: section.title,
         icon: section.icon || "",
         selectable: children.length === 0,
+        expandable: children.length > 0,
+        expanded: open,
         indented: false
       })
+      if (!open) continue
       for (var c = 0; c < children.length; c++) {
         rows.push({
           id: children[c].id,
           title: children[c].title,
           icon: "",
           selectable: true,
+          expandable: false,
+          expanded: false,
           indented: true
         })
       }
@@ -235,13 +260,11 @@ Item {
                 readonly property bool current: modelData.selectable && modelData.id === root.pageId
 
                 Layout.fillWidth: true
-                implicitHeight: modelData.selectable
-                  ? Style.spacing.controlHeight + Style.space(4)
-                  : Style.spacing.controlHeight + Style.space(8)
+                implicitHeight: Style.spacing.controlHeight + Style.space(4)
                 radius: Style.cornerRadius
                 color: current
                   ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.18)
-                  : (modelData.selectable && navMouse.containsMouse
+                  : (navMouse.containsMouse
                      ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
                      : "transparent")
 
@@ -263,23 +286,35 @@ Item {
                   Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.title
-                    // A parent is a heading, not a destination: it reads as a
-                    // label so nothing invites a click that does nothing.
-                    color: modelData.selectable ? root.foreground : root.muted
+                    color: root.foreground
                     font.family: root.fontFamily
-                    font.pixelSize: modelData.selectable ? Style.font.body : Style.font.caption
-                    font.bold: current || !modelData.selectable
-                    font.capitalization: modelData.selectable ? Font.MixedCase : Font.AllUppercase
+                    font.pixelSize: Style.font.body
+                    font.bold: current
                   }
+                }
+
+                // Chevron only on parents, pointing the way the branch will
+                // move when clicked.
+                Text {
+                  anchors.right: parent.right
+                  anchors.rightMargin: Style.space(10)
+                  anchors.verticalCenter: parent.verticalCenter
+                  visible: modelData.expandable
+                  text: modelData.expanded ? "\uf077" : "\uf078"
+                  color: root.muted
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
                 }
 
                 MouseArea {
                   id: navMouse
                   anchors.fill: parent
-                  enabled: modelData.selectable
                   hoverEnabled: true
                   cursorShape: Qt.PointingHandCursor
-                  onClicked: root.pageId = modelData.id
+                  onClicked: {
+                    if (modelData.expandable) root.toggleSection(modelData.id)
+                    else root.pageId = modelData.id
+                  }
                 }
               }
             }

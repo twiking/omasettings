@@ -426,19 +426,40 @@ agents_state() {
        items: [$entries[] | . + { checked: (($checked[.id]) // false) }] }'
 }
 
+# Run a menu entry's action exactly as the menu would. Picking an agent that
+# is not installed, or changing the timezone, opens a terminal or a picker of
+# its own, so this must outlive the settings window: detach it.
+menu_run() {
+  local id=$1 command
+  command=$(menu_entries | jq -r --arg id "$id" '.[$id].action // ""')
+  [[ -n $command ]] || die "menu entry '$id' has no action"
+  setsid bash -lc "$command" >/dev/null 2>&1 &
+  disown 2>/dev/null || true
+}
+
+# What the Date & Time section shows next to those two actions.
+datetime_state() {
+  local zone ntp synced now
+  zone=$(timedatectl show -p Timezone --value 2>/dev/null)
+  ntp=$(timedatectl show -p NTP --value 2>/dev/null)
+  synced=$(timedatectl show -p NTPSynchronized --value 2>/dev/null)
+  now=$(date '+%Y-%m-%d %H:%M %Z' 2>/dev/null)
+
+  jq -cn --arg zone "$zone" --arg now "$now" \
+    --argjson ntp "$([[ $ntp == yes ]] && echo true || echo false)" \
+    --argjson synced "$([[ $synced == yes ]] && echo true || echo false)" \
+    '{ timezone: $zone, now: $now, ntp: $ntp, synchronized: $synced }'
+}
+
 agents_cmd() {
   local action=${1:-} id=${2:-}
   case $action in
     list) agents_state ;;
     run)
       [[ -n $id ]] || die "no agent given"
-      local command
-      command=$(agent_entries | jq -r --arg id "$id" '.[] | select(.id == $id) | .action')
-      [[ -n $command ]] || die "unknown agent '$id'"
-      # Picking an uninstalled agent opens a terminal to install it, so this
-      # must outlive the settings window: detach it the way the menu does.
-      setsid bash -lc "$command" >/dev/null 2>&1 &
-      disown 2>/dev/null || true ;;
+      agent_entries | jq -e --arg id "$id" 'any(.[]; .id == $id)' >/dev/null \
+        || die "unknown agent '$id'"
+      menu_run "setup.default.agent.$id" ;;
     *) die "unknown agents action '$action'" ;;
   esac
 }
@@ -508,7 +529,7 @@ nightlight_enabled() {
 }
 
 state() {
-  local cfg themes fonts theme font nightlight hypr monitors compose plugins agents iconfonts textscale
+  local cfg themes fonts theme font nightlight hypr monitors compose plugins agents iconfonts datetime textscale
   cfg=$(read_shell_json)
   # omarchy-theme-list finds every directory under the theme folders, dotted
   # ones included, so anything a stray tool left behind there shows up as a
@@ -524,6 +545,7 @@ state() {
   plugins=$(plugins_state)
   agents=$(agents_state)
   iconfonts=$(icon_font_state)
+  datetime=$(datetime_state)
   textscale=$(omarchy display text size 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)?' | head -n1)
 
   jq -cn \
@@ -539,6 +561,7 @@ state() {
     --argjson plugins "${plugins:-[]}" \
     --argjson agents "${agents:-null}" \
     --argjson iconFonts "${iconfonts:-{\}}" \
+    --argjson datetime "${datetime:-{\}}" \
     --arg textScale "${textscale:-1}" \
     '{
       theme: $theme,
@@ -561,6 +584,7 @@ state() {
       compose: $compose,
       plugins: $plugins,
       agents: $agents,
+      datetime: $datetime,
       iconFonts: $iconFonts
     }'
 }
@@ -639,6 +663,7 @@ case ${1:-state} in
   plugin) shift; plugin_cmd "$@" ;;
   compose) shift; compose_cmd "$@" ;;
   agents) shift; agents_cmd "$@" ;;
+  menu) shift; [[ ${1:-} == run ]] || die "usage: omasettings menu run <entry-id>"; menu_run "${2:-}" ;;
   *)
     cat >&2 <<'USAGE'
 usage:
@@ -647,6 +672,7 @@ usage:
   omasettings plugin enable|disable <id>
   omasettings compose list | add "<Multi_key> <a> <b>" "text" | remove "<Multi_key> <a> <b>"
   omasettings agents list | run <agent-id>
+  omasettings menu run <entry-id>            (runs an Omarchy menu entry's action)
 USAGE
     exit 1 ;;
 esac

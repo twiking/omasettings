@@ -19,15 +19,18 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 | Idle & Lock | Screensaver and lock timeouts | `~/.config/omarchy/shell.json` |
 | Plugins | Enable and disable installed shell plugins | `omarchy plugin enable/disable` |
 | Compose Keys | Your `<Multi_key>` sequences: list, add, remove | `~/.XCompose` |
+| Date & Time | Timezone and system time resync | Omarchy menu Update → Timezone / Time |
 | Agents → Default Agents | The default coding agent | `omarchy-default-agent` |
 | Agents → Herdr | Nothing yet | — |
 
-The Agents section is read from the Omarchy menu's own definition
+Date & Time and Agents are read from the Omarchy menu's own definition
 (`omarchy-menu.jsonc`, defaults plus your extensions) rather than a second
 list that can drift, so its entries and actions are exactly the menu's
-Setup → Defaults → Agent: picking an agent that is not installed opens a
-terminal to set it up, and the current one is marked with the menu's own
-`checked` test.
+Setup → Defaults → Agent and Update → Timezone / Time: picking an agent that
+is not installed opens a terminal to set it up, the current one is marked with
+the menu's own `checked` test, and the timezone button opens the same picker
+the menu opens. The current timezone and clock are shown next to the buttons
+so you can see what you are changing.
 
 ## How it writes
 
@@ -132,6 +135,7 @@ bin/omasettings compose add '<Multi_key> <s> <e>' 'hello'
 bin/omasettings compose remove '<Multi_key> <s> <e>'
 bin/omasettings agents list
 bin/omasettings agents run codex
+bin/omasettings menu run update.timezone
 ```
 
 It needs `jq`, `hyprctl`, and the `omarchy` command line, all of which Omarchy

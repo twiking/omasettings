@@ -50,6 +50,7 @@ Item {
   readonly property var composeEntries: state.compose !== undefined ? state.compose : []
   readonly property var plugins: state.plugins !== undefined ? state.plugins : []
   readonly property var agentsState: state.agents !== undefined ? state.agents : ({})
+  readonly property var datetime: state.datetime !== undefined ? state.datetime : ({})
 
   // Menu entries can ask for Omarchy's own icon font. Asking Qt for the family
   // by name is not enough — a stale user-installed omarchy.ttf with a single
@@ -142,6 +143,7 @@ Item {
     { id: "idle", title: "Idle & Lock", icon: "\uf023", source: "~/.config/omarchy/shell.json" },
     { id: "plugins", title: "Plugins", icon: "\uf1e6", source: "~/.config/omarchy/shell.json" },
     { id: "compose", title: "Compose Keys", icon: "\uf031", source: "~/.XCompose" },
+    { id: "datetime", title: "Date & Time", icon: "\uf017", source: "timedatectl" },
     { id: "agents", title: "Agents", icon: "\udb81\udea9", children: [
       { id: "agents.default", title: "Default Agents", source: "~/.config/omarchy/defaults/agent" },
       { id: "agents.herdr", title: "Herdr", source: "" }
@@ -222,6 +224,7 @@ Item {
     case "idle": return idleSection
     case "plugins": return pluginsSection
     case "compose": return composeSection
+    case "datetime": return datetimeSection
     case "agents.default": return defaultAgentsSection
     default: return herdrSection
     }
@@ -909,6 +912,33 @@ Item {
   }
 
   Component {
+    id: datetimeSection
+    SectionBody {
+      SettingGroup {
+        title: "Clock"
+        note: "Both actions are the Omarchy menu's Update → Timezone and Update → Time, and open the same picker and terminal."
+
+        ActionRow {
+          label: "Timezone"
+          description: root.datetime.timezone ? String(root.datetime.timezone) : "Unknown"
+          buttonText: "Change…"
+          onTriggered: root.run(["menu", "run", "update.timezone"])
+        }
+
+        ActionRow {
+          label: "System time"
+          description: (root.datetime.now ? String(root.datetime.now) : "")
+            + (root.datetime.ntp === true
+               ? (root.datetime.synchronized === true ? " · synchronized" : " · syncing")
+               : " · automatic sync off")
+          buttonText: "Resync…"
+          onTriggered: root.run(["menu", "run", "update.time"])
+        }
+      }
+    }
+  }
+
+  Component {
     id: defaultAgentsSection
     SectionBody {
       SettingGroup {
@@ -1353,6 +1383,24 @@ Item {
       hoverEnabled: true
       cursorShape: Qt.PointingHandCursor
       onClicked: agentRow.chosen()
+    }
+  }
+
+  // A row whose setting lives behind someone else's flow: the state is shown,
+  // and the button hands off to the command that owns it.
+  component ActionRow: SettingRow {
+    id: actionRow
+    property string buttonText: ""
+    signal triggered()
+
+    Button {
+      anchors.right: parent.right
+      text: actionRow.buttonText
+      bordered: true
+      foreground: root.foreground
+      accent: root.accent
+      fontFamily: root.fontFamily
+      onClicked: actionRow.triggered()
     }
   }
 }

@@ -50,7 +50,7 @@ Ui.SectionBody {
   }
 
   Ui.SettingGroup {
-    title: "Wallpaper and boot"
+    title: "Wallpaper"
 
     Ui.ActionRow {
       label: "Background"
@@ -59,12 +59,6 @@ Ui.SectionBody {
       onTriggered: app.run(["menu", "run", "style.background"])
     }
 
-    Ui.ActionRow {
-      label: "Boot and unlock screen"
-      description: "The animation shown while the machine starts and unlocks."
-      buttonText: "Choose…"
-      onTriggered: app.run(["menu", "run", "style.unlock"])
-    }
   }
 
   Ui.SettingGroup {

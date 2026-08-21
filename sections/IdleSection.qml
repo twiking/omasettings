@@ -23,4 +23,15 @@ Ui.SectionBody {
       onCommitted: function(mins) { app.set("idle-lock", mins * 60) }
     }
   }
+
+  Ui.SettingGroup {
+    title: "Lock screen"
+
+    Ui.ActionRow {
+      label: "Unlock animation"
+      description: "Shown while the machine starts up and while it unlocks."
+      buttonText: "Choose…"
+      onTriggered: app.run(["menu", "run", "style.unlock"])
+    }
+  }
 }

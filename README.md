@@ -18,7 +18,7 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 | Keyboard, Mouse & Touchpad | Also per device: one keyboard or pointer can depart from the global settings, via Hyprland's `hl.device` |  |
 | Mouse & Touchpad | Sensitivity, acceleration, focus-follows-mouse, natural scroll, tap to click, two-finger right click, disable-while-typing, scroll speed | Hyprland |
 | Displays | Per-monitor scale | Hyprland |
-| Idle & Lock | Screensaver and lock timeouts | `~/.config/omarchy/shell.json` |
+| Idle & Lock | Screensaver and lock timeouts, unlock animation | `~/.config/omarchy/shell.json` / Omarchy menu Style → Unlock |
 | Plugins | Enable and disable installed shell plugins | `omarchy plugin enable/disable` |
 | Compose Keys | Your `<Multi_key>` sequences: list, add, remove | `~/.XCompose` |
 | Date & Time | Timezone and system time resync | Omarchy menu Update → Timezone / Time |

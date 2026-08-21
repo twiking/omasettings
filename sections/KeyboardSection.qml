@@ -114,7 +114,9 @@ Ui.SectionBody {
       }
 
       width: parent.width
-      title: name + (modelData.connected === false ? "  (not connected)" : "")
+      // Named as a device so the heading cannot be mistaken for another
+      // group of settings.
+      title: "Device: " + name + (modelData.connected === false ? "  (not connected)" : "")
       note: Object.keys(configured).length > 0 && !ours
         ? "Set in your own Hyprland config."
         : ""

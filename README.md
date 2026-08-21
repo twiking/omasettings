@@ -23,7 +23,7 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 | Network | DNS resolver, Wi-Fi QR code | Omarchy menu Setup → Network |
 | Default Apps | Browser, terminal, editor | Omarchy menu Setup → Defaults |
 | Agents → Default Agents | The default coding agent | `omarchy-default-agent` |
-| Agents → Herdr | Nothing yet | — |
+| Agents → Herdr | Herdr's appearance, panes, sidebar, behaviour, notifications and prefix key | `~/.config/herdr/config.toml` |
 
 The Style, Setup and Update sections are read from the Omarchy menu's own definition
 (`omarchy-menu.jsonc`, defaults plus your extensions) rather than a second
@@ -51,6 +51,12 @@ generated file to hand that setting back to your config.
 Everything else goes through the `omarchy` command that already owns the
 setting — themes, fonts, text size, the bar, plugin enablement — rather than
 being written behind its back.
+
+Herdr's `config.toml` is the one file edited in place rather than generated:
+it is hand-written and every setting carries a comment explaining it, so
+values are replaced where they stand and new ones are appended to their table.
+Every write is validated with `herdr config check` and rolled back if Herdr
+rejects it.
 
 **Anything hand-written is backed up before the first touch.** The first time
 OmaSettings writes to a file you could have edited yourself — `hyprland.lua`,
@@ -138,6 +144,8 @@ bin/omasettings compose remove '<Multi_key> <s> <e>'
 bin/omasettings agents list
 bin/omasettings agents run codex
 bin/omasettings menu run update.timezone
+bin/omasettings herdr state | jq .
+bin/omasettings herdr set ui.pane_gaps true
 ```
 
 It needs `jq`, `hyprctl`, and the `omarchy` command line, all of which Omarchy

@@ -49,6 +49,7 @@ Item {
   readonly property var monitors: state.monitors !== undefined ? state.monitors : []
   readonly property var composeEntries: state.compose !== undefined ? state.compose : []
   readonly property var plugins: state.plugins !== undefined ? state.plugins : []
+  readonly property var agentsState: state.agents !== undefined ? state.agents : ({})
 
   function hyprValue(key, fallback) {
     var value = hypr ? hypr[key] : undefined
@@ -111,30 +112,77 @@ Item {
   }
 
   // ---------------- sections ----------------------------------------------
-  property int sectionIndex: 0
+  // A section is either a page of its own or a parent holding pages; the
+  // sidebar renders parents as headings and only pages are selectable.
+  property string pageId: "appearance"
+
   readonly property var sections: [
-    { title: "Appearance", icon: "\uf1fc", source: "~/.config/omarchy/shell.toml" },
-    { title: "Bar", icon: "\uf0ca", source: "~/.config/omarchy/shell.json" },
-    { title: "Windows", icon: "\uf2d0", source: "~/.config/hypr/looknfeel.lua" },
-    { title: "Keyboard", icon: "\uf11c", source: "~/.config/hypr/input.lua" },
-    { title: "Mouse & Touchpad", icon: "\uf245", source: "~/.config/hypr/input.lua" },
-    { title: "Displays", icon: "\uf108", source: "~/.config/hypr/monitors.lua" },
-    { title: "Idle & Lock", icon: "\uf023", source: "~/.config/omarchy/shell.json" },
-    { title: "Plugins", icon: "\uf1e6", source: "~/.config/omarchy/shell.json" },
-    { title: "Compose Keys", icon: "\uf031", source: "~/.XCompose" }
+    { id: "appearance", title: "Appearance", icon: "\uf1fc", source: "~/.config/omarchy/shell.toml" },
+    { id: "bar", title: "Bar", icon: "\uf0ca", source: "~/.config/omarchy/shell.json" },
+    { id: "windows", title: "Windows", icon: "\uf2d0", source: "~/.config/hypr/looknfeel.lua" },
+    { id: "keyboard", title: "Keyboard", icon: "\uf11c", source: "~/.config/hypr/input.lua" },
+    { id: "pointer", title: "Mouse & Touchpad", icon: "\uf245", source: "~/.config/hypr/input.lua" },
+    { id: "displays", title: "Displays", icon: "\uf108", source: "~/.config/hypr/monitors.lua" },
+    { id: "idle", title: "Idle & Lock", icon: "\uf023", source: "~/.config/omarchy/shell.json" },
+    { id: "plugins", title: "Plugins", icon: "\uf1e6", source: "~/.config/omarchy/shell.json" },
+    { id: "compose", title: "Compose Keys", icon: "\uf031", source: "~/.XCompose" },
+    { id: "agents", title: "Agents", icon: "\udb81\udea9", children: [
+      { id: "agents.default", title: "Default Agents", source: "~/.config/omarchy/defaults/agent" },
+      { id: "agents.herdr", title: "Herdr", source: "" }
+    ] }
   ]
 
-  function sectionComponent(index) {
-    switch (index) {
-    case 0: return appearanceSection
-    case 1: return barSection
-    case 2: return windowsSection
-    case 3: return keyboardSection
-    case 4: return pointerSection
-    case 5: return displaysSection
-    case 6: return idleSection
-    case 7: return pluginsSection
-    default: return composeSection
+  // One flat list the sidebar Repeater can walk: headings for parents, pages
+  // for everything selectable, each carrying the depth it renders at.
+  readonly property var sidebarRows: {
+    var rows = []
+    for (var i = 0; i < sections.length; i++) {
+      var section = sections[i]
+      var children = section.children || []
+      rows.push({
+        id: section.id,
+        title: section.title,
+        icon: section.icon || "",
+        selectable: children.length === 0,
+        indented: false
+      })
+      for (var c = 0; c < children.length; c++) {
+        rows.push({
+          id: children[c].id,
+          title: children[c].title,
+          icon: "",
+          selectable: true,
+          indented: true
+        })
+      }
+    }
+    return rows
+  }
+
+  function pageFor(id) {
+    for (var i = 0; i < sections.length; i++) {
+      var section = sections[i]
+      if (section.id === id) return section
+      var children = section.children || []
+      for (var c = 0; c < children.length; c++)
+        if (children[c].id === id) return children[c]
+    }
+    return { title: "", source: "" }
+  }
+
+  function sectionComponent(id) {
+    switch (id) {
+    case "appearance": return appearanceSection
+    case "bar": return barSection
+    case "windows": return windowsSection
+    case "keyboard": return keyboardSection
+    case "pointer": return pointerSection
+    case "displays": return displaysSection
+    case "idle": return idleSection
+    case "plugins": return pluginsSection
+    case "compose": return composeSection
+    case "agents.default": return defaultAgentsSection
+    default: return herdrSection
     }
   }
 
@@ -180,27 +228,33 @@ Item {
             }
 
             Repeater {
-              model: root.sections
+              model: root.sidebarRows
               delegate: Rectangle {
-                required property int index
                 required property var modelData
 
+                readonly property bool current: modelData.selectable && modelData.id === root.pageId
+
                 Layout.fillWidth: true
-                implicitHeight: Style.spacing.controlHeight + Style.space(4)
+                implicitHeight: modelData.selectable
+                  ? Style.spacing.controlHeight + Style.space(4)
+                  : Style.spacing.controlHeight + Style.space(8)
                 radius: Style.cornerRadius
-                color: index === root.sectionIndex
+                color: current
                   ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.18)
-                  : (navMouse.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08) : "transparent")
+                  : (modelData.selectable && navMouse.containsMouse
+                     ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+                     : "transparent")
 
                 Row {
                   anchors.fill: parent
-                  anchors.leftMargin: Style.space(10)
+                  anchors.leftMargin: Style.space(10) + (modelData.indented ? Style.space(18) : 0)
                   spacing: Style.space(10)
 
                   Text {
                     anchors.verticalCenter: parent.verticalCenter
+                    visible: !modelData.indented
                     text: modelData.icon
-                    color: index === root.sectionIndex ? root.accent : root.muted
+                    color: current ? root.accent : root.muted
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.body
                     width: Style.space(18)
@@ -209,19 +263,23 @@ Item {
                   Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.title
-                    color: root.foreground
+                    // A parent is a heading, not a destination: it reads as a
+                    // label so nothing invites a click that does nothing.
+                    color: modelData.selectable ? root.foreground : root.muted
                     font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
-                    font.bold: index === root.sectionIndex
+                    font.pixelSize: modelData.selectable ? Style.font.body : Style.font.caption
+                    font.bold: current || !modelData.selectable
+                    font.capitalization: modelData.selectable ? Font.MixedCase : Font.AllUppercase
                   }
                 }
 
                 MouseArea {
                   id: navMouse
                   anchors.fill: parent
+                  enabled: modelData.selectable
                   hoverEnabled: true
                   cursorShape: Qt.PointingHandCursor
-                  onClicked: root.sectionIndex = index
+                  onClicked: root.pageId = modelData.id
                 }
               }
             }
@@ -257,7 +315,7 @@ Item {
               anchors.left: parent.left
               anchors.leftMargin: Style.spacing.panelPadding
               anchors.verticalCenter: parent.verticalCenter
-              text: root.sections[root.sectionIndex].title
+              text: root.pageFor(root.pageId).title
               color: root.foreground
               font.family: root.fontFamily
               font.pixelSize: Style.font.heading
@@ -268,7 +326,7 @@ Item {
               anchors.right: parent.right
               anchors.rightMargin: Style.spacing.panelPadding
               anchors.verticalCenter: parent.verticalCenter
-              text: root.sections[root.sectionIndex].source
+              text: root.pageFor(root.pageId).source || ""
               color: root.muted
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
@@ -295,7 +353,7 @@ Item {
             Loader {
               id: bodyLoader
               width: bodyScroll.width
-              sourceComponent: root.sectionComponent(root.sectionIndex)
+              sourceComponent: root.sectionComponent(root.pageId)
             }
           }
 
@@ -799,6 +857,39 @@ Item {
     }
   }
 
+  Component {
+    id: defaultAgentsSection
+    SectionBody {
+      SettingGroup {
+        title: "Default coding agent"
+        note: "The same entries as the Omarchy menu's Setup → Defaults → Agent, and the same actions: picking an agent that is not installed yet opens a terminal to set it up."
+
+        Repeater {
+          model: root.agentsState.items !== undefined ? root.agentsState.items : []
+          delegate: AgentRow {
+            required property var modelData
+            width: parent.width
+            label: modelData.label
+            glyph: modelData.icon
+            glyphFont: modelData.iconFont === "omarchy" ? "omarchy" : root.fontFamily
+            current: modelData.checked === true
+            onChosen: root.run(["agents", "run", modelData.id])
+          }
+        }
+      }
+    }
+  }
+
+  Component {
+    id: herdrSection
+    SectionBody {
+      SettingGroup {
+        title: "Herdr"
+        note: "Nothing here yet."
+      }
+    }
+  }
+
   // The bar's centre section is anchored on a widget id; offer the ids the
   // user actually has in their bar rather than a hardcoded list.
   function barWidgetIds() {
@@ -1145,6 +1236,72 @@ Item {
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
       }
+    }
+  }
+
+  // A pick-one row: the whole row is the target, and the current choice is
+  // marked the way the menu marks it rather than with a control that implies
+  // it can be switched off.
+  component AgentRow: Item {
+    id: agentRow
+    property string label: ""
+    property string glyph: ""
+    property string glyphFont: ""
+    property bool current: false
+    signal chosen()
+
+    width: parent ? parent.width : 0
+    implicitHeight: Style.spacing.controlHeight
+
+    Rectangle {
+      anchors.fill: parent
+      radius: Style.cornerRadius
+      color: agentRow.current
+        ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.14)
+        : (agentMouse.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08) : "transparent")
+    }
+
+    Row {
+      anchors.left: parent.left
+      anchors.leftMargin: Style.space(10)
+      anchors.verticalCenter: parent.verticalCenter
+      spacing: Style.space(12)
+
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: agentRow.glyph
+        color: agentRow.current ? root.accent : root.muted
+        font.family: agentRow.glyphFont !== "" ? agentRow.glyphFont : root.fontFamily
+        font.pixelSize: Style.font.body
+        width: Style.space(20)
+      }
+
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: agentRow.label
+        color: root.foreground
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.body
+      }
+    }
+
+    Text {
+      anchors.right: parent.right
+      anchors.rightMargin: Style.space(10)
+      anchors.verticalCenter: parent.verticalCenter
+      visible: agentRow.current
+      text: "\uf00c"
+      color: root.accent
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.body
+    }
+
+    MouseArea {
+      id: agentMouse
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onClicked: agentRow.chosen()
     }
   }
 }

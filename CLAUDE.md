@@ -154,6 +154,11 @@ the window renders the control beside the page name and the note under it, in
 place of the file path. The Bluetooth adapter switch and its state live there.
 Anything that governs only part of a page stays a row.
 
+**Lead with what the page is for.** Network opens with the Wi-Fi switch and
+the networks it finds, because choosing a network is why anyone comes here.
+Address, gateway and band are about the network you already picked, so they sit
+under Connection *after* the list rather than between the switch and it.
+
 **Group by the question being asked, not by the data.** Bluetooth devices are
 Connected, Paired and Nearby — three headings — because those answer *what am I
 using*, *what do I own*, *what else is here*. One list sorted by state makes the

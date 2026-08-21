@@ -17,35 +17,9 @@ Ui.SectionBody {
       onRequested: function(next) { app.run(["wifi", "radio", next ? "on" : "off"]) }
     }
 
-    Ui.ReadingRow {
-      label: "IP address"
-      visible: app.wifi.connected !== ""
-      value: app.wifiConnection.ip
-        ? String(app.wifiConnection.ip) + (app.wifiConnection.prefix ? "/" + app.wifiConnection.prefix : "")
-        : "—"
-    }
-
-    Ui.ReadingRow {
-      label: "Gateway"
-      visible: app.wifi.connected !== ""
-      value: app.wifiConnection.gateway ? String(app.wifiConnection.gateway) : "—"
-    }
-
-    Ui.PickerRow {
-      label: "Band"
-      visible: app.wifi.connected !== "" && app.bandOptions().length > 1
-      description: app.wifiBand.selected === "auto" && app.wifiBand.current
-        ? "Currently on " + app.wifiBand.current + " GHz"
-        : "Pinned; the radio will not move off it."
-      value: app.wifiBand.selected !== undefined ? String(app.wifiBand.selected) : "auto"
-      options: app.bandOptions()
-      onPicked: function(next) { app.run(["wifi", "band", next]) }
-    }
-
   }
 
   Ui.SettingGroup {
-    title: "Networks"
     visible: app.wifi.enabled === true
 
     Item {
@@ -92,6 +66,37 @@ Ui.SectionBody {
         onForgetRequested: app.run(["wifi", "forget", modelData.ssid])
       }
     }
+  }
+
+  Ui.SettingGroup {
+    title: "Connection"
+    visible: app.wifi.connected !== ""
+
+    Ui.ReadingRow {
+      label: "IP address"
+      visible: app.wifi.connected !== ""
+      value: app.wifiConnection.ip
+        ? String(app.wifiConnection.ip) + (app.wifiConnection.prefix ? "/" + app.wifiConnection.prefix : "")
+        : "—"
+    }
+
+    Ui.ReadingRow {
+      label: "Gateway"
+      visible: app.wifi.connected !== ""
+      value: app.wifiConnection.gateway ? String(app.wifiConnection.gateway) : "—"
+    }
+
+    Ui.PickerRow {
+      label: "Band"
+      visible: app.wifi.connected !== "" && app.bandOptions().length > 1
+      description: app.wifiBand.selected === "auto" && app.wifiBand.current
+        ? "Currently on " + app.wifiBand.current + " GHz"
+        : "Pinned; the radio will not move off it."
+      value: app.wifiBand.selected !== undefined ? String(app.wifiBand.selected) : "auto"
+      options: app.bandOptions()
+      onPicked: function(next) { app.run(["wifi", "band", next]) }
+    }
+
   }
 
   Ui.SettingGroup {

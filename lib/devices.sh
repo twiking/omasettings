@@ -36,6 +36,55 @@ SCHEMA
   esac
 }
 
+# What the user has already written by hand. OmaSettings never rewrites their
+# config, but it has to read it: a device configured in input.lua that this
+# page did not mention would look unconfigured, and setting it here would
+# silently fight a line they wrote themselves.
+device_config_settings() {
+  local file
+  local blocks='{}'
+
+  for file in "$HYPR_DIR"/*.lua; do
+    [[ -f $file ]] || continue
+    # Our own generated file is not "theirs".
+    [[ $file == "$MANAGED_LUA" ]] && continue
+
+    blocks=$(awk '
+      function trim(v) { gsub(/^[ \t]+|[ \t,]+$/, "", v); return v }
+      /^[ \t]*--/ { next }
+      /hl\.device[ \t]*\(/ { inside = 1; name = ""; delete pairs; count = 0; next }
+      inside && /\}\)/ {
+        if (name != "") {
+          printf "%s", name
+          for (i = 1; i <= count; i++) printf "\t%s", pairs[i]
+          printf "\n"
+        }
+        inside = 0
+        next
+      }
+      inside && /=/ {
+        key = trim(substr($0, 1, index($0, "=") - 1))
+        value = trim(substr($0, index($0, "=") + 1))
+        gsub(/^"|"$/, "", value)
+        if (key == "name") name = value
+        else if (key != "") pairs[++count] = key "=" value
+      }
+    ' "$file" | jq -R -s -c --argjson blocks "$blocks" 'split("\n")
+      | map(select(length > 0) | split("\t")
+        | { key: .[0],
+            value: (.[1:] | map(split("=") | { key: .[0], value: (.[1] // "") })
+              | from_entries
+              # A number written as a number should read back as one.
+              | with_entries(.value |= (if . == "true" then true
+                                        elif . == "false" then false
+                                        else (tonumber? // .) end)) ) })
+      | from_entries
+      | $blocks * .')
+  done
+
+  echo "$blocks"
+}
+
 # Hyprland reports far more "keyboards" and "mice" than anyone has on their
 # desk: power buttons, video buses and lid switches all arrive as input
 # devices. A device with no real settings to give is only noise in a list.
@@ -43,7 +92,7 @@ devices_state() {
   local raw
   raw=$(hyprctl -j devices 2>/dev/null) || { echo '{}'; return; }
 
-  jq -c --argjson store "$(read_store)" '
+  jq -c --argjson store "$(read_store)" --argjson configured "$(device_config_settings)" '
     def uninteresting:
       test("^(power-button|video-bus|sleep-button|lid-switch|hl-virtual.*|.*-wireless-radio-control|.*-consumer-control.*)$");
 
@@ -53,7 +102,9 @@ devices_state() {
             kind: "keyboard",
             main: (.main == true),
             layout: (.active_keymap // ""),
-            settings: (($store.devices // {})[.name] // {}) } ],
+            connected: true,
+            settings: (($store.devices // {})[.name] // {}),
+            configured: ($configured[.name] // {}) } ],
       pointers: [ .mice[]
         | select(.name | uninteresting | not)
         | { name: .name,
@@ -61,7 +112,18 @@ devices_state() {
             # A touchpad is a pointer whose name says so, and it wants
             # different settings than a mouse does.
             touchpad: (.name | test("touchpad|synaptics|trackpad")),
-            settings: (($store.devices // {})[.name] // {}) } ] }
+            connected: true,
+            settings: (($store.devices // {})[.name] // {}),
+            configured: ($configured[.name] // {}) } ] }
+    # A device that is configured but unplugged still belongs in the list: a
+    # mouse does not stop being yours when you undock.
+    | . as $live
+    | ($live.keyboards + $live.pointers | map(.name)) as $present
+    | .pointers = (.pointers + [ (($store.devices // {}) + $configured) | to_entries[]
+        | select([.key] | inside($present) | not)
+        | { name: .key, kind: "pointer", touchpad: false, connected: false,
+            settings: (($store.devices // {})[.key] // {}),
+            configured: ($configured[.key] // {}) } ])
   ' <<<"$raw"
 }
 

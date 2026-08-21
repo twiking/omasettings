@@ -20,6 +20,9 @@ Ui.SectionBody {
     Ui.PickerRow {
       label: "These settings apply to"
       value: device
+      description: perDevice && app.deviceIsConfigured(app.devices.keyboards, device, "kb_layout")
+        ? "Showing what your own config sets for this device."
+        : ""
       options: app.deviceOptions(app.devices.keyboards, "Every keyboard")
       onPicked: function(next) { app.keyboardDevice = next }
     }

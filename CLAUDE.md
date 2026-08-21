@@ -175,6 +175,19 @@ value when it does not, so it always shows what is in force.
 buttons, lid switches, video buses, virtual keyboards — so `devices.sh` filters
 them out. The picker hides itself entirely when only one real device exists.
 
+Two things the first version got wrong, both worth keeping in mind:
+
+- **A device you own is not always plugged in.** Listing only what
+  `hyprctl devices` reports means a Bluetooth mouse vanishes from settings the
+  moment you undock. Devices that appear in any config are listed too, marked
+  "(not connected)".
+- **Read their config even though you never write it.** The no-parsing rule is
+  about *writing*. A device already configured in `input.lua` would otherwise
+  read as unconfigured here, and a value set from this page would silently
+  fight a line the user wrote by hand. `device_config_settings` reads the
+  `hl.device` blocks out of their Lua, and a control falls back
+  ours → theirs → global, which is the order Hyprland itself resolves them in.
+
 ## Design
 
 The window is a settings app, so it follows what settings apps have settled on.

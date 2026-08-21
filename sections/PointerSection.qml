@@ -18,6 +18,9 @@ Ui.SectionBody {
 
     Ui.PickerRow {
       label: "These settings apply to"
+      description: perDevice && app.deviceIsConfigured(app.devices.pointers, device, "sensitivity")
+        ? "Showing what your own config sets for this device."
+        : ""
       value: device
       options: app.deviceOptions(app.devices.pointers, "Every pointer")
       onPicked: function(next) { app.pointerDevice = next }

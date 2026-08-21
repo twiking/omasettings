@@ -66,21 +66,46 @@ Item {
   function deviceOptions(list, everything) {
     var out = [{ value: "", label: everything }]
     var items = list !== undefined ? list : []
-    for (var i = 0; i < items.length; i++)
-      out.push({ value: String(items[i].name), label: String(items[i].name) })
+    for (var i = 0; i < items.length; i++) {
+      var device = items[i]
+      out.push({
+        value: String(device.name),
+        // A device you own but have unplugged is still worth configuring, and
+        // saying so beats leaving you to wonder why it reads oddly.
+        label: String(device.name) + (device.connected === false ? " (not connected)" : "")
+      })
+    }
     return out
   }
 
-  // What a device has been given, if anything; otherwise what the global
-  // setting says, so the controls always show what is in force.
+  // What is actually in force for this device: what OmaSettings set, else
+  // what the user wrote in their own config, else the global setting. The
+  // generated file loads after theirs, so ours winning here matches what
+  // Hyprland does.
   function deviceSetting(list, name, key, fallback) {
     var items = list !== undefined ? list : []
     for (var i = 0; i < items.length; i++) {
       if (String(items[i].name) !== name) continue
       var settings = items[i].settings || ({})
       if (settings[key] !== undefined && settings[key] !== null) return settings[key]
+      var configured = items[i].configured || ({})
+      if (configured[key] !== undefined && configured[key] !== null) return configured[key]
     }
     return fallback
+  }
+
+  // Whether the value on screen came from the user's own config rather than
+  // from here, so a page can say so instead of implying it owns it.
+  function deviceIsConfigured(list, name, key) {
+    var items = list !== undefined ? list : []
+    for (var i = 0; i < items.length; i++) {
+      if (String(items[i].name) !== name) continue
+      var settings = items[i].settings || ({})
+      if (settings[key] !== undefined && settings[key] !== null) return false
+      var configured = items[i].configured || ({})
+      return configured[key] !== undefined && configured[key] !== null
+    }
+    return false
   }
 
   function setDevice(name, key, value, kind) {

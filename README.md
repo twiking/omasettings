@@ -21,7 +21,7 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 | Plugins | Enable and disable installed shell plugins | `omarchy plugin enable/disable` |
 | Compose Keys | Your `<Multi_key>` sequences: list, add, remove | `~/.XCompose` |
 | Date & Time | Timezone and system time resync | Omarchy menu Update → Timezone / Time |
-| Network | Wi-Fi networks, DNS resolver, Wi-Fi QR code | NetworkManager / Omarchy menu Setup → Network |
+| Network | Wi-Fi networks, address and gateway, band, DNS resolver, Wi-Fi QR code | NetworkManager / `omarchy-network-band` / Omarchy menu Setup → Network |
 | Applications → Defaults | Browser, terminal, editor, coding agent | Omarchy menu Setup → Defaults |
 | Applications → Herdr | Herdr's appearance, panes, sidebar, behaviour, notifications and prefix key | `~/.config/herdr/config.toml` |
 | Applications → Tmux | Prefix, copy-mode keys, status bar, window and pane numbering, mouse, scrollback, clipboard | `~/.config/tmux/tmux.conf` |
@@ -71,7 +71,10 @@ Adding a combination that is already taken emits an `hl.unbind` before the
 the block disappears, leaving the file exactly as it was.
 
 Wi-Fi is the one area with nothing to write: NetworkManager owns it, so the
-list, the connection and the saved profiles are all `nmcli`. A passphrase is
+list, the connection and the saved profiles are all `nmcli`, and the band is
+`omarchy-network-band` — the same control the bar's network widget offers.
+The address and gateway are read from the Wi-Fi device rather than the default
+route, which points at the tunnel when a VPN is up. A passphrase is
 handed to `nmcli --ask` on stdin rather than passed as an argument, so it never
 appears in the process list.
 

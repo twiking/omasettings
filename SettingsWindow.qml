@@ -55,6 +55,18 @@ Item {
 
   readonly property var wifi: state.wifi !== undefined ? state.wifi : ({})
   readonly property var wifiNetworks: wifi.networks !== undefined ? wifi.networks : []
+  readonly property var wifiConnection: wifi.connection !== undefined ? wifi.connection : ({})
+  readonly property var wifiBand: wifi.band !== undefined ? wifi.band : ({})
+
+  // Automatic plus whichever bands this radio and access point actually
+  // offer, so a 2.4-only network never shows a 5 GHz choice that cannot work.
+  function bandOptions() {
+    var out = [{ value: "auto", label: "Automatic" }]
+    var available = wifiBand.available !== undefined ? wifiBand.available : []
+    for (var i = 0; i < available.length; i++)
+      out.push({ value: String(available[i]), label: String(available[i]) + " GHz" })
+    return out
+  }
   // The network whose password field is open, if any.
   property string wifiPrompting: ""
 
@@ -1155,6 +1167,31 @@ Item {
           description: root.wifi.connected ? "Connected to " + root.wifi.connected : "Not connected"
           checked: root.wifi.enabled === true
           onRequested: function(next) { root.run(["wifi", "radio", next ? "on" : "off"]) }
+        }
+
+        ReadingRow {
+          label: "IP address"
+          visible: root.wifi.connected !== ""
+          value: root.wifiConnection.ip
+            ? String(root.wifiConnection.ip) + (root.wifiConnection.prefix ? "/" + root.wifiConnection.prefix : "")
+            : "—"
+        }
+
+        ReadingRow {
+          label: "Gateway"
+          visible: root.wifi.connected !== ""
+          value: root.wifiConnection.gateway ? String(root.wifiConnection.gateway) : "—"
+        }
+
+        PickerRow {
+          label: "Band"
+          visible: root.wifi.connected !== "" && root.bandOptions().length > 1
+          description: root.wifiBand.selected === "auto" && root.wifiBand.current
+            ? "Currently on " + root.wifiBand.current + " GHz"
+            : "Pinned; the radio will not move off it."
+          value: root.wifiBand.selected !== undefined ? String(root.wifiBand.selected) : "auto"
+          options: root.bandOptions()
+          onPicked: function(next) { root.run(["wifi", "band", next]) }
         }
 
         Item {
@@ -2422,6 +2459,20 @@ Item {
         fontFamily: root.fontFamily
         onClicked: if (passwordField.text !== "") root.connectWifi(wifiRow.ssid, passwordField.text)
       }
+    }
+  }
+
+  // A value the page reports but does not set.
+  component ReadingRow: SettingRow {
+    id: readingRow
+    property string value: ""
+
+    Text {
+      anchors.right: parent.right
+      text: readingRow.value
+      color: root.muted
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.body
     }
   }
 }

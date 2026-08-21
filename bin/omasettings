@@ -1200,17 +1200,54 @@ wifi_networks() {
       | sort_by(-(if .active then 1000 else 0 end) - .signal)'
 }
 
+# Address, gateway and resolvers as the Wi-Fi device itself has them. The
+# default route is not a reliable source here: with a VPN up it points at the
+# tunnel, which is not the answer to "what is my address on this network".
+wifi_connection() {
+  local device=$1
+  [[ -n $device ]] || { echo '{}'; return; }
+
+  nmcli -t -f IP4.ADDRESS,IP4.GATEWAY,IP4.DNS dev show "$device" 2>/dev/null \
+    | jq -R -s -c 'split("\n")
+      | map(select(length > 0) | (index(":") // -1) as $at
+        | select($at > 0) | { key: .[0:$at], value: .[$at + 1:] })
+      | from_entries
+      | { ip: ((.["IP4.ADDRESS[1]"] // "") | sub("/.*$"; "")),
+          prefix: ((.["IP4.ADDRESS[1]"] // "") | capture("/(?<p>[0-9]+)$").p? // ""),
+          gateway: (.["IP4.GATEWAY"] // ""),
+          dns: ([.["IP4.DNS[1]"], .["IP4.DNS[2]"]] | map(select(. != null and . != ""))) }'
+}
+
+# The same band control the bar's network widget offers: pin 2.4, 5 or 6 GHz,
+# or leave it automatic and let the radio choose.
+wifi_band() {
+  local report
+  report=$(omarchy-network-band 2>/dev/null) || { echo '{}'; return; }
+  jq -R -s -c 'split("\n")
+    | map(select(length > 0) | split("\t"))
+    | map({ key: .[0], value: (.[1] // "") })
+    | from_entries
+    | { current: (.band // ""),
+        selected: (.selected // "auto"),
+        available: ((.available // "") | split(" ") | map(select(length > 0))) }' <<<"$report"
+}
+
 wifi_state() {
-  local enabled device networks
+  local enabled device networks connection band
   enabled=$(nmcli -t -f WIFI general status 2>/dev/null | head -n1)
   device=$(wifi_device)
   networks=$([[ $enabled == enabled ]] && wifi_networks || echo '[]')
+  connection=$(wifi_connection "$device")
+  band=$(wifi_band)
 
   jq -cn --argjson available "$(command -v nmcli >/dev/null 2>&1 && echo true || echo false)" \
     --argjson enabled "$([[ $enabled == enabled ]] && echo true || echo false)" \
     --arg device "${device:-}" \
     --argjson networks "${networks:-[]}" \
+    --argjson connection "${connection:-{\}}" \
+    --argjson band "${band:-{\}}" \
     '{ available: $available, enabled: $enabled, device: $device, networks: $networks,
+       connection: $connection, band: $band,
        connected: (($networks[] | select(.active) | .ssid) // "") }'
 }
 
@@ -1245,6 +1282,11 @@ wifi_cmd() {
       fi
       grep -qiE '^error|failed' <<<"$output" && die "${output#Error: }"
       true ;;
+    band)
+      case $ssid in
+        auto|2.4|5|6) omarchy-network-band "$ssid" >/dev/null 2>&1 || die "could not pin the band to $ssid" ;;
+        *) die "expected auto, 2.4, 5 or 6" ;;
+      esac ;;
     disconnect)
       local device
       device=$(wifi_device)
@@ -1441,7 +1483,8 @@ usage:
   omasettings tmux state | tmux set <option> <value>
   omasettings nvim state | nvim set <option> <value>
   omasettings keys list | add "<KEYS>" "<description>" "<command>" | remove "<KEYS>" | disable "<KEYS>"
-  omasettings wifi list | rescan | connect <ssid> [password] | disconnect | forget <ssid> | radio on|off
+  omasettings wifi list | rescan | connect <ssid> [password] | disconnect | forget <ssid>
+                 | radio on|off | band auto|2.4|5|6
 USAGE
     exit 1 ;;
 esac

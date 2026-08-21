@@ -8,9 +8,27 @@ import "../ui" as Ui
 // row reads, and the calls every control makes.
 Ui.SectionBody {
   property var app: null
+  // "super+shift+r", "SUPER + SHIFT + R" and "Super Shift R" are one chord;
+  // the helper canonicalises the same way before it compares.
+  function canonicalKeys(text) {
+    return String(text).toUpperCase().replace(/\+/g, " ").trim().split(/\s+/).filter(function(part) {
+      return part !== ""
+    }).join(" + ")
+  }
+
+  // What the chord being typed would take over, if anything.
+  function bindingFor(text) {
+    var wanted = canonicalKeys(text)
+    if (wanted === "") return null
+    var items = app.bindings.items !== undefined ? app.bindings.items : []
+    for (var i = 0; i < items.length; i++)
+      if (String(items[i].canonical) === wanted) return items[i]
+    return null
+  }
+
   Ui.SettingGroup {
     title: "Add a binding"
-    note: "Keys as Hyprland spells them: SUPER, SHIFT, CTRL, ALT, and a key. Binding a combination that is already taken replaces it."
+    note: "Keys as Hyprland spells them: SUPER, SHIFT, CTRL, ALT, and a key."
 
     Row {
       width: parent.width
@@ -57,6 +75,24 @@ Ui.SectionBody {
           commandField.text = ""
         }
       }
+    }
+
+    // Saying so before the button is pressed, rather than after the old
+    // binding is gone.
+    Text {
+      readonly property var clash: bindingFor(keysField.text)
+
+      width: parent.width
+      visible: clash !== null
+      wrapMode: Text.WordWrap
+      text: clash
+        ? canonicalKeys(keysField.text) + " already runs " +
+          (String(clash.description) !== "" ? String(clash.description) : "something else") +
+          ". Adding this replaces it."
+        : ""
+      color: Color.urgent
+      font.family: Ui.Palette.fontFamily
+      font.pixelSize: Style.font.caption
     }
   }
 

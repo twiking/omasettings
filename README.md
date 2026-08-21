@@ -22,6 +22,7 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 | Compose Keys | Your `<Multi_key>` sequences: list, add, remove | `~/.XCompose` |
 | Date & Time | Timezone and system time resync | Omarchy menu Update → Timezone / Time |
 | Network | Wi-Fi networks, address and gateway, band, DNS resolver, Wi-Fi QR code | NetworkManager / `omarchy-network-band` / Omarchy menu Setup → Network |
+| Battery | Charge, time remaining, draw, health, and the power profile per power source | `upower` / `omarchy-powerprofiles-set` |
 | Bluetooth | Adapter power, paired and nearby devices, connect, pair, forget | `omarchy-bluetooth-power` / `omarchy-bluetooth-device` |
 | Applications → Defaults | Browser, terminal, editor, coding agent | Omarchy menu Setup → Defaults |
 | Applications → Herdr | Herdr's appearance, panes, sidebar, behaviour, notifications and prefix key | `~/.config/herdr/config.toml` |
@@ -186,6 +187,7 @@ lib/                   One module per thing being configured
   bindings.sh            Hyprland keybindings
   wifi.sh                NetworkManager
   bluetooth.sh           BlueZ, through Omarchy's power and device wrappers
+  battery.sh             battery reading and the per-source power profile
   setters.sh             the `set` subcommand's routing
   state.sh               one JSON document assembled from all of the above
 ```

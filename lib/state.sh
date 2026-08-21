@@ -39,6 +39,7 @@ state() {
   bindings=$(bindings_state)
   wifi=$(wifi_state)
   bluetooth=$(bluetooth_state)
+  battery=$(battery_state)
   textscale=$(omarchy display text size 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)?' | head -n1)
 
   jq -cn \
@@ -62,6 +63,7 @@ state() {
     --argjson bindings "${bindings:-{\}}" \
     --argjson wifi "${wifi:-{\}}" \
     --argjson bluetooth "${bluetooth:-{\}}" \
+    --argjson battery "${battery:-{\}}" \
     --arg textScale "${textscale:-1}" \
     '{
       theme: $theme,
@@ -92,6 +94,7 @@ state() {
       bindings: $bindings,
       wifi: $wifi,
       bluetooth: $bluetooth,
+      battery: $battery,
       iconFonts: $iconFonts
     }'
 }

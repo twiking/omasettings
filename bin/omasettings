@@ -18,6 +18,7 @@
 #   bindings.sh      Hyprland keybindings
 #   wifi.sh          NetworkManager
 #   bluetooth.sh     BlueZ, through Omarchy's power and device wrappers
+#   battery.sh       battery reading and the per-source power profile
 #   setters.sh       the `set` subcommand's routing
 #   state.sh         one JSON document assembled from all of the above
 
@@ -25,7 +26,7 @@ set -uo pipefail
 
 OMASETTINGS_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
 
-for module in core store hypr shell_config compose plugins menu herdr tmux neovim bindings wifi bluetooth setters state; do
+for module in core store hypr shell_config compose plugins menu herdr tmux neovim bindings wifi bluetooth battery setters state; do
   # shellcheck source=/dev/null
   source "$OMASETTINGS_LIB/$module.sh"
 done
@@ -42,6 +43,7 @@ case ${1:-state} in
   keys) shift; keys_cmd "$@" ;;
   wifi) shift; wifi_cmd "$@" ;;
   bluetooth) shift; bluetooth_cmd "$@" ;;
+  battery) shift; battery_cmd "$@" ;;
   menu) shift; [[ ${1:-} == run ]] || die "usage: omasettings menu run <entry-id>"; menu_run "${2:-}" ;;
   *)
     cat >&2 <<'USAGE'
@@ -56,6 +58,7 @@ usage:
   omasettings tmux state | tmux set <option> <value>
   omasettings nvim state | nvim set <option> <value>
   omasettings keys list | add "<KEYS>" "<description>" "<command>" | remove "<KEYS>" | disable "<KEYS>"
+  omasettings battery state | profile ac|battery <power-saver|balanced|performance>
   omasettings bluetooth state | power on|off | scan | poll | pair|connect|disconnect|forget <address>
   omasettings wifi list | rescan | poll | connect <ssid> [password] | disconnect | forget <ssid>
                  | radio on|off | band auto|2.4|5|6

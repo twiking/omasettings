@@ -54,6 +54,20 @@ Item {
   readonly property var datetime: state.datetime !== undefined ? state.datetime : ({})
   readonly property var groups: state.groups !== undefined ? state.groups : ({})
 
+  readonly property var bluetooth: state.bluetooth !== undefined ? state.bluetooth : ({})
+
+  // What the switch says underneath itself: the devices in hand, or why there
+  // are none.
+  readonly property string bluetoothSummary: {
+    if (bluetooth.available === false) return "No Bluetooth adapter"
+    if (bluetooth.powered !== true) return "Off"
+    var devices = bluetooth.devices !== undefined ? bluetooth.devices : []
+    var names = []
+    for (var i = 0; i < devices.length; i++)
+      if (devices[i].connected) names.push(devices[i].name !== "" ? devices[i].name : devices[i].address)
+    return names.length === 0 ? "Nothing connected" : "Connected to " + names.join(", ")
+  }
+
   readonly property var wifi: state.wifi !== undefined ? state.wifi : ({})
   readonly property var wifiNetworks: wifi.networks !== undefined ? wifi.networks : []
   readonly property var wifiConnection: wifi.connection !== undefined ? wifi.connection : ({})
@@ -252,6 +266,7 @@ Item {
     { id: "compose", title: "Compose Keys", icon: "\uf031", source: "~/.XCompose" },
     { id: "datetime", title: "Date & Time", icon: "\uf017", source: "/etc/localtime" },
     { id: "network", title: "Network", icon: "\uf1eb", source: "/etc/systemd/resolved.conf.d" },
+    { id: "bluetooth", title: "Bluetooth", icon: "\uf294", source: "bluetoothctl" },
 
     { id: "apps", title: "Applications", icon: "\uf085", children: [
       { id: "apps.defaults", title: "Defaults", source: "~/.config/omarchy/defaults" },
@@ -340,6 +355,7 @@ Item {
     case "compose": return "sections/ComposeSection.qml"
     case "datetime": return "sections/DateTimeSection.qml"
     case "network": return "sections/NetworkSection.qml"
+    case "bluetooth": return "sections/BluetoothSection.qml"
     case "apps.defaults": return "sections/DefaultsSection.qml"
     case "apps.tmux": return "sections/TmuxSection.qml"
     case "apps.nvim": return "sections/NvimSection.qml"

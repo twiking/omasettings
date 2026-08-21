@@ -22,6 +22,7 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 | Compose Keys | Your `<Multi_key>` sequences: list, add, remove | `~/.XCompose` |
 | Date & Time | Timezone and system time resync | Omarchy menu Update → Timezone / Time |
 | Network | Wi-Fi networks, address and gateway, band, DNS resolver, Wi-Fi QR code | NetworkManager / `omarchy-network-band` / Omarchy menu Setup → Network |
+| Bluetooth | Adapter power, paired and nearby devices, connect, pair, forget | `omarchy-bluetooth-power` / `omarchy-bluetooth-device` |
 | Applications → Defaults | Browser, terminal, editor, coding agent | Omarchy menu Setup → Defaults |
 | Applications → Herdr | Herdr's appearance, panes, sidebar, behaviour, notifications and prefix key | `~/.config/herdr/config.toml` |
 | Applications → Tmux | Prefix, copy-mode keys, status bar, window and pane numbering, mouse, scrollback, clipboard | `~/.config/tmux/tmux.conf` |
@@ -69,6 +70,11 @@ kept in OmaSettings' store and rendered into a marked block at the end of your
 Adding a combination that is already taken emits an `hl.unbind` before the
 `o.bind`, which is what makes an override actually win. Remove everything and
 the block disappears, leaving the file exactly as it was.
+
+Bluetooth goes through `omarchy-bluetooth-power` and `omarchy-bluetooth-device`
+rather than bluetoothctl: powering an adapter means clearing an rfkill soft
+block, which is what survives a reboot, and connecting a device means trusting
+it first. Those two already know that.
 
 Wi-Fi is the one area with nothing to write: NetworkManager owns it, so the
 list, the connection and the saved profiles are all `nmcli`, and the band is
@@ -155,6 +161,7 @@ ui/                    Presentation, with no idea what a setting is
   SwitchRow, PickerRow, TextRow, NumberRow, PercentRow, FactorRow,
   MinutesRow, ActionRow, ReadingRow, BrandingRow
   BindingRow.qml         A keybinding and the one action that fits it
+  DeviceRow.qml          A Bluetooth device, its battery, and what applies
   WifiRow.qml            A network, its signal, and its passphrase prompt
 
 sections/              One file per page, handed the window as `app`
@@ -162,7 +169,8 @@ sections/              One file per page, handed the window as `app`
   KeyboardSection.qml    BindingsSection.qml     PointerSection.qml
   DisplaysSection.qml    IdleSection.qml         PluginsSection.qml
   ComposeSection.qml     DateTimeSection.qml     NetworkSection.qml
-  DefaultsSection.qml    HerdrSection.qml        TmuxSection.qml
+  BluetoothSection.qml   DefaultsSection.qml     HerdrSection.qml
+  TmuxSection.qml
   NvimSection.qml
 
 bin/omasettings        Subcommand routing; every module is sourced from lib/
@@ -177,6 +185,7 @@ lib/                   One module per thing being configured
   herdr.sh  tmux.sh  neovim.sh    per-application configs
   bindings.sh            Hyprland keybindings
   wifi.sh                NetworkManager
+  bluetooth.sh           BlueZ, through Omarchy's power and device wrappers
   setters.sh             the `set` subcommand's routing
   state.sh               one JSON document assembled from all of the above
 ```

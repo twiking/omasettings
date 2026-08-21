@@ -38,6 +38,7 @@ state() {
   nvimstate=$(nvim_state)
   bindings=$(bindings_state)
   wifi=$(wifi_state)
+  bluetooth=$(bluetooth_state)
   textscale=$(omarchy display text size 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)?' | head -n1)
 
   jq -cn \
@@ -60,6 +61,7 @@ state() {
     --argjson nvim "${nvimstate:-{\}}" \
     --argjson bindings "${bindings:-{\}}" \
     --argjson wifi "${wifi:-{\}}" \
+    --argjson bluetooth "${bluetooth:-{\}}" \
     --arg textScale "${textscale:-1}" \
     '{
       theme: $theme,
@@ -89,6 +91,7 @@ state() {
       nvim: $nvim,
       bindings: $bindings,
       wifi: $wifi,
+      bluetooth: $bluetooth,
       iconFonts: $iconFonts
     }'
 }

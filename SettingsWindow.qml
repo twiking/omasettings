@@ -143,7 +143,7 @@ Item {
     { id: "idle", title: "Idle & Lock", icon: "\uf023", source: "~/.config/omarchy/shell.json" },
     { id: "plugins", title: "Plugins", icon: "\uf1e6", source: "~/.config/omarchy/shell.json" },
     { id: "compose", title: "Compose Keys", icon: "\uf031", source: "~/.XCompose" },
-    { id: "datetime", title: "Date & Time", icon: "\uf017", source: "timedatectl" },
+    { id: "datetime", title: "Date & Time", icon: "\uf017", source: "/etc/localtime" },
     { id: "agents", title: "Agents", icon: "\udb81\udea9", children: [
       { id: "agents.default", title: "Default Agents", source: "~/.config/omarchy/defaults/agent" },
       { id: "agents.herdr", title: "Herdr", source: "" }
@@ -434,7 +434,6 @@ Item {
     SectionBody {
       SettingGroup {
         title: "Theme and font"
-        note: "Applied with omarchy theme set / omarchy font set."
 
         PickerRow {
           label: "Theme"
@@ -622,7 +621,7 @@ Item {
     SectionBody {
       SettingGroup {
         title: "Layout"
-        note: "Comma-separated layouts switch with the key combination set in options."
+        note: "Add several layouts separated by commas, then set a shortcut to switch under Options."
 
         TextRow {
           label: "Layouts"
@@ -685,7 +684,7 @@ Item {
 
         PercentRow {
           label: "Sensitivity"
-          description: "Hyprland's -1 to 1 range, shown as a percentage of full speed."
+          description: "How far the pointer travels for the same hand movement."
           value: (Number(root.hyprValue("sensitivity", 0)) + 1) / 2
           onCommitted: function(next) { root.setHypr("sensitivity", (next * 2 - 1).toFixed(2)) }
         }
@@ -756,7 +755,6 @@ Item {
     SectionBody {
       SettingGroup {
         title: "Scale"
-        note: "Applied live and written to the generated Hyprland config."
 
         Repeater {
           model: root.monitors
@@ -802,7 +800,7 @@ Item {
     SectionBody {
       SettingGroup {
         title: "Installed plugins"
-        note: "Bar widgets also need a place in the bar; use omarchy bar put for that."
+        note: "A bar widget also needs a slot in the bar before it shows up there."
 
         Repeater {
           model: root.plugins
@@ -824,7 +822,7 @@ Item {
     SectionBody {
       SettingGroup {
         title: "Add a sequence"
-        note: "Compose key first, then the keys to press. Type <Multi_key> for the compose key itself."
+        note: "The compose key first, then the keys to press after it. Write the compose key as <Multi_key>."
 
         Row {
           width: parent.width
@@ -916,7 +914,6 @@ Item {
     SectionBody {
       SettingGroup {
         title: "Clock"
-        note: "Both actions are the Omarchy menu's Update → Timezone and Update → Time, and open the same picker and terminal."
 
         ActionRow {
           label: "Timezone"
@@ -943,7 +940,7 @@ Item {
     SectionBody {
       SettingGroup {
         title: "Default coding agent"
-        note: "The same entries as the Omarchy menu's Setup → Defaults → Agent, and the same actions: picking an agent that is not installed yet opens a terminal to set it up."
+        note: "An agent you have not installed yet is set up the first time you pick it."
 
         Repeater {
           model: root.agentsState.items !== undefined ? root.agentsState.items : []
@@ -966,7 +963,7 @@ Item {
     SectionBody {
       SettingGroup {
         title: "Herdr"
-        note: "Nothing here yet."
+        note: "Coming soon."
       }
     }
   }

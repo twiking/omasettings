@@ -1,40 +1,334 @@
 #!/bin/bash
-# omasettings — state reader and mutator behind the OmaSettings panel.
+# omasettings — the state reader and mutator behind the OmaSettings window.
 #
-# The panel stays declarative: it asks for `state` as one JSON blob and calls
-# `set <key> <value>` for every change, so all the shelling out, jq surgery and
-# omarchy-command knowledge lives here rather than in QML.
+# The window stays declarative: it asks for `state` as one JSON document and
+# calls `set <key> <value>` (or the `plugin` / `compose` subcommands) for every
+# change. All the shelling out, hyprctl querying, Lua generation and file
+# backup lives here rather than in QML.
+#
+# Where settings live:
+#   ~/.config/omarchy/shell.json      bar, idle, plugin enablement (omarchy owns it)
+#   ~/.config/hypr/*.lua              Hyprland config (the user owns it)
+#   ~/.config/hypr/omasettings.lua    generated from our own store, loaded last
+#   ~/.config/omarchy/omasettings.json  our store: every Hyprland value we set
+#   ~/.XCompose                       compose sequences
+#
+# Hyprland values are never edited in place in the user's own Lua or conf
+# files — parsing and rewriting hand-written config is how a settings app
+# eats someone's setup. Instead every change is applied live with
+# `hyprctl keyword` and recorded in our store, which is rendered into
+# omasettings.lua and loaded after the user's files so it survives a restart.
 
 set -uo pipefail
 
-SHELL_JSON="${OMARCHY_SHELL_JSON:-$HOME/.config/omarchy/shell.json}"
+HOME_DIR=${HOME:?}
+SHELL_JSON="${OMARCHY_SHELL_JSON:-$HOME_DIR/.config/omarchy/shell.json}"
+STORE="${OMASETTINGS_STORE:-$HOME_DIR/.config/omarchy/omasettings.json}"
+HYPR_DIR="${OMASETTINGS_HYPR_DIR:-$HOME_DIR/.config/hypr}"
+MANAGED_LUA="$HYPR_DIR/omasettings.lua"
+MANAGED_CONF="$HYPR_DIR/omasettings.conf"
+XCOMPOSE="${OMASETTINGS_XCOMPOSE:-$HOME_DIR/.XCompose}"
 
-json_string() { jq -Rn --arg v "$1" '$v'; }
+MANAGED_MARKER="omasettings:managed"
 
-# Lines to a JSON array, dropping blanks.
+die() { echo "omasettings: $*" >&2; exit 1; }
+
+# The first time OmaSettings writes to a file the user could have edited by
+# hand, keep a copy of what was there. Only the first time: later writes must
+# not overwrite the pristine backup with our own output.
+backup_once() {
+  local file=$1
+  [[ -f $file ]] || return 0
+  [[ -e "$file.omasettings.bak" ]] && return 0
+  cp -p "$file" "$file.omasettings.bak"
+}
+
+# `managed` marks a file OmaSettings generates in full: there is no
+# hand-written version of it worth keeping a backup of.
+write_file() {
+  local file=$1 managed=${2:-} tmp
+  [[ -n $managed ]] || backup_once "$file"
+  mkdir -p "$(dirname "$file")"
+  tmp=$(mktemp "$file.omasettings.XXXXXX") || return 1
+  cat >"$tmp" || { rm -f "$tmp"; return 1; }
+  mv "$tmp" "$file"
+}
+
 lines_to_array() { jq -Rn '[inputs | select(length > 0)]'; }
+
+# ---------------------------------------------------------------- our store
+
+read_store() {
+  [[ -f $STORE ]] && jq -c . "$STORE" 2>/dev/null && return
+  echo '{}'
+}
+
+# jq-edit the store, then re-render the generated Hyprland config from it.
+edit_store() {
+  local filter=$1
+  shift
+  local current next
+  current=$(read_store)
+  next=$(jq -c "$filter" "$@" <<<"$current") || die "failed to update $STORE"
+  write_file "$STORE" managed <<<"$next" || die "failed to write $STORE"
+  render_managed
+}
+
+store_get() { jq -r --arg k "$1" '.hypr[$k] // empty' <<<"$(read_store)"; }
+
+# ------------------------------------------------------- Hyprland plumbing
+
+# Every Hyprland setting the window can touch: our key, the Hyprland keyword,
+# and the value type used to read it back out of `hyprctl getoption`.
+hypr_keyword() {
+  case $1 in
+    gaps-in) echo "general:gaps_in css" ;;
+    gaps-out) echo "general:gaps_out css" ;;
+    border-size) echo "general:border_size int" ;;
+    rounding) echo "decoration:rounding int" ;;
+    active-opacity) echo "decoration:active_opacity float" ;;
+    inactive-opacity) echo "decoration:inactive_opacity float" ;;
+    dim-inactive) echo "decoration:dim_inactive bool" ;;
+    dim-strength) echo "decoration:dim_strength float" ;;
+    blur) echo "decoration:blur:enabled bool" ;;
+    blur-size) echo "decoration:blur:size int" ;;
+    blur-passes) echo "decoration:blur:passes int" ;;
+    animations) echo "animations:enabled bool" ;;
+    kb-layout) echo "input:kb_layout str" ;;
+    kb-variant) echo "input:kb_variant str" ;;
+    kb-options) echo "input:kb_options str" ;;
+    repeat-rate) echo "input:repeat_rate int" ;;
+    repeat-delay) echo "input:repeat_delay int" ;;
+    numlock) echo "input:numlock_by_default bool" ;;
+    sensitivity) echo "input:sensitivity float" ;;
+    accel-profile) echo "input:accel_profile str" ;;
+    follow-mouse) echo "input:follow_mouse int" ;;
+    natural-scroll) echo "input:touchpad:natural_scroll bool" ;;
+    disable-while-typing) echo "input:touchpad:disable_while_typing bool" ;;
+    clickfinger) echo "input:touchpad:clickfinger_behavior bool" ;;
+    tap-to-click) echo "input:touchpad:tap-to-click bool" ;;
+    scroll-factor) echo "input:touchpad:scroll_factor float" ;;
+    *) return 1 ;;
+  esac
+}
+
+# The live value, straight from the compositor — authoritative regardless of
+# which file (ours, theirs, a theme's) last set it.
+hypr_read() {
+  local key=$1 spec keyword type raw
+  spec=$(hypr_keyword "$key") || return 1
+  keyword=${spec%% *}
+  type=${spec##* }
+  raw=$(hyprctl -j getoption "$keyword" 2>/dev/null) || return 1
+  [[ -n $raw ]] || return 1
+  case $type in
+    int) jq -c '(.int // 0)' <<<"$raw" ;;
+    # Gaps come back as a CSS-style "2 2 2 2" box rather than an int; the
+    # window edits them as one number, so read the first side.
+    css) jq -c '((.css // "0") | split(" ") | .[0] | tonumber? // 0)' <<<"$raw" ;;
+    float) jq -c '((.float // 0) * 1000 | round) / 1000' <<<"$raw" ;;
+    bool) jq -c '((.int // 0) != 0)' <<<"$raw" ;;
+    # Hyprland spells "no value set" as [[EMPTY]]; the window wants "".
+    str) jq -c '((.str // "") | if . == "[[EMPTY]]" then "" else . end)' <<<"$raw" ;;
+  esac
+}
+
+hypr_state() {
+  local out='{}' key value
+  for key in gaps-in gaps-out border-size rounding active-opacity inactive-opacity \
+             dim-inactive dim-strength blur blur-size blur-passes animations \
+             kb-layout kb-variant kb-options repeat-rate repeat-delay numlock \
+             sensitivity accel-profile follow-mouse natural-scroll \
+             disable-while-typing clickfinger tap-to-click scroll-factor; do
+    value=$(hypr_read "$key") || continue
+    out=$(jq -c --arg k "$key" --argjson v "$value" '.[$k] = $v' <<<"$out")
+  done
+  echo "$out"
+}
+
+lua_value() {
+  local value=$1
+  case $value in
+    true|false) echo "$value" ;;
+    ''|*[!0-9.-]*) printf '"%s"' "$value" ;;
+    *) echo "$value" ;;
+  esac
+}
+
+# Render the store into a generated Lua file (or a conf file on pre-Lua
+# setups), and make sure the user's top-level config loads it.
+render_managed() {
+  local store keys
+  store=$(read_store)
+
+  if [[ -f $HYPR_DIR/hyprland.lua ]]; then
+    render_managed_lua "$store"
+    ensure_loaded "$HYPR_DIR/hyprland.lua" 'require("hypr.omasettings")'
+  else
+    render_managed_conf "$store"
+    ensure_loaded "$HYPR_DIR/hyprland.conf" 'source = ~/.config/hypr/omasettings.conf'
+  fi
+}
+
+render_managed_lua() {
+  local store=$1 pairs
+
+  # Each stored key knows its Hyprland keyword path (e.g. input:touchpad:
+  # natural_scroll); jq then folds those paths back into the nested tables the
+  # Lua config expects, so two touchpad settings share one touchpad table
+  # instead of overwriting each other.
+  pairs=$(while read -r key; do
+    spec=$(hypr_keyword "$key") || continue
+    jq -cn --arg key "$key" --arg keyword "${spec%% *}" '{key: $key, path: ($keyword | split(":"))}'
+  done < <(jq -r '.hypr // {} | keys[]' <<<"$store") | jq -s -c .)
+
+  {
+    echo "-- Generated by OmaSettings ($MANAGED_MARKER) — do not edit by hand."
+    echo "-- Every value here was set from the OmaSettings window; delete a line"
+    echo "-- to hand that setting back to your own config."
+    echo ""
+    jq -r --argjson pairs "$pairs" '
+      def lua(v):
+        if v == true or v == false then (v | tostring)
+        elif (v | type) == "number" then (v | tostring)
+        else "\"" + (v | tostring) + "\"" end;
+      def render(obj; indent):
+        [obj | to_entries[]
+          | if (.value | type) == "object"
+            then indent + .key + " = {\n" + render(.value; indent + "  ") + indent + "},\n"
+            else indent + .key + " = " + lua(.value) + ",\n" end]
+        | join("");
+      . as $store
+      | reduce $pairs[] as $p ({}; setpath($p.path; $store.hypr[$p.key]))
+      | to_entries[]
+      | "hl.config({\n  " + .key + " = {\n" + render(.value; "    ") + "  },\n})\n"
+    ' <<<"$store"
+  } | write_file "$MANAGED_LUA" managed
+}
+
+render_managed_conf() {
+  local store=$1 body="" keyword value
+  while read -r key; do
+    spec=$(hypr_keyword "$key") || continue
+    keyword=${spec%% *}
+    value=$(jq -r --arg k "$key" '.hypr[$k]' <<<"$store")
+    body+="$(tr ':' ':' <<<"$keyword") = $value"$'\n'
+  done < <(jq -r '.hypr // {} | keys[]' <<<"$store")
+
+  {
+    echo "# Generated by OmaSettings ($MANAGED_MARKER) — do not edit by hand."
+    echo ""
+    printf "%s" "$body"
+  } | write_file "$MANAGED_CONF" managed
+}
+
+# Append the load line to the user's top-level config exactly once.
+ensure_loaded() {
+  local file=$1 line=$2
+  [[ -f $file ]] || return 0
+  grep -qF "$line" "$file" && return 0
+  backup_once "$file"
+  {
+    echo ""
+    echo "-- Load settings written by OmaSettings ($MANAGED_MARKER)."
+    echo "$line"
+  } >>"$file"
+}
+
+hypr_set() {
+  local key=$1 value=$2 spec keyword type
+  spec=$(hypr_keyword "$key") || return 1
+  keyword=${spec%% *}
+  type=${spec##* }
+
+  case $type in
+    int|css) [[ $value =~ ^-?[0-9]+$ ]] || die "'$value' is not a whole number" ;;
+    float) [[ $value =~ ^-?[0-9]+(\.[0-9]+)?$ ]] || die "'$value' is not a number" ;;
+    bool) [[ $value == true || $value == false ]] || die "'$value' is not true or false" ;;
+  esac
+
+  local applied=$value
+  [[ $type == bool ]] && { [[ $value == true ]] && applied=1 || applied=0; }
+  hyprctl keyword "$keyword" "$applied" >/dev/null 2>&1
+
+  local json
+  if [[ $type == bool ]]; then json=$value
+  elif [[ $type == str ]]; then json=$(jq -Rn --arg v "$value" '$v')
+  else json=$value
+  fi
+  edit_store '.hypr = ((.hypr // {}) | .[$key] = $value)' --arg key "$key" --argjson value "$json"
+}
+
+# ------------------------------------------------------------- shell.json
 
 read_shell_json() {
   [[ -f $SHELL_JSON ]] && jq -c . "$SHELL_JSON" 2>/dev/null && return
   echo '{}'
 }
 
-# jq-edit shell.json in place through a temp file, so a failed filter or a
-# crash mid-write can never leave the shell with a truncated config.
 edit_shell_json() {
   local filter=$1
   shift
-  local current tmp
-  current=$(read_shell_json)
-  tmp=$(mktemp "${SHELL_JSON}.omasettings.XXXXXX") || return 1
-  if ! jq "$@" "$filter" <<<"$current" >"$tmp"; then
-    rm -f "$tmp"
-    echo "omasettings: failed to update $SHELL_JSON" >&2
-    return 1
-  fi
-  mkdir -p "$(dirname "$SHELL_JSON")"
-  mv "$tmp" "$SHELL_JSON"
+  local next
+  next=$(jq "$filter" "$@" <<<"$(read_shell_json)") || die "failed to update $SHELL_JSON"
+  write_file "$SHELL_JSON" <<<"$next" || die "failed to write $SHELL_JSON"
 }
+
+# ------------------------------------------------------------- .XCompose
+
+# One JSON object per sequence: the keys as written, and the string produced.
+compose_entries() {
+  [[ -f $XCOMPOSE ]] || { echo '[]'; return; }
+  grep -E '^[[:space:]]*<[^#]*:' "$XCOMPOSE" 2>/dev/null \
+    | jq -Rn '[inputs
+        | capture("^\\s*(?<keys>(<[^>]+>\\s*)+)\\s*:\\s*\"(?<text>([^\"\\\\]|\\\\.)*)\"(\\s*(?<name>\\S+))?\\s*$")
+        | { keys: (.keys | gsub("\\s+$"; "")), text: .text, name: (.name // "") }]' 2>/dev/null \
+    || echo '[]'
+}
+
+compose_add() {
+  local keys=$1 text=$2
+  [[ -n $keys && -n $text ]] || die "compose add needs both a key sequence and a result"
+  [[ $keys == *"<"* ]] || die "key sequence must look like '<Multi_key> <a> <b>'"
+
+  # A file that does not include the system rules yet needs the include line
+  # first, or adding one sequence silently drops every default one.
+  if [[ ! -f $XCOMPOSE ]]; then
+    write_file "$XCOMPOSE" <<<'include "%L"'
+  elif ! grep -q '^include ' "$XCOMPOSE"; then
+    backup_once "$XCOMPOSE"
+    printf 'include "%%L"\n%s' "$(cat "$XCOMPOSE")" | write_file "$XCOMPOSE"
+  fi
+
+  compose_remove "$keys" quiet
+  backup_once "$XCOMPOSE"
+  printf '%s : "%s"\n' "$keys" "$text" >>"$XCOMPOSE"
+}
+
+compose_remove() {
+  local keys=$1 quiet=${2:-}
+  [[ -f $XCOMPOSE ]] || return 0
+  local escaped
+  escaped=$(sed 's/[][\.*^$/]/\\&/g' <<<"$keys")
+  grep -qE "^[[:space:]]*$escaped[[:space:]]*:" "$XCOMPOSE" || { [[ -n $quiet ]] && return 0; return 0; }
+  backup_once "$XCOMPOSE"
+  grep -vE "^[[:space:]]*$escaped[[:space:]]*:" "$XCOMPOSE" | write_file "$XCOMPOSE"
+}
+
+# ----------------------------------------------------------------- plugins
+
+plugins_state() {
+  omarchy plugin list --json 2>/dev/null | jq -c '[.[] | {
+    id: .id,
+    name: (.name // .id),
+    kinds: (.kinds // []),
+    enabled: (.enabled == true),
+    firstParty: (.firstParty // .isFirstParty // false),
+    description: (.description // "")
+  }]' 2>/dev/null || echo '[]'
+}
+
+# ------------------------------------------------------------------- state
 
 nightlight_enabled() {
   local status
@@ -44,13 +338,18 @@ nightlight_enabled() {
 }
 
 state() {
-  local cfg themes fonts theme font nightlight
+  local cfg themes fonts theme font nightlight hypr monitors compose plugins textscale
   cfg=$(read_shell_json)
   themes=$(omarchy-theme-list 2>/dev/null | lines_to_array)
   fonts=$(omarchy font list 2>/dev/null | lines_to_array)
   theme=$(omarchy-theme-current 2>/dev/null | head -n1)
   font=$(omarchy font current 2>/dev/null | head -n1)
   nightlight=$(nightlight_enabled)
+  hypr=$(hypr_state)
+  monitors=$(hyprctl -j monitors 2>/dev/null | jq -c '[.[] | {name, scale, width, height, refreshRate: (.refreshRate | floor), transform}]' 2>/dev/null || echo '[]')
+  compose=$(compose_entries)
+  plugins=$(plugins_state)
+  textscale=$(omarchy display text size 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)?' | head -n1)
 
   jq -cn \
     --argjson cfg "$cfg" \
@@ -59,63 +358,114 @@ state() {
     --arg theme "$theme" \
     --arg font "$font" \
     --argjson nightlight "${nightlight:-false}" \
+    --argjson hypr "${hypr:-{\}}" \
+    --argjson monitors "${monitors:-[]}" \
+    --argjson compose "${compose:-[]}" \
+    --argjson plugins "${plugins:-[]}" \
+    --arg textScale "${textscale:-1}" \
     '{
       theme: $theme,
       themes: $themes,
       font: $font,
       fonts: $fonts,
       nightlight: $nightlight,
-      barPosition: (($cfg.bar.position // "top") | tostring),
-      barTransparent: (($cfg.bar.transparent // false) == true),
-      idleScreensaver: (($cfg.idle.screensaver // 150) | tonumber? // 150),
-      idleLock: (($cfg.idle.lock // 300) | tonumber? // 300)
+      textScale: (($textScale | tonumber?) // 1),
+      bar: {
+        position: (($cfg.bar.position // "top") | tostring),
+        transparent: (($cfg.bar.transparent // false) == true),
+        centerAnchor: (($cfg.bar.centerAnchor // "") | tostring)
+      },
+      idle: {
+        screensaver: (($cfg.idle.screensaver // 150) | tonumber? // 150),
+        lock: (($cfg.idle.lock // 300) | tonumber? // 300)
+      },
+      hypr: $hypr,
+      monitors: $monitors,
+      compose: $compose,
+      plugins: $plugins
     }'
 }
 
-require_value() {
-  [[ -n ${1:-} ]] && return 0
-  echo "omasettings: missing value for '$2'" >&2
-  return 1
-}
+# ------------------------------------------------------------------- setters
 
 set_key() {
   local key=${1:-} value=${2:-}
   case $key in
-    theme)
-      require_value "$value" "$key" || return 1
-      omarchy-theme-set "$value" ;;
-    font)
-      require_value "$value" "$key" || return 1
-      omarchy font set "$value" ;;
+    theme) [[ -n $value ]] || die "no theme given"; omarchy-theme-set "$value" ;;
+    font) [[ -n $value ]] || die "no font given"; omarchy font set "$value" ;;
+    text-scale) [[ -n $value ]] || die "no text size given"; omarchy display text size "$value" ;;
     nightlight)
       # The toggle script has no absolute set, so only flip when the requested
       # state differs from the live one — repeated clicks stay idempotent.
-      local current
-      current=$(nightlight_enabled)
-      [[ $current == "$value" ]] || omarchy-toggle-nightlight ;;
+      [[ $(nightlight_enabled) == "$value" ]] || omarchy-toggle-nightlight ;;
     bar-position)
       case $value in
         top|bottom|left|right) omarchy bar position "$value" ;;
-        *) echo "omasettings: bad bar position '$value'" >&2; return 1 ;;
+        *) die "bad bar position '$value'" ;;
       esac ;;
     bar-transparent)
       case $value in
         true|false|toggle) omarchy bar transparent "$value" ;;
-        *) echo "omasettings: bad bar transparency '$value'" >&2; return 1 ;;
+        *) die "bad bar transparency '$value'" ;;
       esac ;;
+    bar-center-anchor)
+      [[ -n $value ]] || die "no widget id given"
+      edit_shell_json '.bar = ((.bar // {}) | .centerAnchor = $id)' --arg id "$value" ;;
     idle-screensaver|idle-lock)
       local field=${key#idle-}
-      [[ $value =~ ^[0-9]+$ ]] || { echo "omasettings: '$value' is not a number of seconds" >&2; return 1; }
+      [[ $value =~ ^[0-9]+$ ]] || die "'$value' is not a number of seconds"
       edit_shell_json '.idle = ((.idle // {}) | .[$field] = ($seconds | tonumber))' \
         --arg field "$field" --arg seconds "$value" ;;
+    monitor-scale)
+      # "<output>=<scale>": scaling is per output, and the window sends the one
+      # the user picked rather than assuming a single screen.
+      local output=${value%%=*} scale=${value#*=}
+      [[ -n $output && $scale =~ ^[0-9]+(\.[0-9]+)?$ ]] || die "expected <output>=<scale>"
+      local mode
+      mode=$(hyprctl -j monitors 2>/dev/null | jq -r --arg o "$output" '.[] | select(.name == $o) | "\(.width)x\(.height)@\(.refreshRate | floor)"')
+      [[ -n $mode ]] || die "no monitor named '$output'"
+      hyprctl keyword monitor "$output,$mode,auto,$scale" >/dev/null 2>&1
+      edit_store '.monitors = ((.monitors // {}) | .[$o] = { scale: ($s | tonumber), mode: $m })' \
+        --arg o "$output" --arg s "$scale" --arg m "$mode" ;;
     *)
-      echo "omasettings: unknown key '$key'" >&2
-      return 1 ;;
+      hypr_set "$key" "$value" || die "unknown key '$key'" ;;
+  esac
+}
+
+plugin_cmd() {
+  local action=${1:-} id=${2:-}
+  [[ -n $id ]] || die "no plugin id given"
+  case $action in
+    enable) omarchy plugin enable "$id" ;;
+    disable) omarchy plugin disable "$id" ;;
+    *) die "unknown plugin action '$action'" ;;
+  esac
+}
+
+compose_cmd() {
+  local action=${1:-}
+  shift || true
+  case $action in
+    list) compose_entries ;;
+    add) compose_add "${1:-}" "${2:-}" ;;
+    remove) compose_remove "${1:-}" ;;
+    *) die "unknown compose action '$action'" ;;
   esac
 }
 
 case ${1:-state} in
   state) state ;;
+  keys) shift; hypr_keyword "${1:-}" ;;
   set) shift; set_key "$@" ;;
-  *) echo "usage: omasettings [state | set <key> <value>]" >&2; exit 1 ;;
+  plugin) shift; plugin_cmd "$@" ;;
+  compose) shift; compose_cmd "$@" ;;
+  *)
+    cat >&2 <<'USAGE'
+usage:
+  omasettings state
+  omasettings set <key> <value>
+  omasettings plugin enable|disable <id>
+  omasettings compose list | add "<Multi_key> <a> <b>" "text" | remove "<Multi_key> <a> <b>"
+USAGE
+    exit 1 ;;
 esac

@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "Tobias Wiking",
   "license": "MIT",
-  "description": "Quick settings in the bar: theme, font, bar placement, night light, and the idle and lock timeouts, each applied through the matching omarchy command.",
+  "description": "One window for the settings scattered across shell.json, the Hyprland config, and .XCompose: appearance, bar, windows, input, displays, idle, plugins, and compose keys.",
   "homepage": "https://github.com/twiking/omasettings",
   "kinds": [
     "bar-widget"
@@ -15,23 +15,9 @@
   },
   "barWidget": {
     "displayName": "OmaSettings",
-    "description": "Theme, font, bar, night light, and idle timeouts in one panel.",
+    "description": "Opens the OmaSettings window.",
     "category": "System",
     "allowMultiple": false,
-    "defaultSection": "right",
-    "defaults": {
-      "maxIdleMinutes": 60
-    },
-    "schema": [
-      {
-        "key": "maxIdleMinutes",
-        "type": "integer",
-        "label": "Upper end of the idle sliders (minutes)",
-        "min": 5,
-        "max": 240,
-        "step": 5,
-        "defaultValue": 60
-      }
-    ]
+    "defaultSection": "right"
   }
 }

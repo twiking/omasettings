@@ -181,7 +181,7 @@ Ui.SectionBody {
       Ui.ActionRow {
         readonly property bool theirs: Object.keys(configured).length > 0
 
-        buttonText: "Remove"
+        buttonText: "Remove Device"
         onTriggered: {
           if (theirs) app.removeDevice(name)
           else if (ours) app.clearDevice(name)

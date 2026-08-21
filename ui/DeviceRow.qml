@@ -80,14 +80,6 @@ Item {
       font.bold: deviceRow.connected
     }
 
-    Text {
-      anchors.verticalCenter: parent.verticalCenter
-      visible: deviceRow.paired && !deviceRow.connected
-      text: "paired"
-      color: Local.Palette.muted
-      font.family: Local.Palette.fontFamily
-      font.pixelSize: Style.font.caption
-    }
   }
 
   Row {

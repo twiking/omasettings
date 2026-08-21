@@ -340,7 +340,10 @@ nightlight_enabled() {
 state() {
   local cfg themes fonts theme font nightlight hypr monitors compose plugins textscale
   cfg=$(read_shell_json)
-  themes=$(omarchy-theme-list 2>/dev/null | lines_to_array)
+  # omarchy-theme-list finds every directory under the theme folders, dotted
+  # ones included, so anything a stray tool left behind there shows up as a
+  # theme. A theme is never hidden; drop those.
+  themes=$(omarchy-theme-list 2>/dev/null | grep -v '^\.' | lines_to_array)
   fonts=$(omarchy font list 2>/dev/null | lines_to_array)
   theme=$(omarchy-theme-current 2>/dev/null | head -n1)
   font=$(omarchy font current 2>/dev/null | head -n1)

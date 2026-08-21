@@ -23,6 +23,8 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 | Network | DNS resolver, Wi-Fi QR code | Omarchy menu Setup → Network |
 | Applications → Defaults | Browser, terminal, editor, coding agent | Omarchy menu Setup → Defaults |
 | Applications → Herdr | Herdr's appearance, panes, sidebar, behaviour, notifications and prefix key | `~/.config/herdr/config.toml` |
+| Applications → Tmux | Prefix, copy-mode keys, status bar, window and pane numbering, mouse, scrollback, clipboard | `~/.config/tmux/tmux.conf` |
+| Applications → Neovim | Gutter, wrapping, column guide, scrolloff, spell, indentation | `~/.config/nvim/lua/config/options.lua` |
 
 The Style, Setup and Update sections are read from the Omarchy menu's own definition
 (`omarchy-menu.jsonc`, defaults plus your extensions) rather than a second
@@ -51,11 +53,14 @@ Everything else goes through the `omarchy` command that already owns the
 setting — themes, fonts, text size, the bar, plugin enablement — rather than
 being written behind its back.
 
-Herdr's `config.toml` is the one file edited in place rather than generated:
-it is hand-written and every setting carries a comment explaining it, so
-values are replaced where they stand and new ones are appended to their table.
-Every write is validated with `herdr config check` and rolled back if Herdr
-rejects it.
+The per-application configs — Herdr's `config.toml`, `tmux.conf`, and
+Neovim's `options.lua` — are edited in place rather than generated:
+they are hand-written and their comments explain the choices, so a value is
+replaced where it already stands and a new one is appended. Each is checked
+in its own terms: Herdr with `herdr config check`, tmux by applying the option
+to the running server, and Neovim by compiling the Lua — and rolled back if
+the check fails. Because a tmux config is a script where the last assignment
+wins, it is the last one that gets rewritten.
 
 **Anything hand-written is backed up before the first touch.** The first time
 OmaSettings writes to a file you could have edited yourself — `hyprland.lua`,
@@ -145,6 +150,8 @@ bin/omasettings agents run codex
 bin/omasettings menu run update.timezone
 bin/omasettings herdr state | jq .
 bin/omasettings herdr set ui.pane_gaps true
+bin/omasettings tmux set mouse true
+bin/omasettings nvim set relativenumber false
 ```
 
 It needs `jq`, `hyprctl`, and the `omarchy` command line, all of which Omarchy

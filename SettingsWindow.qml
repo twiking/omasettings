@@ -63,8 +63,28 @@ Item {
 
   function setHerdr(key, value) { run(["herdr", "set", key, String(value)]) }
 
-  function editHerdrConfig() {
-    editProcess.command = ["bash", "-lc", "omarchy-launch-config-editor \"$HOME/.config/herdr/config.toml\""]
+  readonly property var tmux: state.tmux !== undefined ? state.tmux : ({})
+  readonly property var tmuxValues: tmux.values !== undefined ? tmux.values : ({})
+
+  function tmuxValue(key, fallback) {
+    var value = tmuxValues ? tmuxValues[key] : undefined
+    return value === undefined || value === null ? fallback : value
+  }
+
+  function setTmux(key, value) { run(["tmux", "set", key, String(value)]) }
+
+  readonly property var nvim: state.nvim !== undefined ? state.nvim : ({})
+  readonly property var nvimValues: nvim.values !== undefined ? nvim.values : ({})
+
+  function nvimValue(key, fallback) {
+    var value = nvimValues ? nvimValues[key] : undefined
+    return value === undefined || value === null ? fallback : value
+  }
+
+  function setNvim(key, value) { run(["nvim", "set", key, String(value)]) }
+
+  function editConfig(path) {
+    editProcess.command = ["bash", "-lc", "omarchy-launch-config-editor \"" + path + "\""]
     editProcess.running = true
   }
 
@@ -188,7 +208,9 @@ Item {
 
     { id: "apps", title: "Applications", icon: "\uf085", children: [
       { id: "apps.defaults", title: "Defaults", source: "~/.config/omarchy/defaults" },
-      { id: "apps.herdr", title: "Herdr", source: "~/.config/herdr/config.toml" }
+      { id: "apps.herdr", title: "Herdr", source: "~/.config/herdr/config.toml" },
+      { id: "apps.tmux", title: "Tmux", source: "~/.config/tmux/tmux.conf" },
+      { id: "apps.nvim", title: "Neovim", source: "~/.config/nvim/lua/config/options.lua" }
     ] }
   ]
 
@@ -269,6 +291,8 @@ Item {
     case "datetime": return datetimeSection
     case "network": return networkSection
     case "apps.defaults": return defaultsSection
+    case "apps.tmux": return tmuxSection
+    case "apps.nvim": return nvimSection
     default: return herdrSection
     }
   }
@@ -1089,6 +1113,247 @@ Item {
   }
 
   Component {
+    id: tmuxSection
+    SectionBody {
+      SettingGroup {
+        title: "Keys"
+
+        TextRow {
+          label: "Prefix"
+          description: "tmux spelling: C-Space, C-b, M-a."
+          placeholder: "C-b"
+          value: String(root.tmuxValue("prefix", "C-b"))
+          onCommitted: function(next) { root.setTmux("prefix", next) }
+        }
+
+        PickerRow {
+          label: "Copy mode keys"
+          value: String(root.tmuxValue("mode-keys", "emacs"))
+          options: [
+            { value: "vi", label: "Vi" },
+            { value: "emacs", label: "Emacs" }
+          ]
+          onPicked: function(next) { root.setTmux("mode-keys", next) }
+        }
+
+        ActionRow {
+          label: "Every shortcut"
+          description: "The full list, as tmux has it."
+          buttonText: "Show…"
+          onTriggered: root.run(["menu", "run", "learn.tmux-keybindings"])
+        }
+      }
+
+      SettingGroup {
+        title: "Status bar"
+
+        PickerRow {
+          label: "Position"
+          value: String(root.tmuxValue("status-position", "bottom"))
+          options: [
+            { value: "top", label: "Top" },
+            { value: "bottom", label: "Bottom" }
+          ]
+          onPicked: function(next) { root.setTmux("status-position", next) }
+        }
+      }
+
+      SettingGroup {
+        title: "Windows and panes"
+
+        NumberRow {
+          label: "First window number"
+          value: Number(root.tmuxValue("base-index", 0))
+          from: 0
+          to: 1
+          onCommitted: function(next) { root.setTmux("base-index", next) }
+        }
+
+        NumberRow {
+          label: "First pane number"
+          value: Number(root.tmuxValue("pane-base-index", 0))
+          from: 0
+          to: 1
+          onCommitted: function(next) { root.setTmux("pane-base-index", next) }
+        }
+
+        SwitchRow {
+          label: "Renumber when one closes"
+          checked: root.tmuxValue("renumber-windows", false) === true
+          onRequested: function(next) { root.setTmux("renumber-windows", next ? "true" : "false") }
+        }
+      }
+
+      SettingGroup {
+        title: "Behaviour"
+
+        SwitchRow {
+          label: "Mouse"
+          description: "Click to focus a pane, drag to resize, scroll to page back."
+          checked: root.tmuxValue("mouse", false) === true
+          onRequested: function(next) { root.setTmux("mouse", next ? "true" : "false") }
+        }
+
+        NumberRow {
+          label: "Scrollback"
+          suffix: "lines"
+          value: Number(root.tmuxValue("history-limit", 2000))
+          from: 1000
+          to: 100000
+          step: 1000
+          onCommitted: function(next) { root.setTmux("history-limit", next) }
+        }
+
+        NumberRow {
+          label: "Escape delay"
+          suffix: "ms"
+          description: "Low values keep Esc snappy in Vim; zero can break some terminals."
+          value: Number(root.tmuxValue("escape-time", 500))
+          from: 0
+          to: 500
+          step: 10
+          onCommitted: function(next) { root.setTmux("escape-time", next) }
+        }
+
+        PickerRow {
+          label: "Clipboard"
+          description: "Whether tmux hands copied text to the outer terminal."
+          value: String(root.tmuxValue("set-clipboard", "external"))
+          options: [
+            { value: "on", label: "On" },
+            { value: "external", label: "External only" },
+            { value: "off", label: "Off" }
+          ]
+          onPicked: function(next) { root.setTmux("set-clipboard", next) }
+        }
+      }
+
+      SettingGroup {
+        title: "Beyond these settings"
+
+        ActionRow {
+          label: "The rest of the config"
+          description: "Open tmux.conf for bindings, styling, and plugins."
+          buttonText: "Edit…"
+          onTriggered: root.editConfig("$HOME/.config/tmux/tmux.conf")
+        }
+      }
+    }
+  }
+
+  Component {
+    id: nvimSection
+    SectionBody {
+      SettingGroup {
+        title: "The gutter"
+
+        SwitchRow {
+          label: "Line numbers"
+          checked: root.nvimValue("number", true) === true
+          onRequested: function(next) { root.setNvim("number", next ? "true" : "false") }
+        }
+
+        SwitchRow {
+          label: "Relative line numbers"
+          checked: root.nvimValue("relativenumber", true) === true
+          onRequested: function(next) { root.setNvim("relativenumber", next ? "true" : "false") }
+        }
+
+        PickerRow {
+          label: "Sign column"
+          description: "Where git marks and diagnostics appear."
+          value: String(root.nvimValue("signcolumn", "yes"))
+          options: [
+            { value: "yes", label: "Always" },
+            { value: "auto", label: "Only when needed" },
+            { value: "no", label: "Never" }
+          ]
+          onPicked: function(next) { root.setNvim("signcolumn", next) }
+        }
+      }
+
+      SettingGroup {
+        title: "The text"
+
+        SwitchRow {
+          label: "Wrap long lines"
+          checked: root.nvimValue("wrap", false) === true
+          onRequested: function(next) { root.setNvim("wrap", next ? "true" : "false") }
+        }
+
+        SwitchRow {
+          label: "Highlight the current line"
+          checked: root.nvimValue("cursorline", true) === true
+          onRequested: function(next) { root.setNvim("cursorline", next ? "true" : "false") }
+        }
+
+        TextRow {
+          label: "Column guide"
+          description: "A column number, or empty for none."
+          placeholder: "100"
+          value: String(root.nvimValue("colorcolumn", ""))
+          onCommitted: function(next) { root.setNvim("colorcolumn", next) }
+        }
+
+        NumberRow {
+          label: "Keep visible above and below"
+          suffix: "lines"
+          value: Number(root.nvimValue("scrolloff", 4))
+          from: 0
+          to: 20
+          onCommitted: function(next) { root.setNvim("scrolloff", next) }
+        }
+
+        SwitchRow {
+          label: "Spell checking"
+          checked: root.nvimValue("spell", false) === true
+          onRequested: function(next) { root.setNvim("spell", next ? "true" : "false") }
+        }
+      }
+
+      SettingGroup {
+        title: "Indentation"
+
+        SwitchRow {
+          label: "Spaces instead of tabs"
+          checked: root.nvimValue("expandtab", true) === true
+          onRequested: function(next) { root.setNvim("expandtab", next ? "true" : "false") }
+        }
+
+        NumberRow {
+          label: "Indent width"
+          suffix: "spaces"
+          value: Number(root.nvimValue("shiftwidth", 2))
+          from: 1
+          to: 8
+          onCommitted: function(next) { root.setNvim("shiftwidth", next) }
+        }
+
+        NumberRow {
+          label: "Tab width"
+          suffix: "spaces"
+          value: Number(root.nvimValue("tabstop", 2))
+          from: 1
+          to: 8
+          onCommitted: function(next) { root.setNvim("tabstop", next) }
+        }
+      }
+
+      SettingGroup {
+        title: "Beyond these settings"
+        note: "Changes here apply the next time Neovim starts."
+
+        ActionRow {
+          label: "The rest of the config"
+          description: "Open options.lua for anything this page does not cover."
+          buttonText: "Edit…"
+          onTriggered: root.editConfig("$HOME/.config/nvim/lua/config/options.lua")
+        }
+      }
+    }
+  }
+
+  Component {
     id: herdrSection
     SectionBody {
       SettingGroup {
@@ -1304,7 +1569,7 @@ Item {
           label: "The rest of the config"
           description: "Open config.toml for the settings this page does not cover."
           buttonText: "Edit…"
-          onTriggered: root.editHerdrConfig()
+          onTriggered: root.editConfig("$HOME/.config/herdr/config.toml")
         }
       }
 

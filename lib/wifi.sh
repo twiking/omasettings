@@ -117,6 +117,13 @@ wifi_cmd() {
       # back is the one we already had.
       sleep 2
       wifi_state ;;
+    poll)
+      # For the page's own refresh loop: ask for a scan and return what is
+      # known right now, without waiting for it. NetworkManager rate-limits
+      # rescans and answers the request with an error when one came too soon,
+      # which is fine — the next poll picks up whatever that scan found.
+      nmcli dev wifi rescan >/dev/null 2>&1 || true
+      wifi_state ;;
     radio)
       case $ssid in
         on|off) nmcli radio wifi "$ssid" >/dev/null 2>&1 || die "could not turn Wi-Fi $ssid" ;;

@@ -21,31 +21,24 @@ Ui.SectionBody {
   Ui.SettingGroup {
     visible: app.wifi.enabled === true
 
-    Item {
+    // Networks come and go while you are looking at them, so the page keeps
+    // its own list current rather than making you ask. It runs only while
+    // this page is the one on screen and the window is open.
+    Timer {
+      interval: 5000
+      running: app.shown
+      repeat: true
+      triggeredOnStart: true
+      onTriggered: app.pollWifi()
+    }
+
+    Text {
       width: parent.width
-      implicitHeight: rescanButton.implicitHeight
-
-      Text {
-        anchors.left: parent.left
-        anchors.verticalCenter: parent.verticalCenter
-        text: app.wifiNetworks.length === 1 ? "1 network in range"
-                                             : app.wifiNetworks.length + " networks in range"
-        color: app.muted
-        font.family: app.fontFamily
-        font.pixelSize: Style.font.caption
-      }
-
-      Button {
-        id: rescanButton
-        anchors.right: parent.right
-        text: "Scan again"
-        bordered: true
-        foreground: app.foreground
-        accent: app.accent
-        fontFamily: app.fontFamily
-        fontSize: Style.font.caption
-        onClicked: app.run(["wifi", "rescan"])
-      }
+      text: app.wifiNetworks.length === 1 ? "1 network in range"
+                                          : app.wifiNetworks.length + " networks in range"
+      color: Ui.Palette.muted
+      font.family: Ui.Palette.fontFamily
+      font.pixelSize: Style.font.caption
     }
 
     Repeater {

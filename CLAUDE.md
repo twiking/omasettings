@@ -164,6 +164,11 @@ Connected, Paired and Nearby — three headings — because those answer *what a
 using*, *what do I own*, *what else is here*. One list sorted by state makes the
 reader infer the boundaries from the buttons on each row.
 
+**What belongs to a heading is stepped in from it.** `SettingGroup` indents
+its note and its rows under a title, so membership is a matter of looking
+rather than of reading. A group with no title indents nothing — there is
+nothing to belong to.
+
 **A heading earns its place or disappears.** `SettingGroup` renders no heading
 when its title is empty, which is right for a page with a single group; the
 page name is already the heading.
@@ -181,6 +186,12 @@ gets set up when you pick it, that a bar widget still needs a slot in the bar.
 **Don't repeat state that is visible below.** The header says whether Bluetooth
 is on, not which devices are connected, and the Wi-Fi switch does not name the
 network you are on — the list under both is already saying it, a few rows down.
+
+**A page that watches something keeps itself current.** The Network page polls
+Wi-Fi every five seconds while it is the page on screen *and* the window is
+open (`running: app.shown`), through a light `wifi poll` that asks for a scan
+and returns immediately, rather than re-reading the whole state. Nobody should
+have to press a button to see what is in the room.
 
 ## Shell conventions
 

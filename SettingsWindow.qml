@@ -68,7 +68,33 @@ Item {
     return names.length === 0 ? "Nothing connected" : "Connected to " + names.join(", ")
   }
 
-  readonly property var wifi: state.wifi !== undefined ? state.wifi : ({})
+  // While the Network page is open it polls Wi-Fi on its own, far more often
+  // than the whole state is worth re-reading. That poll's answer stands in
+  // for the Wi-Fi part of the state until the next full read replaces it.
+  property var wifiLive: null
+  readonly property var wifi: wifiLive !== null ? wifiLive
+    : (state.wifi !== undefined ? state.wifi : ({}))
+
+  function pollWifi() {
+    if (wifiPollProcess.running) return
+    wifiPollProcess.command = ["bash", root.helperPath, "wifi", "poll"]
+    wifiPollProcess.running = true
+  }
+
+  Process {
+    id: wifiPollProcess
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        try {
+          var next = JSON.parse(text)
+          if (next && typeof next === "object") root.wifiLive = next
+        } catch (e) {
+          // A failed poll leaves the last good list on screen.
+        }
+      }
+    }
+  }
   readonly property var wifiNetworks: wifi.networks !== undefined ? wifi.networks : []
   readonly property var wifiConnection: wifi.connection !== undefined ? wifi.connection : ({})
   readonly property var wifiBand: wifi.band !== undefined ? wifi.band : ({})
@@ -219,6 +245,7 @@ Item {
           if (next && typeof next === "object") {
             root.state = next
             root.loaded = true
+            root.wifiLive = null
           }
         } catch (e) {
           // A partial read leaves the last good state on screen.

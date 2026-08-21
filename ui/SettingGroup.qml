@@ -7,6 +7,9 @@ Column {
   id: group
   property string title: ""
   property string note: ""
+  // Everything under a heading is stepped in from it, so which rows belong to
+  // which heading is a matter of looking rather than of reading.
+  property real indent: title !== "" ? Style.space(14) : 0
   default property alias content: groupContent.data
 
   width: parent ? parent.width : 0
@@ -23,7 +26,8 @@ Column {
 
   Text {
     visible: group.note !== ""
-    width: group.width
+    x: group.indent
+    width: group.width - group.indent
     text: group.note
     wrapMode: Text.WordWrap
     color: Local.Palette.muted
@@ -33,7 +37,8 @@ Column {
 
   Column {
     id: groupContent
-    width: group.width
+    x: group.indent
+    width: group.width - group.indent
     spacing: Style.space(12)
   }
 }

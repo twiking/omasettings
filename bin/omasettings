@@ -57,7 +57,7 @@ usage:
   omasettings nvim state | nvim set <option> <value>
   omasettings keys list | add "<KEYS>" "<description>" "<command>" | remove "<KEYS>" | disable "<KEYS>"
   omasettings bluetooth state | power on|off | scan | pair|connect|disconnect|forget <address>
-  omasettings wifi list | rescan | connect <ssid> [password] | disconnect | forget <ssid>
+  omasettings wifi list | rescan | poll | connect <ssid> [password] | disconnect | forget <ssid>
                  | radio on|off | band auto|2.4|5|6
 USAGE
     exit 1 ;;

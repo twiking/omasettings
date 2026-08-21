@@ -10,7 +10,7 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 
 | Section | What it covers | Where it lands |
 |---|---|---|
-| Appearance | Theme, font, text size, night light | `omarchy theme set` / `omarchy font set` / `omarchy display text size` |
+| Appearance | Theme, font, text size, night light, background, boot screen, screensaver and about branding | `omarchy theme set` / `omarchy font set` / `omarchy display text size` / Omarchy menu Style |
 | Bar | Position, transparency, centred widget | `~/.config/omarchy/shell.json` |
 | Windows | Gaps, border, rounding, window opacity, dim, animations, blur | Hyprland |
 | Keyboard | Layouts, variant, XKB options, repeat rate and delay, num lock | Hyprland |
@@ -20,10 +20,12 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 | Plugins | Enable and disable installed shell plugins | `omarchy plugin enable/disable` |
 | Compose Keys | Your `<Multi_key>` sequences: list, add, remove | `~/.XCompose` |
 | Date & Time | Timezone and system time resync | Omarchy menu Update → Timezone / Time |
+| Network | DNS resolver, Wi-Fi QR code | Omarchy menu Setup → Network |
+| Default Apps | Browser, terminal, editor | Omarchy menu Setup → Defaults |
 | Agents → Default Agents | The default coding agent | `omarchy-default-agent` |
 | Agents → Herdr | Nothing yet | — |
 
-Date & Time and Agents are read from the Omarchy menu's own definition
+The Style, Setup and Update sections are read from the Omarchy menu's own definition
 (`omarchy-menu.jsonc`, defaults plus your extensions) rather than a second
 list that can drift, so its entries and actions are exactly the menu's
 Setup → Defaults → Agent and Update → Timezone / Time: picking an agent that

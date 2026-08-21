@@ -51,6 +51,21 @@ Item {
   readonly property var plugins: state.plugins !== undefined ? state.plugins : []
   readonly property var agentsState: state.agents !== undefined ? state.agents : ({})
   readonly property var datetime: state.datetime !== undefined ? state.datetime : ({})
+  readonly property var groups: state.groups !== undefined ? state.groups : ({})
+
+  function group(name) {
+    var g = groups ? groups[name] : undefined
+    return g !== undefined && g !== null ? g : { items: [], current: "" }
+  }
+
+  // A menu group as dropdown options, labelled the way the menu labels them.
+  function groupOptions(name) {
+    var items = group(name).items || []
+    var out = []
+    for (var i = 0; i < items.length; i++)
+      out.push({ value: String(items[i].id), label: String(items[i].label) })
+    return out
+  }
 
   // Menu entries can ask for Omarchy's own icon font. Asking Qt for the family
   // by name is not enough — a stale user-installed omarchy.ttf with a single
@@ -144,6 +159,8 @@ Item {
     { id: "plugins", title: "Plugins", icon: "\uf1e6", source: "~/.config/omarchy/shell.json" },
     { id: "compose", title: "Compose Keys", icon: "\uf031", source: "~/.XCompose" },
     { id: "datetime", title: "Date & Time", icon: "\uf017", source: "/etc/localtime" },
+    { id: "network", title: "Network", icon: "\uf1eb", source: "/etc/systemd/resolved.conf.d" },
+    { id: "defaults", title: "Default Apps", icon: "\uf085", source: "~/.config/omarchy/defaults" },
     { id: "agents", title: "Agents", icon: "\udb81\udea9", children: [
       { id: "agents.default", title: "Default Agents", source: "~/.config/omarchy/defaults/agent" },
       { id: "agents.herdr", title: "Herdr", source: "" }
@@ -225,6 +242,8 @@ Item {
     case "plugins": return pluginsSection
     case "compose": return composeSection
     case "datetime": return datetimeSection
+    case "network": return networkSection
+    case "defaults": return defaultsSection
     case "agents.default": return defaultAgentsSection
     default: return herdrSection
     }
@@ -472,6 +491,39 @@ Item {
           onRequested: function(next) { root.set("nightlight", next ? "true" : "false") }
         }
       }
+
+      SettingGroup {
+        title: "Wallpaper and boot"
+
+        ActionRow {
+          label: "Background"
+          description: "Pick from the wallpapers that come with your theme."
+          buttonText: "Choose…"
+          onTriggered: root.run(["menu", "run", "style.background"])
+        }
+
+        ActionRow {
+          label: "Boot and unlock screen"
+          description: "The animation shown while the machine starts and unlocks."
+          buttonText: "Choose…"
+          onTriggered: root.run(["menu", "run", "style.unlock"])
+        }
+      }
+
+      SettingGroup {
+        title: "Branding"
+        note: "What the screensaver and the about screen show."
+
+        BrandingRow {
+          label: "Screensaver"
+          entryPrefix: "style.screensaver"
+        }
+
+        BrandingRow {
+          label: "About screen"
+          entryPrefix: "style.about"
+        }
+      }
     }
   }
 
@@ -611,6 +663,17 @@ Item {
           from: 1
           to: 5
           onCommitted: function(next) { root.setHypr("blur-passes", next) }
+        }
+      }
+
+      SettingGroup {
+        title: "Beyond these settings"
+
+        ActionRow {
+          label: "Window rules and animations"
+          description: "Open looknfeel.lua for anything this page does not cover."
+          buttonText: "Edit…"
+          onTriggered: root.run(["menu", "run", "style.hyprland"])
         }
       }
     }
@@ -904,6 +967,65 @@ Item {
               onClicked: root.run(["compose", "remove", modelData.keys])
             }
           }
+        }
+      }
+    }
+  }
+
+  Component {
+    id: networkSection
+    SectionBody {
+      SettingGroup {
+        title: "DNS"
+        note: "Which servers resolve names on every connection."
+
+        PickerRow {
+          label: "Resolver"
+          value: root.group("dns").current
+          options: root.groupOptions("dns")
+          onPicked: function(next) { root.run(["menu", "run", "setup.network.dns." + next]) }
+        }
+      }
+
+      SettingGroup {
+        title: "Sharing"
+
+        ActionRow {
+          label: "Wi-Fi QR code"
+          description: "Show a code others can scan to join this network."
+          buttonText: "Show…"
+          onTriggered: root.run(["menu", "run", "setup.network.qr"])
+        }
+      }
+    }
+  }
+
+  Component {
+    id: defaultsSection
+    SectionBody {
+      SettingGroup {
+        title: "Applications"
+        note: "An app you have not installed yet is set up the first time you pick it."
+
+        PickerRow {
+          label: "Browser"
+          value: root.group("browser").current
+          options: root.groupOptions("browser")
+          onPicked: function(next) { root.run(["menu", "run", "setup.default.browser." + next]) }
+        }
+
+        PickerRow {
+          label: "Terminal"
+          value: root.group("terminal").current
+          options: root.groupOptions("terminal")
+          onPicked: function(next) { root.run(["menu", "run", "setup.default.terminal." + next]) }
+        }
+
+        PickerRow {
+          label: "Editor"
+          value: root.group("editor").current
+          options: root.groupOptions("editor")
+          onPicked: function(next) { root.run(["menu", "run", "setup.default.editor." + next]) }
         }
       }
     }
@@ -1398,6 +1520,45 @@ Item {
       accent: root.accent
       fontFamily: root.fontFamily
       onClicked: actionRow.triggered()
+    }
+  }
+
+  // Three ways to set one piece of branding, the way the menu offers them:
+  // type it, point at an image, or put the shipped one back.
+  component BrandingRow: SettingRow {
+    id: brandingRow
+    property string entryPrefix: ""
+
+    Row {
+      anchors.right: parent.right
+      spacing: Style.space(8)
+
+      Button {
+        text: "Text…"
+        bordered: true
+        foreground: root.foreground
+        accent: root.accent
+        fontFamily: root.fontFamily
+        onClicked: root.run(["menu", "run", brandingRow.entryPrefix + ".text"])
+      }
+
+      Button {
+        text: "Image…"
+        bordered: true
+        foreground: root.foreground
+        accent: root.accent
+        fontFamily: root.fontFamily
+        onClicked: root.run(["menu", "run", brandingRow.entryPrefix + ".image"])
+      }
+
+      Button {
+        text: "Reset"
+        bordered: true
+        foreground: root.foreground
+        accent: root.accent
+        fontFamily: root.fontFamily
+        onClicked: root.run(["menu", "run", brandingRow.entryPrefix + ".default"])
+      }
     }
   }
 }

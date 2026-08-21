@@ -392,10 +392,14 @@ menu_entries() {
   jq -c -s '.[0] * .[1]' <(jsonc_to_json "$MENU_DEFAULTS") <(jsonc_to_json "$MENU_USER") 2>/dev/null || echo '{}'
 }
 
-agent_entries() {
-  menu_entries | jq -c '[to_entries[]
-    | select(.key | test("^setup\\.default\\.agent\\.[^.]+$"))
+# Every direct child of a menu id, in menu order: the entries OmaSettings
+# renders as a pick-one group.
+menu_group() {
+  local prefix=$1
+  menu_entries | jq -c --arg prefix "$prefix" '[to_entries[]
+    | select(.key | startswith($prefix + ".") and (.[($prefix | length) + 1:] | contains(".") | not))
     | { id: (.key | split(".") | last),
+        entry: .key,
         label: (.value.label // (.key | split(".") | last)),
         icon: (.value.icon // ""),
         iconFont: (.value.iconFont // ""),
@@ -403,32 +407,44 @@ agent_entries() {
         check: (.value.checked // "") }]'
 }
 
-agents_state() {
-  local entries current
-  entries=$(agent_entries)
-  current=$(omarchy-default-agent 2>/dev/null | head -n1)
-  # `checked` is a bash expression in the menu definition; evaluating it keeps
-  # a custom entry's own idea of "current" working instead of assuming every
-  # agent is chosen through omarchy-default-agent.
-  local checked='[]' id expr result
-  checked=$(while read -r id; do
-    expr=$(jq -r --arg id "$id" '.[] | select(.id == $id) | .check' <<<"$entries")
-    if [[ -n $expr ]]; then
-      bash -c "$expr" >/dev/null 2>&1 && result=true || result=false
-    else
-      [[ $id == "$current" ]] && result=true || result=false
-    fi
-    jq -cn --arg id "$id" --argjson checked "$result" '{id: $id, checked: $checked}'
-  done < <(jq -r '.[].id' <<<"$entries") | jq -s -c 'INDEX(.id) | map_values(.checked)')
+agent_entries() { menu_group "setup.default.agent"; }
 
-  jq -cn --argjson entries "$entries" --argjson checked "${checked:-{\}}" --arg current "$current" \
-    '{ current: $current,
-       items: [$entries[] | . + { checked: (($checked[.id]) // false) }] }'
+# Each entry carries a bash expression saying whether it is the current choice.
+# They all run in one shell rather than one process per entry: a settings
+# window that takes a second to open is a settings window nobody opens.
+evaluate_checks() {
+  local entries=$1 script
+  script=$(jq -r '.[] | select(.check != "") | "if " + .check + "; then echo \"" + .id + "\ttrue\"; else echo \"" + .id + "\tfalse\"; fi"' <<<"$entries")
+  [[ -n $script ]] || { echo '{}'; return; }
+  bash -c "$script" 2>/dev/null | jq -R -s -c 'split("\n")
+    | map(select(length > 0) | split("\t") | { key: .[0], value: (.[1] == "true") })
+    | from_entries'
+}
+
+# A group as the window wants it: the entries plus which one is current.
+menu_group_state() {
+  local entries checked
+  entries=$(menu_group "$1")
+  checked=$(evaluate_checks "$entries")
+  jq -cn --argjson entries "$entries" --argjson checked "${checked:-{\}}" \
+    '{ items: [$entries[] | . + { checked: (($checked[.id]) // false) }] }
+     | . + { current: ((.items[] | select(.checked) | .id) // "") }'
+}
+
+agents_state() {
+  local state current
+  state=$(menu_group_state "setup.default.agent")
+  # The agent group's own checked tests already say which is current; the
+  # command is asked only as a fallback for a menu without them.
+  current=$(jq -r '.current' <<<"$state")
+  [[ -n $current && $current != "" ]] || current=$(omarchy-default-agent 2>/dev/null | head -n1)
+  jq -c --arg current "$current" '.current = $current' <<<"$state"
 }
 
 # Run a menu entry's action exactly as the menu would. Picking an agent that
-# is not installed, or changing the timezone, opens a terminal or a picker of
-# its own, so this must outlive the settings window: detach it.
+# is not installed, changing the timezone, or setting a DNS provider opens a
+# terminal or a picker of its own, so this must outlive the settings window:
+# detach it.
 menu_run() {
   local id=$1 command
   command=$(menu_entries | jq -r --arg id "$id" '.[$id].action // ""')
@@ -529,7 +545,7 @@ nightlight_enabled() {
 }
 
 state() {
-  local cfg themes fonts theme font nightlight hypr monitors compose plugins agents iconfonts datetime textscale
+  local cfg themes fonts theme font nightlight hypr monitors compose plugins agents groups iconfonts datetime textscale
   cfg=$(read_shell_json)
   # omarchy-theme-list finds every directory under the theme folders, dotted
   # ones included, so anything a stray tool left behind there shows up as a
@@ -544,6 +560,12 @@ state() {
   compose=$(compose_entries)
   plugins=$(plugins_state)
   agents=$(agents_state)
+  groups=$(jq -cn \
+    --argjson browser "$(menu_group_state "setup.default.browser")" \
+    --argjson terminal "$(menu_group_state "setup.default.terminal")" \
+    --argjson editor "$(menu_group_state "setup.default.editor")" \
+    --argjson dns "$(menu_group_state "setup.network.dns")" \
+    '{ browser: $browser, terminal: $terminal, editor: $editor, dns: $dns }')
   iconfonts=$(icon_font_state)
   datetime=$(datetime_state)
   textscale=$(omarchy display text size 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)?' | head -n1)
@@ -562,6 +584,7 @@ state() {
     --argjson agents "${agents:-null}" \
     --argjson iconFonts "${iconfonts:-{\}}" \
     --argjson datetime "${datetime:-{\}}" \
+    --argjson groups "${groups:-{\}}" \
     --arg textScale "${textscale:-1}" \
     '{
       theme: $theme,
@@ -584,6 +607,7 @@ state() {
       compose: $compose,
       plugins: $plugins,
       agents: $agents,
+      groups: $groups,
       datetime: $datetime,
       iconFonts: $iconFonts
     }'

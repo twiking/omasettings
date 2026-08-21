@@ -10,7 +10,6 @@ Ui.SectionBody {
   property var app: null
   Ui.SettingGroup {
     title: "Timeouts"
-    note: "Counted from when you stop using the machine."
 
     Ui.MinutesRow {
       label: "Screensaver after"

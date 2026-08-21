@@ -174,13 +174,11 @@ Ui.SectionBody {
         onCommitted: function(next) { app.setDevice(name, "scroll_factor", next, "pointer") }
       }
 
+      // No label: what the button removes is the group it sits in, and how
+      // that is undone in a config file is not the reader's problem.
       Ui.ActionRow {
         readonly property bool theirs: Object.keys(configured).length > 0
 
-        label: "Follow the settings above"
-        description: theirs
-          ? "The hl.device block in your config is commented out, not deleted."
-          : ""
         buttonText: "Remove"
         onTriggered: {
           if (theirs) app.removeDevice(name)

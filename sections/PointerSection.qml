@@ -9,7 +9,6 @@ import "../ui" as Ui
 Ui.SectionBody {
   property var app: null
   Ui.SettingGroup {
-    title: "Pointer"
 
     Ui.PercentRow {
       label: "Sensitivity"
@@ -86,7 +85,7 @@ Ui.SectionBody {
 
   // A device is only worth a group of its own once it departs from the
   // settings above. The rest are one dropdown away, so a page with five
-  // devices and no overrides stays a page about pointers, not a list of
+  // devices and no overrides stays a page about settings, not a list of
   // hardware.
   property var opened: []
 
@@ -195,10 +194,10 @@ Ui.SectionBody {
     visible: untouched.length > 0
 
     Ui.PickerRow {
-      label: "Settings for one pointer"
-      description: "Give a single pointer its own settings, apart from the ones above."
+      label: "Settings for one device"
+      description: "Give a single mouse or touchpad its own settings, apart from the ones above."
       value: ""
-      options: [{ value: "", label: "Pick a pointer…" }].concat(untouched.map(function(device) {
+      options: [{ value: "", label: "Pick a device…" }].concat(untouched.map(function(device) {
         return {
           value: String(device.name),
           label: String(device.name) + (device.connected === false ? " (not connected)" : "")

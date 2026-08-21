@@ -21,7 +21,7 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 | Plugins | Enable and disable installed shell plugins | `omarchy plugin enable/disable` |
 | Compose Keys | Your `<Multi_key>` sequences: list, add, remove | `~/.XCompose` |
 | Date & Time | Timezone and system time resync | Omarchy menu Update → Timezone / Time |
-| Network | DNS resolver, Wi-Fi QR code | Omarchy menu Setup → Network |
+| Network | Wi-Fi networks, DNS resolver, Wi-Fi QR code | NetworkManager / Omarchy menu Setup → Network |
 | Applications → Defaults | Browser, terminal, editor, coding agent | Omarchy menu Setup → Defaults |
 | Applications → Herdr | Herdr's appearance, panes, sidebar, behaviour, notifications and prefix key | `~/.config/herdr/config.toml` |
 | Applications → Tmux | Prefix, copy-mode keys, status bar, window and pane numbering, mouse, scrollback, clipboard | `~/.config/tmux/tmux.conf` |
@@ -69,6 +69,11 @@ kept in OmaSettings' store and rendered into a marked block at the end of your
 Adding a combination that is already taken emits an `hl.unbind` before the
 `o.bind`, which is what makes an override actually win. Remove everything and
 the block disappears, leaving the file exactly as it was.
+
+Wi-Fi is the one area with nothing to write: NetworkManager owns it, so the
+list, the connection and the saved profiles are all `nmcli`. A passphrase is
+handed to `nmcli --ask` on stdin rather than passed as an argument, so it never
+appears in the process list.
 
 **Anything hand-written is backed up before the first touch.** The first time
 OmaSettings writes to a file you could have edited yourself — `hyprland.lua`,
@@ -164,6 +169,8 @@ bin/omasettings keys list | jq .
 bin/omasettings keys add "SUPER + SHIFT + R" "SSH box" "alacritty -e ssh myserver"
 bin/omasettings keys disable "SUPER + SHIFT + X"
 bin/omasettings keys remove "SUPER + SHIFT + R"
+bin/omasettings wifi list | jq .
+bin/omasettings wifi connect "Some Network" "passphrase"
 ```
 
 It needs `jq`, `hyprctl`, and the `omarchy` command line, all of which Omarchy

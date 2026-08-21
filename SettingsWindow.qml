@@ -53,6 +53,17 @@ Item {
   readonly property var datetime: state.datetime !== undefined ? state.datetime : ({})
   readonly property var groups: state.groups !== undefined ? state.groups : ({})
 
+  readonly property var wifi: state.wifi !== undefined ? state.wifi : ({})
+  readonly property var wifiNetworks: wifi.networks !== undefined ? wifi.networks : []
+  // The network whose password field is open, if any.
+  property string wifiPrompting: ""
+
+  function connectWifi(ssid, password) {
+    wifiPrompting = ""
+    if (password !== undefined && password !== "") run(["wifi", "connect", ssid, password])
+    else run(["wifi", "connect", ssid])
+  }
+
   readonly property var bindings: state.bindings !== undefined ? state.bindings : ({})
   property string bindingFilter: ""
 
@@ -1137,6 +1148,58 @@ Item {
     id: networkSection
     SectionBody {
       SettingGroup {
+        title: "Wi-Fi"
+
+        SwitchRow {
+          label: "Wi-Fi"
+          description: root.wifi.connected ? "Connected to " + root.wifi.connected : "Not connected"
+          checked: root.wifi.enabled === true
+          onRequested: function(next) { root.run(["wifi", "radio", next ? "on" : "off"]) }
+        }
+
+        Item {
+          width: parent.width
+          implicitHeight: rescanButton.implicitHeight
+          visible: root.wifi.enabled === true
+
+          Text {
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.wifiNetworks.length === 1 ? "1 network in range"
+                                                 : root.wifiNetworks.length + " networks in range"
+            color: root.muted
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+          }
+
+          Button {
+            id: rescanButton
+            anchors.right: parent.right
+            text: "Scan again"
+            bordered: true
+            foreground: root.foreground
+            accent: root.accent
+            fontFamily: root.fontFamily
+            fontSize: Style.font.caption
+            onClicked: root.run(["wifi", "rescan"])
+          }
+        }
+
+        Repeater {
+          model: root.wifi.enabled === true ? root.wifiNetworks : []
+          delegate: WifiRow {
+            required property var modelData
+            width: parent.width
+            ssid: modelData.ssid
+            signalStrength: Number(modelData.signal)
+            secured: modelData.secured === true
+            saved: modelData.saved === true
+            active: modelData.active === true
+          }
+        }
+      }
+
+      SettingGroup {
         title: "DNS"
         note: "Which servers resolve names on every connection."
 
@@ -2189,6 +2252,175 @@ Item {
       onClicked: {
         if (bindingRow.mine || bindingRow.off) root.run(["keys", "remove", bindingRow.keys])
         else root.run(["keys", "disable", bindingRow.keys])
+      }
+    }
+  }
+
+  // One network: name, how strong it is, whether it wants a password, and
+  // what clicking it will do. A network that needs a password asks for it
+  // in place rather than in a dialog on top of the list.
+  component WifiRow: Column {
+    id: wifiRow
+    property string ssid: ""
+    property int signalStrength: 0
+    property bool secured: false
+    property bool saved: false
+    property bool active: false
+
+    readonly property bool prompting: root.wifiPrompting === wifiRow.ssid
+    // A saved network has its password already; only a new secured one needs asking.
+    readonly property bool needsPassword: wifiRow.secured && !wifiRow.saved
+
+    width: parent ? parent.width : 0
+    spacing: Style.space(6)
+
+    Item {
+      width: parent.width
+      implicitHeight: Style.spacing.controlHeight
+
+      Rectangle {
+        anchors.fill: parent
+        radius: Style.cornerRadius
+        color: wifiRow.active
+          ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.14)
+          : (wifiMouse.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08) : "transparent")
+      }
+
+      MouseArea {
+        id: wifiMouse
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: {
+          if (wifiRow.active) return
+          if (wifiRow.needsPassword) root.wifiPrompting = wifiRow.prompting ? "" : wifiRow.ssid
+          else root.connectWifi(wifiRow.ssid)
+        }
+      }
+
+      Row {
+        anchors.left: parent.left
+        anchors.leftMargin: Style.space(10)
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Style.space(10)
+
+        // Four rungs of signal, drawn rather than set in a glyph: icon fonts
+        // vary in what they carry, and a missing glyph would leave every
+        // network looking equally strong.
+        Row {
+          anchors.verticalCenter: parent.verticalCenter
+          width: Style.space(20)
+          spacing: Style.space(2)
+
+          Repeater {
+            model: 4
+            delegate: Rectangle {
+              required property int index
+              readonly property int rungs: wifiRow.signalStrength >= 70 ? 4
+                                         : wifiRow.signalStrength >= 45 ? 3
+                                         : wifiRow.signalStrength >= 20 ? 2 : 1
+              width: Style.space(3)
+              height: Style.space(4) + index * Style.space(3)
+              anchors.bottom: parent.bottom
+              radius: 1
+              color: wifiRow.active ? root.accent : root.foreground
+              opacity: index < rungs ? 1 : 0.25
+            }
+          }
+        }
+
+        Text {
+          anchors.verticalCenter: parent.verticalCenter
+          text: wifiRow.ssid
+          color: root.foreground
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.body
+          font.bold: wifiRow.active
+        }
+
+        Text {
+          anchors.verticalCenter: parent.verticalCenter
+          visible: wifiRow.secured
+          text: "\uf023"
+          color: root.muted
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+        }
+
+        Text {
+          anchors.verticalCenter: parent.verticalCenter
+          visible: wifiRow.saved && !wifiRow.active
+          text: "saved"
+          color: root.muted
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+        }
+      }
+
+      Row {
+        anchors.right: parent.right
+        anchors.rightMargin: Style.space(6)
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Style.space(8)
+
+        Text {
+          anchors.verticalCenter: parent.verticalCenter
+          text: wifiRow.signalStrength + "%"
+          color: root.muted
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+        }
+
+        Button {
+          anchors.verticalCenter: parent.verticalCenter
+          visible: wifiRow.active
+          text: "Disconnect"
+          bordered: true
+          foreground: root.foreground
+          accent: root.accent
+          fontFamily: root.fontFamily
+          fontSize: Style.font.caption
+          onClicked: root.run(["wifi", "disconnect"])
+        }
+
+        Button {
+          anchors.verticalCenter: parent.verticalCenter
+          visible: wifiRow.saved && !wifiRow.active && wifiMouse.containsMouse
+          text: "Forget"
+          bordered: true
+          foreground: root.foreground
+          accent: root.accent
+          fontFamily: root.fontFamily
+          fontSize: Style.font.caption
+          onClicked: root.run(["wifi", "forget", wifiRow.ssid])
+        }
+      }
+    }
+
+    Row {
+      width: parent.width
+      visible: wifiRow.prompting
+      spacing: Style.space(8)
+
+      TextField {
+        id: passwordField
+        width: parent.width - connectButton.width - Style.space(8)
+        placeholderText: "Password for " + wifiRow.ssid
+        password: true
+        foreground: root.foreground
+        accent: root.accent
+        onAccepted: if (text !== "") root.connectWifi(wifiRow.ssid, text)
+      }
+
+      Button {
+        id: connectButton
+        anchors.verticalCenter: parent.verticalCenter
+        text: "Connect"
+        bordered: true
+        foreground: root.foreground
+        accent: root.accent
+        fontFamily: root.fontFamily
+        onClicked: if (passwordField.text !== "") root.connectWifi(wifiRow.ssid, passwordField.text)
       }
     }
   }

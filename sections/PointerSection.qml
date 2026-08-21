@@ -8,52 +8,25 @@ import "../ui" as Ui
 // row reads, and the calls every control makes.
 Ui.SectionBody {
   property var app: null
-  readonly property string device: app.pointerDevice
-  readonly property bool perDevice: device !== ""
-
-  // Which pointer the settings below apply to: a trackball that needs its own
-  // sensitivity should not drag the touchpad along with it.
-  Ui.SettingGroup {
-    visible: (app.devices.pointers !== undefined ? app.devices.pointers.length : 0) > 1
-
-    Ui.PickerRow {
-      label: "These settings apply to"
-      description: perDevice && app.deviceIsConfigured(app.devices.pointers, device, "sensitivity")
-        ? "Showing what your own config sets for this device."
-        : ""
-      value: device
-      options: app.deviceOptions(app.devices.pointers, "Every pointer")
-      onPicked: function(next) { app.pointerDevice = next }
-    }
-  }
-
   Ui.SettingGroup {
     title: "Pointer"
 
     Ui.PercentRow {
       label: "Sensitivity"
       description: "How far the pointer travels for the same hand movement."
-      value: (Number(perDevice ? app.deviceSetting(app.devices.pointers, device, "sensitivity", app.hyprValue("sensitivity", 0))
-                               : app.hyprValue("sensitivity", 0)) + 1) / 2
-      onCommitted: function(next) {
-        if (perDevice) app.setDevice(device, "sensitivity", (next * 2 - 1).toFixed(2), "pointer")
-        else app.setHypr("sensitivity", (next * 2 - 1).toFixed(2))
-      }
+      value: (Number(app.hyprValue("sensitivity", 0)) + 1) / 2
+      onCommitted: function(next) { app.setHypr("sensitivity", (next * 2 - 1).toFixed(2)) }
     }
 
     Ui.PickerRow {
       label: "Acceleration"
-      value: String(perDevice ? app.deviceSetting(app.devices.pointers, device, "accel_profile", app.hyprValue("accel-profile", ""))
-                              : app.hyprValue("accel-profile", ""))
+      value: String(app.hyprValue("accel-profile", ""))
       options: [
         { value: "", label: "Default (adaptive)" },
         { value: "flat", label: "Flat — no acceleration" },
         { value: "adaptive", label: "Adaptive" }
       ]
-      onPicked: function(next) {
-        if (perDevice) app.setDevice(device, "accel_profile", next, "pointer")
-        else app.setHypr("accel-profile", next)
-      }
+      onPicked: function(next) { app.setHypr("accel-profile", next) }
     }
 
     Ui.PickerRow {
@@ -74,12 +47,8 @@ Ui.SectionBody {
 
     Ui.SwitchRow {
       label: "Natural scrolling"
-      checked: (perDevice ? app.deviceSetting(app.devices.pointers, device, "natural_scroll", app.hyprValue("natural-scroll", false))
-                          : app.hyprValue("natural-scroll", false)) === true
-      onRequested: function(next) {
-        if (perDevice) app.setDevice(device, "natural_scroll", next ? "true" : "false", "pointer")
-        else app.setHypr("natural-scroll", next ? "true" : "false")
-      }
+      checked: app.hyprValue("natural-scroll", false) === true
+      onRequested: function(next) { app.setHypr("natural-scroll", next ? "true" : "false") }
     }
 
     Ui.SwitchRow {
@@ -103,11 +72,84 @@ Ui.SectionBody {
 
     Ui.FactorRow {
       label: "Scroll speed"
-      value: Number(perDevice ? app.deviceSetting(app.devices.pointers, device, "scroll_factor", app.hyprValue("scroll-factor", 1))
-                              : app.hyprValue("scroll-factor", 1))
-      onCommitted: function(next) {
-        if (perDevice) app.setDevice(device, "scroll_factor", next, "pointer")
-        else app.setHypr("scroll-factor", next)
+      value: Number(app.hyprValue("scroll-factor", 1))
+      onCommitted: function(next) { app.setHypr("scroll-factor", next) }
+    }
+  }
+
+  // Every pointer that can depart from the settings above gets its own group,
+  // so what a control writes is never in doubt: the ones under a device name
+  // write that device, the ones above write every device.
+  //
+  // A device shows the value in force for it — what was set here, else what
+  // the user's own config gives it, else the global setting above.
+  Repeater {
+    model: app.devices.pointers !== undefined ? app.devices.pointers : []
+
+    delegate: Ui.SettingGroup {
+      required property var modelData
+
+      readonly property string name: String(modelData.name)
+      readonly property var settings: modelData.settings || ({})
+      readonly property var configured: modelData.configured || ({})
+      readonly property bool ours: Object.keys(settings).length > 0
+
+      // Not called `value`: inside a row, that name resolves to the row's own
+      // value property rather than to this.
+      function inForce(key, fallback) {
+        if (settings[key] !== undefined && settings[key] !== null) return settings[key]
+        if (configured[key] !== undefined && configured[key] !== null) return configured[key]
+        return fallback
+      }
+
+      width: parent.width
+      title: name + (modelData.connected === false ? "  (not connected)" : "")
+      note: Object.keys(configured).length > 0 && !ours
+        ? "Set in your own Hyprland config."
+        : ""
+
+      Ui.PercentRow {
+        label: "Sensitivity"
+        value: (Number(inForce("sensitivity", app.hyprValue("sensitivity", 0))) + 1) / 2
+        onCommitted: function(next) { app.setDevice(name, "sensitivity", (next * 2 - 1).toFixed(2), "pointer") }
+      }
+
+      Ui.PickerRow {
+        label: "Acceleration"
+        value: String(inForce("accel_profile", app.hyprValue("accel-profile", "")))
+        options: [
+          { value: "", label: "Default (adaptive)" },
+          { value: "flat", label: "Flat — no acceleration" },
+          { value: "adaptive", label: "Adaptive" }
+        ]
+        onPicked: function(next) { app.setDevice(name, "accel_profile", next, "pointer") }
+      }
+
+      Ui.SwitchRow {
+        label: "Natural scrolling"
+        checked: inForce("natural_scroll", app.hyprValue("natural-scroll", false)) === true
+        onRequested: function(next) { app.setDevice(name, "natural_scroll", next ? "true" : "false", "pointer") }
+      }
+
+      Ui.SwitchRow {
+        label: "Left handed"
+        checked: inForce("left_handed", false) === true
+        onRequested: function(next) { app.setDevice(name, "left_handed", next ? "true" : "false", "pointer") }
+      }
+
+      Ui.FactorRow {
+        label: "Scroll speed"
+        minimum: 0.1
+        maximum: 3
+        value: Number(inForce("scroll_factor", app.hyprValue("scroll-factor", 1)))
+        onCommitted: function(next) { app.setDevice(name, "scroll_factor", next, "pointer") }
+      }
+
+      Ui.ActionRow {
+        label: "Follow the settings above"
+        visible: ours
+        buttonText: "Clear"
+        onTriggered: app.clearDevice(name)
       }
     }
   }

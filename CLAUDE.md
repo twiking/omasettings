@@ -166,10 +166,18 @@ first.
 ## Per-device input
 
 Hyprland lets one keyboard or pointer depart from the global input settings
-(`hl.device`). The Keyboard and Mouse pages carry a picker that switches what
-their controls write: "Every keyboard" writes `input`, a named device writes
-that device. A control shows the device's value when it has one and the global
-value when it does not, so it always shows what is in force.
+(`hl.device`). Each device gets **its own group**, below the global settings
+and titled with the device name, so what a control writes is never in doubt:
+the rows under a device name write that device, the rows above write all of
+them.
+
+The first attempt used one picker that switched what the page's controls wrote.
+It was fewer rows and it was wrong — the same slider meaning different things
+depending on a dropdown three groups up is a trap, not a saving. If a control
+can write to two places, show two controls.
+
+A device row shows the value in force for it: what was set here, else what the
+user's own config gives it, else the global setting above.
 
 `hyprctl devices` reports far more devices than anyone has on a desk — power
 buttons, lid switches, video buses, virtual keyboards — so `devices.sh` filters

@@ -151,11 +151,18 @@ device_set() {
   hyprctl eval "hl.device({ name = $(jq -Rn --arg v "$name" '$v'), $key = $formatted })" >/dev/null 2>&1
 }
 
+# With no key, everything OmaSettings set for that device goes. What the user
+# wrote in their own config is untouched — it was never ours to clear.
 device_clear() {
-  local name=$1 key=$2
+  local name=$1 key=${2:-}
   [[ -n $name ]] || die "no device given"
-  edit_store '.devices = ((.devices // {}) | .[$name] = ((.[$name] // {}) | del(.[$key])) | with_entries(select(.value != {})))' \
-    --arg name "$name" --arg key "$key"
+
+  if [[ -n $key ]]; then
+    edit_store '.devices = ((.devices // {}) | .[$name] = ((.[$name] // {}) | del(.[$key])) | with_entries(select(.value != {})))' \
+      --arg name "$name" --arg key "$key"
+  else
+    edit_store '.devices = ((.devices // {}) | del(.[$name]))' --arg name "$name"
+  fi
   # Hyprland has no way to unset one device option, so the config it was
   # written into is reloaded without it.
   hyprctl reload >/dev/null 2>&1

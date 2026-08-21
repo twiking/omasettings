@@ -8,26 +8,6 @@ import "../ui" as Ui
 // row reads, and the calls every control makes.
 Ui.SectionBody {
   property var app: null
-  readonly property string device: app.keyboardDevice
-  readonly property bool perDevice: device !== ""
-
-  // Which keyboard the settings below apply to. Hyprland lets one device
-  // depart from the global input settings; picking it here is what switches
-  // these controls from writing `input` to writing `hl.device`.
-  Ui.SettingGroup {
-    visible: (app.devices.keyboards !== undefined ? app.devices.keyboards.length : 0) > 1
-
-    Ui.PickerRow {
-      label: "These settings apply to"
-      value: device
-      description: perDevice && app.deviceIsConfigured(app.devices.keyboards, device, "kb_layout")
-        ? "Showing what your own config sets for this device."
-        : ""
-      options: app.deviceOptions(app.devices.keyboards, "Every keyboard")
-      onPicked: function(next) { app.keyboardDevice = next }
-    }
-  }
-
   Ui.SettingGroup {
     title: "Layout"
     note: "Add several layouts separated by commas, then set a shortcut to switch under Options."
@@ -35,34 +15,22 @@ Ui.SectionBody {
     Ui.TextRow {
       label: "Layouts"
       placeholder: "us,se"
-      value: String(perDevice ? app.deviceSetting(app.devices.keyboards, device, "kb_layout", app.hyprValue("kb-layout", ""))
-                              : app.hyprValue("kb-layout", ""))
-      onCommitted: function(next) {
-        if (perDevice) app.setDevice(device, "kb_layout", next, "keyboard")
-        else app.setHypr("kb-layout", next)
-      }
+      value: String(app.hyprValue("kb-layout", ""))
+      onCommitted: function(next) { app.setHypr("kb-layout", next) }
     }
 
     Ui.TextRow {
       label: "Variant"
       placeholder: "intl"
-      value: String(perDevice ? app.deviceSetting(app.devices.keyboards, device, "kb_variant", app.hyprValue("kb-variant", ""))
-                              : app.hyprValue("kb-variant", ""))
-      onCommitted: function(next) {
-        if (perDevice) app.setDevice(device, "kb_variant", next, "keyboard")
-        else app.setHypr("kb-variant", next)
-      }
+      value: String(app.hyprValue("kb-variant", ""))
+      onCommitted: function(next) { app.setHypr("kb-variant", next) }
     }
 
     Ui.TextRow {
       label: "Options"
       placeholder: "compose:caps,grp:alts_toggle"
-      value: String(perDevice ? app.deviceSetting(app.devices.keyboards, device, "kb_options", app.hyprValue("kb-options", ""))
-                              : app.hyprValue("kb-options", ""))
-      onCommitted: function(next) {
-        if (perDevice) app.setDevice(device, "kb_options", next, "keyboard")
-        else app.setHypr("kb-options", next)
-      }
+      value: String(app.hyprValue("kb-options", ""))
+      onCommitted: function(next) { app.setHypr("kb-options", next) }
     }
   }
 
@@ -72,37 +40,99 @@ Ui.SectionBody {
     Ui.NumberRow {
       label: "Repeat rate"
       suffix: "keys/s"
-      value: Number(perDevice ? app.deviceSetting(app.devices.keyboards, device, "repeat_rate", app.hyprValue("repeat-rate", 25))
-                              : app.hyprValue("repeat-rate", 25))
+      value: app.hyprValue("repeat-rate", 25)
       from: 1
       to: 100
-      onCommitted: function(next) {
-        if (perDevice) app.setDevice(device, "repeat_rate", next, "keyboard")
-        else app.setHypr("repeat-rate", next)
-      }
+      onCommitted: function(next) { app.setHypr("repeat-rate", next) }
     }
 
     Ui.NumberRow {
       label: "Repeat delay"
       suffix: "ms"
-      value: Number(perDevice ? app.deviceSetting(app.devices.keyboards, device, "repeat_delay", app.hyprValue("repeat-delay", 600))
-                              : app.hyprValue("repeat-delay", 600))
+      value: app.hyprValue("repeat-delay", 600)
       from: 100
       to: 1000
       step: 50
-      onCommitted: function(next) {
-        if (perDevice) app.setDevice(device, "repeat_delay", next, "keyboard")
-        else app.setHypr("repeat-delay", next)
-      }
+      onCommitted: function(next) { app.setHypr("repeat-delay", next) }
     }
 
     Ui.SwitchRow {
       label: "Num lock on at login"
-      checked: (perDevice ? app.deviceSetting(app.devices.keyboards, device, "numlock_by_default", app.hyprValue("numlock", false))
-                          : app.hyprValue("numlock", false)) === true
-      onRequested: function(next) {
-        if (perDevice) app.setDevice(device, "numlock_by_default", next ? "true" : "false", "keyboard")
-        else app.setHypr("numlock", next ? "true" : "false")
+      checked: app.hyprValue("numlock", false) === true
+      onRequested: function(next) { app.setHypr("numlock", next ? "true" : "false") }
+    }
+  }
+
+  // One group per keyboard, for the ones that should not follow the settings
+  // above — an external board on a different layout, say.
+  Repeater {
+    model: app.devices.keyboards !== undefined ? app.devices.keyboards : []
+
+    delegate: Ui.SettingGroup {
+      required property var modelData
+
+      readonly property string name: String(modelData.name)
+      readonly property var settings: modelData.settings || ({})
+      readonly property var configured: modelData.configured || ({})
+      readonly property bool ours: Object.keys(settings).length > 0
+
+      // Not called `value`: inside a row, that name resolves to the row's own
+      // value property rather than to this.
+      function inForce(key, fallback) {
+        if (settings[key] !== undefined && settings[key] !== null) return settings[key]
+        if (configured[key] !== undefined && configured[key] !== null) return configured[key]
+        return fallback
+      }
+
+      width: parent.width
+      title: name + (modelData.connected === false ? "  (not connected)" : "")
+      note: Object.keys(configured).length > 0 && !ours
+        ? "Set in your own Hyprland config."
+        : ""
+
+      Ui.TextRow {
+        label: "Layouts"
+        placeholder: String(app.hyprValue("kb-layout", ""))
+        value: String(inForce("kb_layout", app.hyprValue("kb-layout", "")))
+        onCommitted: function(next) { app.setDevice(name, "kb_layout", next, "keyboard") }
+      }
+
+      Ui.TextRow {
+        label: "Variant"
+        value: String(inForce("kb_variant", app.hyprValue("kb-variant", "")))
+        onCommitted: function(next) { app.setDevice(name, "kb_variant", next, "keyboard") }
+      }
+
+      Ui.TextRow {
+        label: "Options"
+        value: String(inForce("kb_options", app.hyprValue("kb-options", "")))
+        onCommitted: function(next) { app.setDevice(name, "kb_options", next, "keyboard") }
+      }
+
+      Ui.NumberRow {
+        label: "Repeat rate"
+        suffix: "keys/s"
+        from: 1
+        to: 100
+        value: Number(inForce("repeat_rate", app.hyprValue("repeat-rate", 25)))
+        onCommitted: function(next) { app.setDevice(name, "repeat_rate", next, "keyboard") }
+      }
+
+      Ui.NumberRow {
+        label: "Repeat delay"
+        suffix: "ms"
+        from: 100
+        to: 1000
+        step: 50
+        value: Number(inForce("repeat_delay", app.hyprValue("repeat-delay", 600)))
+        onCommitted: function(next) { app.setDevice(name, "repeat_delay", next, "keyboard") }
+      }
+
+      Ui.ActionRow {
+        label: "Follow the settings above"
+        visible: ours
+        buttonText: "Clear"
+        onTriggered: app.clearDevice(name)
       }
     }
   }

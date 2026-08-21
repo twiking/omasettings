@@ -56,61 +56,15 @@ Item {
 
   readonly property var audio: state.audio !== undefined ? state.audio : ({})
 
-  // Input devices, and which one the Keyboard and Mouse pages are editing.
-  // "" means every device — the global settings — which is what those pages
-  // showed before they could single a device out.
+  // Input devices. Each page lists its own, one group per device, so the
+  // Keyboard and Mouse pages never have to say which device a control means.
   readonly property var devices: state.devices !== undefined ? state.devices : ({})
-  property string keyboardDevice: ""
-  property string pointerDevice: ""
-
-  function deviceOptions(list, everything) {
-    var out = [{ value: "", label: everything }]
-    var items = list !== undefined ? list : []
-    for (var i = 0; i < items.length; i++) {
-      var device = items[i]
-      out.push({
-        value: String(device.name),
-        // A device you own but have unplugged is still worth configuring, and
-        // saying so beats leaving you to wonder why it reads oddly.
-        label: String(device.name) + (device.connected === false ? " (not connected)" : "")
-      })
-    }
-    return out
-  }
-
-  // What is actually in force for this device: what OmaSettings set, else
-  // what the user wrote in their own config, else the global setting. The
-  // generated file loads after theirs, so ours winning here matches what
-  // Hyprland does.
-  function deviceSetting(list, name, key, fallback) {
-    var items = list !== undefined ? list : []
-    for (var i = 0; i < items.length; i++) {
-      if (String(items[i].name) !== name) continue
-      var settings = items[i].settings || ({})
-      if (settings[key] !== undefined && settings[key] !== null) return settings[key]
-      var configured = items[i].configured || ({})
-      if (configured[key] !== undefined && configured[key] !== null) return configured[key]
-    }
-    return fallback
-  }
-
-  // Whether the value on screen came from the user's own config rather than
-  // from here, so a page can say so instead of implying it owns it.
-  function deviceIsConfigured(list, name, key) {
-    var items = list !== undefined ? list : []
-    for (var i = 0; i < items.length; i++) {
-      if (String(items[i].name) !== name) continue
-      var settings = items[i].settings || ({})
-      if (settings[key] !== undefined && settings[key] !== null) return false
-      var configured = items[i].configured || ({})
-      return configured[key] !== undefined && configured[key] !== null
-    }
-    return false
-  }
 
   function setDevice(name, key, value, kind) {
     run(["devices", "set", name, key, String(value), kind])
   }
+
+  function clearDevice(name) { run(["devices", "clear", name]) }
 
   readonly property var power: state.power !== undefined ? state.power : ({})
 

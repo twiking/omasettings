@@ -58,6 +58,22 @@ Values are read back from the live system (`hyprctl getoption`, `omarchy
 theme current`, …), not from the store, so settings changed elsewhere show up
 correctly the next time the window opens.
 
+### If the agent icons are blank
+
+Five agents (Codex, Grok, omp, OpenCode, Pi) draw their icon from Omarchy's
+own `omarchy` icon font rather than a Nerd Font. If they render blank here —
+they will be blank in the Omarchy menu too, so check there first — look for a
+second font of the same family shadowing the complete one:
+
+```bash
+fc-list | grep -i omarchy
+```
+
+An old `~/.local/share/fonts/omarchy.ttf` left over from an earlier Omarchy
+version carries only the first glyph, and Qt can pick it over the full
+`/usr/share/fonts/omarchy/omarchy.ttf`. Remove the stale copy and run
+`fc-cache -f`.
+
 ## Install
 
 ```bash

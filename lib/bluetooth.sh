@@ -83,6 +83,17 @@ bluetooth_cmd() {
       # timeout ends it, and the state that follows includes what it found.
       timeout 20 bluetoothctl --timeout 12 scan on >/dev/null 2>&1 || true
       bluetooth_state ;;
+    poll)
+      # For the page's own refresh loop. Discovery is a mode the adapter has
+      # to be left in, not a one-shot, so this keeps one running and returns
+      # what is known right now. The timeout means that when the page stops
+      # polling, discovery stops by itself shortly after.
+      if [[ $(omarchy-bluetooth-power is-on >/dev/null 2>&1 && echo on) == on ]] \
+        && ! timeout 3 bluetoothctl show 2>/dev/null | grep -q "Discovering: yes"; then
+        setsid bluetoothctl --timeout 30 scan on >/dev/null 2>&1 &
+        disown 2>/dev/null || true
+      fi
+      bluetooth_state ;;
     pair|connect|disconnect|forget)
       [[ $address =~ ^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$ ]] || die "'$address' is not a device address"
       local output

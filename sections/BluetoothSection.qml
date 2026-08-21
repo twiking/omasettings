@@ -43,6 +43,17 @@ Ui.SectionBody {
     return bluetooth.powered === true ? "" : "Off"
   }
 
+  // Devices come and go while you are looking at them, and discovery is a
+  // mode the adapter has to be held in, so the page holds it — but only
+  // while it is the page on screen and the window is open.
+  Timer {
+    interval: 5000
+    running: app.shown
+    repeat: true
+    triggeredOnStart: true
+    onTriggered: app.pollBluetooth()
+  }
+
   Ui.SettingGroup {
     title: "Connected"
     visible: bluetooth.powered === true && connectedDevices.length > 0
@@ -66,25 +77,6 @@ Ui.SectionBody {
   Ui.SettingGroup {
     title: "Nearby"
     visible: bluetooth.powered === true
-
-    Item {
-      width: parent.width
-      implicitHeight: scanButton.implicitHeight
-
-      Button {
-        id: scanButton
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        text: app.busy ? "Scanning…" : "Scan"
-        enabled: !app.busy
-        bordered: true
-        foreground: Ui.Palette.foreground
-        accent: Ui.Palette.accent
-        fontFamily: Ui.Palette.fontFamily
-        fontSize: Style.font.caption
-        onClicked: app.run(["bluetooth", "scan"])
-      }
-    }
 
     Repeater {
       model: nearbyDevices

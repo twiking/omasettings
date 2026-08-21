@@ -187,11 +187,17 @@ gets set up when you pick it, that a bar widget still needs a slot in the bar.
 is on, not which devices are connected, and the Wi-Fi switch does not name the
 network you are on — the list under both is already saying it, a few rows down.
 
-**A page that watches something keeps itself current.** The Network page polls
-Wi-Fi every five seconds while it is the page on screen *and* the window is
-open (`running: app.shown`), through a light `wifi poll` that asks for a scan
-and returns immediately, rather than re-reading the whole state. Nobody should
+**A page that watches something keeps itself current.** Network and Bluetooth
+poll every five seconds while they are the page on screen *and* the window is
+open (`running: app.shown`), through a light `poll` subcommand that returns
+what is known right now rather than re-reading the whole state. Nobody should
 have to press a button to see what is in the room.
+
+Discovery differs between the two: a Wi-Fi scan is a one-shot request that
+NetworkManager rate-limits, while Bluetooth discovery is a *mode* the adapter
+has to be held in. So the Bluetooth poll keeps a 30-second `bluetoothctl scan`
+alive and lets it lapse once the polling stops — the page never has to clean up
+after itself.
 
 ## Shell conventions
 

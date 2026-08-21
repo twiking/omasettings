@@ -54,7 +54,32 @@ Item {
   readonly property var datetime: state.datetime !== undefined ? state.datetime : ({})
   readonly property var groups: state.groups !== undefined ? state.groups : ({})
 
-  readonly property var bluetooth: state.bluetooth !== undefined ? state.bluetooth : ({})
+  // Like Wi-Fi: the Bluetooth page keeps its own list current while it is on
+  // screen, without re-reading the whole state to do it.
+  property var bluetoothLive: null
+  readonly property var bluetooth: bluetoothLive !== null ? bluetoothLive
+    : (state.bluetooth !== undefined ? state.bluetooth : ({}))
+
+  function pollBluetooth() {
+    if (bluetoothPollProcess.running) return
+    bluetoothPollProcess.command = ["bash", root.helperPath, "bluetooth", "poll"]
+    bluetoothPollProcess.running = true
+  }
+
+  Process {
+    id: bluetoothPollProcess
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        try {
+          var next = JSON.parse(text)
+          if (next && typeof next === "object") root.bluetoothLive = next
+        } catch (e) {
+          // A failed poll leaves the last good list on screen.
+        }
+      }
+    }
+  }
 
   // What the switch says underneath itself: the devices in hand, or why there
   // are none.
@@ -246,6 +271,7 @@ Item {
             root.state = next
             root.loaded = true
             root.wifiLive = null
+            root.bluetoothLive = null
           }
         } catch (e) {
           // A partial read leaves the last good state on screen.

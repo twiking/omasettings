@@ -75,6 +75,14 @@ Item {
     return g !== undefined && g !== null ? g : { items: [], current: "" }
   }
 
+  function agentOptions() {
+    var items = agentsState.items !== undefined ? agentsState.items : []
+    var out = []
+    for (var i = 0; i < items.length; i++)
+      out.push({ value: String(items[i].id), label: String(items[i].label) })
+    return out
+  }
+
   // A menu group as dropdown options, labelled the way the menu labels them.
   function groupOptions(name) {
     var items = group(name).items || []
@@ -177,10 +185,10 @@ Item {
     { id: "compose", title: "Compose Keys", icon: "\uf031", source: "~/.XCompose" },
     { id: "datetime", title: "Date & Time", icon: "\uf017", source: "/etc/localtime" },
     { id: "network", title: "Network", icon: "\uf1eb", source: "/etc/systemd/resolved.conf.d" },
-    { id: "defaults", title: "Default Apps", icon: "\uf085", source: "~/.config/omarchy/defaults" },
-    { id: "agents", title: "Agents", icon: "\udb81\udea9", children: [
-      { id: "agents.default", title: "Default Agents", source: "~/.config/omarchy/defaults/agent" },
-      { id: "agents.herdr", title: "Herdr", source: "~/.config/herdr/config.toml" }
+
+    { id: "apps", title: "Applications", icon: "\uf085", children: [
+      { id: "apps.defaults", title: "Defaults", source: "~/.config/omarchy/defaults" },
+      { id: "apps.herdr", title: "Herdr", source: "~/.config/herdr/config.toml" }
     ] }
   ]
 
@@ -260,8 +268,7 @@ Item {
     case "compose": return composeSection
     case "datetime": return datetimeSection
     case "network": return networkSection
-    case "defaults": return defaultsSection
-    case "agents.default": return defaultAgentsSection
+    case "apps.defaults": return defaultsSection
     default: return herdrSection
     }
   }
@@ -1044,6 +1051,13 @@ Item {
           options: root.groupOptions("editor")
           onPicked: function(next) { root.run(["menu", "run", "setup.default.editor." + next]) }
         }
+
+        PickerRow {
+          label: "Coding agent"
+          value: root.agentsState.current !== undefined ? String(root.agentsState.current) : ""
+          options: root.agentOptions()
+          onPicked: function(next) { root.run(["agents", "run", next]) }
+        }
       }
     }
   }
@@ -1069,29 +1083,6 @@ Item {
                : " · automatic sync off")
           buttonText: "Resync…"
           onTriggered: root.run(["menu", "run", "update.time"])
-        }
-      }
-    }
-  }
-
-  Component {
-    id: defaultAgentsSection
-    SectionBody {
-      SettingGroup {
-        title: "Default coding agent"
-        note: "An agent you have not installed yet is set up the first time you pick it."
-
-        Repeater {
-          model: root.agentsState.items !== undefined ? root.agentsState.items : []
-          delegate: AgentRow {
-            required property var modelData
-            width: parent.width
-            label: modelData.label
-            glyph: modelData.icon
-            glyphFont: modelData.iconFont === "omarchy" ? root.omarchyFontFamily : root.fontFamily
-            current: modelData.checked === true
-            onChosen: root.run(["agents", "run", modelData.id])
-          }
         }
       }
     }
@@ -1677,72 +1668,6 @@ Item {
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
       }
-    }
-  }
-
-  // A pick-one row: the whole row is the target, and the current choice is
-  // marked the way the menu marks it rather than with a control that implies
-  // it can be switched off.
-  component AgentRow: Item {
-    id: agentRow
-    property string label: ""
-    property string glyph: ""
-    property string glyphFont: ""
-    property bool current: false
-    signal chosen()
-
-    width: parent ? parent.width : 0
-    implicitHeight: Style.spacing.controlHeight
-
-    Rectangle {
-      anchors.fill: parent
-      radius: Style.cornerRadius
-      color: agentRow.current
-        ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.14)
-        : (agentMouse.containsMouse ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08) : "transparent")
-    }
-
-    Row {
-      anchors.left: parent.left
-      anchors.leftMargin: Style.space(10)
-      anchors.verticalCenter: parent.verticalCenter
-      spacing: Style.space(12)
-
-      Text {
-        anchors.verticalCenter: parent.verticalCenter
-        text: agentRow.glyph
-        color: agentRow.current ? root.accent : root.muted
-        font.family: agentRow.glyphFont !== "" ? agentRow.glyphFont : root.fontFamily
-        font.pixelSize: Style.font.body
-        width: Style.space(20)
-      }
-
-      Text {
-        anchors.verticalCenter: parent.verticalCenter
-        text: agentRow.label
-        color: root.foreground
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.body
-      }
-    }
-
-    Text {
-      anchors.right: parent.right
-      anchors.rightMargin: Style.space(10)
-      anchors.verticalCenter: parent.verticalCenter
-      visible: agentRow.current
-      text: "\uf00c"
-      color: root.accent
-      font.family: root.fontFamily
-      font.pixelSize: Style.font.body
-    }
-
-    MouseArea {
-      id: agentMouse
-      anchors.fill: parent
-      hoverEnabled: true
-      cursorShape: Qt.PointingHandCursor
-      onClicked: agentRow.chosen()
     }
   }
 

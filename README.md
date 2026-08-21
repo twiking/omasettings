@@ -21,9 +21,8 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 | Compose Keys | Your `<Multi_key>` sequences: list, add, remove | `~/.XCompose` |
 | Date & Time | Timezone and system time resync | Omarchy menu Update → Timezone / Time |
 | Network | DNS resolver, Wi-Fi QR code | Omarchy menu Setup → Network |
-| Default Apps | Browser, terminal, editor | Omarchy menu Setup → Defaults |
-| Agents → Default Agents | The default coding agent | `omarchy-default-agent` |
-| Agents → Herdr | Herdr's appearance, panes, sidebar, behaviour, notifications and prefix key | `~/.config/herdr/config.toml` |
+| Applications → Defaults | Browser, terminal, editor, coding agent | Omarchy menu Setup → Defaults |
+| Applications → Herdr | Herdr's appearance, panes, sidebar, behaviour, notifications and prefix key | `~/.config/herdr/config.toml` |
 
 The Style, Setup and Update sections are read from the Omarchy menu's own definition
 (`omarchy-menu.jsonc`, defaults plus your extensions) rather than a second

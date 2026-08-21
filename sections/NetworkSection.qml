@@ -32,15 +32,6 @@ Ui.SectionBody {
       onTriggered: app.pollWifi()
     }
 
-    Text {
-      width: parent.width
-      text: app.wifiNetworks.length === 1 ? "1 network in range"
-                                          : app.wifiNetworks.length + " networks in range"
-      color: Ui.Palette.muted
-      font.family: Ui.Palette.fontFamily
-      font.pixelSize: Style.font.caption
-    }
-
     Repeater {
       model: app.wifi.enabled === true ? app.wifiNetworks : []
       delegate: Ui.WifiRow {
@@ -93,7 +84,6 @@ Ui.SectionBody {
 
   Ui.SettingGroup {
     title: "DNS"
-    note: "Which servers resolve names on every connection."
 
     Ui.PickerRow {
       label: "Resolver"

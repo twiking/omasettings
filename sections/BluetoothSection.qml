@@ -71,19 +71,6 @@ Ui.SectionBody {
       width: parent.width
       implicitHeight: scanButton.implicitHeight
 
-      Text {
-        anchors.left: parent.left
-        anchors.verticalCenter: parent.verticalCenter
-        width: parent.width - scanButton.width - Style.space(12)
-        elide: Text.ElideRight
-        text: nearbyDevices.length === 0
-          ? "Nothing else in range."
-          : (nearbyDevices.length === 1 ? "1 device found" : nearbyDevices.length + " devices found")
-        color: Ui.Palette.muted
-        font.family: Ui.Palette.fontFamily
-        font.pixelSize: Style.font.caption
-      }
-
       Button {
         id: scanButton
         anchors.right: parent.right

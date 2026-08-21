@@ -4,15 +4,42 @@
 # same interface the bar's audio widget uses. Nothing here is stored: the
 # server owns the defaults, the volumes and the mutes.
 
+# Which sinks are worth offering. An HDMI output with no cable in it still
+# exists in the graph, and a speaker tuning puts a virtual sink in front of the
+# real speakers — picking the physical one would only bypass the tuning. The
+# bar's audio widget asks omarchy-audio-sink-availability about both; so does
+# this, or the two lists disagree about what you own.
+audio_availability() {
+  omarchy-audio-sink-availability 2>/dev/null \
+    | jq -R -s -c 'split("\n")
+      | map(select(length > 0) | split("\t") | { key: .[0], value: (.[1] != "0") })
+      | from_entries'
+}
+
 # Monitor sources are loopbacks of an output, not microphones; showing them
 # under Input would offer to record the speakers.
 audio_devices() {
   local kind=$1
   pactl -f json list "$kind" 2>/dev/null | jq -c --arg kind "$kind" '
+    # The same label the widget shows: the short nickname a device gives
+    # itself, not the sentence-long description PulseAudio assembles.
+    def short_name(device):
+      (device.properties["node.nick"] //
+       device.properties["device.profile.description"] //
+       device.description // device.name)
+      | gsub("^sof-soundwire\\s+"; "")
+      | gsub("(?i)^built-?in audio\\s+"; "")
+      | sub("\\s+Output$"; "")
+      | sub("\\s+Input$"; "")
+      | gsub("Microphones"; "Microphone");
+
     [ .[]
       | select($kind != "sources" or (.name | test("\\.monitor$") | not))
+      # Quickshell publishes a node of its own; it is not a microphone.
+      | select(.name != "quickshell")
       | { name: .name,
-          description: (.description // .name),
+          description: short_name(.),
+          icon: (.properties["device.icon-name"] // ""),
           muted: (.mute == true),
           volume: (( .volume | to_entries | map(.value.value_percent | rtrimstr("%") | tonumber) | add / length ) | round) } ]'
 }
@@ -22,10 +49,15 @@ audio_state() {
 
   jq -cn --argjson outputs "$(audio_devices sinks)" \
     --argjson inputs "$(audio_devices sources)" \
+    --argjson availability "$(audio_availability)" \
     --arg defaultOutput "$(pactl get-default-sink 2>/dev/null)" \
     --arg defaultInput "$(pactl get-default-source 2>/dev/null)" \
     '{ available: true,
-       outputs: [$outputs[] | . + { default: (.name == $defaultOutput) }],
+       outputs: [$outputs[]
+         | . + { default: (.name == $defaultOutput) }
+         # Whatever is playing right now stays listed even if it reports
+         # itself unavailable, so the current output is never missing.
+         | select(.default or ($availability[.name] != false))],
        inputs: [$inputs[] | . + { default: (.name == $defaultInput) }] }'
 }
 

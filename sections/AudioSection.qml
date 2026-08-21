@@ -18,6 +18,18 @@ Ui.SectionBody {
     return null
   }
 
+  // The same marks the bar's audio widget uses, chosen from what the device
+  // says it is rather than from its name.
+  function deviceGlyph(device, isInput) {
+    var blob = (String(device.description) + " " + String(device.icon)).toLowerCase()
+    if (blob.indexOf("headphone") !== -1 || blob.indexOf("headset") !== -1
+      || blob.indexOf("earbud") !== -1 || blob.indexOf("airpod") !== -1) return "\uf025"
+    if (isInput) return "\uf130"
+    if (blob.indexOf("hdmi") !== -1 || blob.indexOf("displayport") !== -1) return "\uf108"
+    if (blob.indexOf("bluetooth") !== -1) return "\uf294"
+    return "\uf028"
+  }
+
   readonly property var currentOutput: selected(outputs)
   readonly property var currentInput: selected(inputs)
 
@@ -42,6 +54,7 @@ Ui.SectionBody {
         required property var modelData
         width: parent.width
         label: modelData.description
+        glyph: deviceGlyph(modelData, false)
         detail: modelData.volume + "%"
         selected: modelData.default === true
         onPicked: app.run(["audio", "default", "output", modelData.name])
@@ -70,6 +83,7 @@ Ui.SectionBody {
         required property var modelData
         width: parent.width
         label: modelData.description
+        glyph: deviceGlyph(modelData, true)
         selected: modelData.default === true
         onPicked: app.run(["audio", "default", "input", modelData.name])
       }

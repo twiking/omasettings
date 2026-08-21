@@ -77,6 +77,23 @@ agents, browsers, DNS providers. `menu_group_state` reads a group, and
 `menu_run <entry-id>` runs an entry's action exactly as the menu would. Never
 keep a second copy of those lists; they drift.
 
+## When the bar already shows the same thing
+
+A page that duplicates a bar widget has to agree with it, or the two become
+two answers to one question. Audio was a lesson in this: `pactl` lists every
+sink in the graph, so the page offered four HDMI outputs with no cable in them
+and a physical speaker sink sitting behind a tuning, under names like "Radeon
+High Definition Audio Controller HDMI / DisplayPort 3 Output". The widget shows
+two devices called "ALC285 Analog" and "HDMI 3".
+
+The difference was not taste. `omarchy-audio-sink-availability` reports which
+sinks have a live port and hides the one a speaker tuning fronts; the widget
+labels a device by its own short nickname (`node.nick`) rather than the
+sentence PulseAudio assembles. Both now feed this page too.
+
+Before building a page over something the bar already shows, read the widget
+and use the same source, the same filter, and the same labels.
+
 ## Testing
 
 There is no hot reload worth trusting for structural changes. The loop is:

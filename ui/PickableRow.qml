@@ -9,6 +9,7 @@ Item {
   id: pickableRow
 
   property string label: ""
+  property string glyph: ""
   property string detail: ""
   property bool selected: false
 
@@ -34,7 +35,20 @@ Item {
   }
 
   Text {
+    id: glyphText
     anchors.left: parent.left
+    anchors.leftMargin: Style.space(10)
+    anchors.verticalCenter: parent.verticalCenter
+    visible: pickableRow.glyph !== ""
+    text: pickableRow.glyph
+    color: pickableRow.selected ? Local.Palette.accent : Local.Palette.muted
+    font.family: Local.Palette.fontFamily
+    font.pixelSize: Style.font.body
+    width: visible ? Style.space(20) : 0
+  }
+
+  Text {
+    anchors.left: glyphText.visible ? glyphText.right : parent.left
     anchors.leftMargin: Style.space(10)
     anchors.right: detailText.left
     anchors.rightMargin: Style.space(10)

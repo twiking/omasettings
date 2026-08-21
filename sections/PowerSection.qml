@@ -8,13 +8,13 @@ import "../ui" as Ui
 Ui.SectionBody {
   property var app: null
 
-  readonly property var battery: app.battery
-  readonly property var reading: battery.battery !== undefined ? battery.battery : ({})
+  readonly property var power: app.power
+  readonly property var reading: power.battery !== undefined ? power.battery : ({})
 
   // Power profiles are named for machines, not people.
   function profileOptions() {
     var labels = { "power-saver": "Power saver", "balanced": "Balanced", "performance": "Performance" }
-    var list = battery.profiles !== undefined ? battery.profiles : []
+    var list = power.profiles !== undefined ? power.profiles : []
     var out = []
     for (var i = 0; i < list.length; i++)
       out.push({ value: String(list[i]), label: labels[list[i]] || String(list[i]) })
@@ -22,7 +22,7 @@ Ui.SectionBody {
   }
 
   Ui.SettingGroup {
-    visible: battery.hasBattery === true
+    visible: power.hasBattery === true
 
     Ui.ReadingRow {
       label: "Charge"
@@ -52,21 +52,21 @@ Ui.SectionBody {
   }
 
   Ui.SettingGroup {
-    title: "Power profile"
+    title: "Profile"
     note: "Remembered per power source and applied when you plug in or unplug."
 
     Ui.ChoiceRow {
       label: "On battery"
-      value: battery.forBattery !== undefined ? String(battery.forBattery) : ""
+      value: power.forBattery !== undefined ? String(power.forBattery) : ""
       options: profileOptions()
-      onPicked: function(next) { app.run(["battery", "profile", "battery", next]) }
+      onPicked: function(next) { app.run(["power", "profile", "battery", next]) }
     }
 
     Ui.ChoiceRow {
       label: "Plugged in"
-      value: battery.ac !== undefined ? String(battery.ac) : ""
+      value: power.ac !== undefined ? String(power.ac) : ""
       options: profileOptions()
-      onPicked: function(next) { app.run(["battery", "profile", "ac", next]) }
+      onPicked: function(next) { app.run(["power", "profile", "ac", next]) }
     }
   }
 }

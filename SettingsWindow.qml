@@ -56,7 +56,7 @@ Item {
 
   readonly property var audio: state.audio !== undefined ? state.audio : ({})
 
-  readonly property var battery: state.battery !== undefined ? state.battery : ({})
+  readonly property var power: state.power !== undefined ? state.power : ({})
 
   // Like Wi-Fi: the Bluetooth page keeps its own list current while it is on
   // screen, without re-reading the whole state to do it.
@@ -329,7 +329,7 @@ Item {
     { id: "datetime", title: "Date & Time", icon: "\uf017", source: "/etc/localtime" },
     { id: "network", title: "Network", icon: "\uf1eb", source: "/etc/systemd/resolved.conf.d" },
     { id: "bluetooth", title: "Bluetooth", icon: "\uf294", source: "bluetoothctl" },
-    { id: "battery", title: "Battery", icon: "\uf240", source: "powerprofilesctl" },
+    { id: "power", title: "Power", icon: "\uf0e7", source: "powerprofilesctl" },
     { id: "audio", title: "Audio", icon: "\uf028", source: "pactl" },
 
     { id: "apps", title: "Applications", icon: "\uf085", children: [
@@ -420,7 +420,7 @@ Item {
     case "datetime": return "sections/DateTimeSection.qml"
     case "network": return "sections/NetworkSection.qml"
     case "bluetooth": return "sections/BluetoothSection.qml"
-    case "battery": return "sections/BatterySection.qml"
+    case "power": return "sections/PowerSection.qml"
     case "audio": return "sections/AudioSection.qml"
     case "apps.defaults": return "sections/DefaultsSection.qml"
     case "apps.tmux": return "sections/TmuxSection.qml"

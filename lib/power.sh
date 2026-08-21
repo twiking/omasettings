@@ -1,17 +1,18 @@
 # Part of OmaSettings. Sourced by bin/omasettings; not run on its own.
 #
-# Battery and power profiles. The profile is remembered per power source, the
+# Power: what the battery is doing, and the profile the machine runs at. The
+# profile is remembered per power source, the
 # way omarchy-powerprofiles-set stores it: a laptop wants performance on the
 # wall and power-saver on the train, and should not be asked twice a day.
 
 POWERPROFILES_STATE="${OMARCHY_POWERPROFILES_STATE_DIR:-${XDG_STATE_HOME:-$HOME_DIR/.local/state}/omarchy/powerprofiles}"
 
-battery_device() {
+power_battery_device() {
   upower -e 2>/dev/null | grep -m1 'BAT'
 }
 
 # upower's own report, reduced to the handful of facts worth showing.
-battery_reading() {
+power_battery_reading() {
   local device=$1
   [[ -n $device ]] || { echo '{}'; return; }
 
@@ -34,13 +35,13 @@ battery_reading() {
         watts: ((.[5] | tonumber?) // null) }'
 }
 
-battery_state() {
+power_state() {
   local device reading profiles current onbattery saved_ac saved_battery
 
   command -v powerprofilesctl >/dev/null 2>&1 || { echo '{"available": false}'; return; }
 
-  device=$(battery_device)
-  reading=$(battery_reading "$device")
+  device=$(power_battery_device)
+  reading=$(power_battery_reading "$device")
   profiles=$(omarchy-powerprofiles-list 2>/dev/null | jq -R -s -c 'split("\n") | map(select(length > 0))')
   current=$(powerprofilesctl get 2>/dev/null)
   onbattery=$(busctl get-property org.freedesktop.UPower /org/freedesktop/UPower org.freedesktop.UPower OnBattery 2>/dev/null)
@@ -70,10 +71,10 @@ battery_state() {
        forBattery: (if $savedBattery != "" then $savedBattery else "balanced" end) }'
 }
 
-battery_cmd() {
+power_cmd() {
   local action=${1:-} source=${2:-} profile=${3:-}
   case $action in
-    state) battery_state ;;
+    state) power_state ;;
     profile)
       [[ $source == ac || $source == battery ]] || die "expected ac or battery"
       [[ -n $profile ]] || die "no profile given"

@@ -127,6 +127,15 @@ render_managed_lua() {
       | to_entries[]
       | "hl.config({\n  " + .key + " = {\n" + render(.value; "    ") + "  },\n})\n"
     ' <<<"$store"
+
+    # Per-device overrides, one hl.device call each.
+    jq -r '(.devices // {}) | to_entries[]
+      | "hl.device({\n  name = \"" + .key + "\","
+        + ([.value | to_entries[]
+            | "\n  " + .key + " = "
+              + (if (.value | type) == "string" then "\"" + .value + "\"" else (.value | tostring) end) + ","]
+           | join(""))
+        + "\n})\n"' <<<"$store"
   } | write_file "$MANAGED_LUA" managed
 }
 
@@ -159,6 +168,40 @@ ensure_loaded() {
   } >>"$file"
 }
 
+# Applying a setting without waiting for a config reload.
+#
+# `hyprctl keyword` only works against the legacy parser: on a Lua config it
+# answers "keyword can't work with non-legacy parsers. Use eval." So the value
+# is handed to the Lua parser as the same nested table the generated file
+# would hold, and the keyword form is kept for setups still on .conf.
+hypr_apply_live() {
+  local keyword=$1 value=$2 type=$3
+
+  if [[ -f $HYPR_DIR/hyprland.lua ]]; then
+    local lua_value=$value
+    [[ $type == str ]] && lua_value=$(jq -Rn --arg v "$value" '$v')
+    hyprctl eval "hl.config($(hypr_lua_table "$keyword" "$lua_value"))" >/dev/null 2>&1
+    return
+  fi
+
+  local applied=$value
+  [[ $type == bool ]] && { [[ $value == true ]] && applied=1 || applied=0; }
+  hyprctl keyword "$keyword" "$applied" >/dev/null 2>&1
+}
+
+# "input:touchpad:natural_scroll" + true -> { input = { touchpad = { natural_scroll = true } } }
+hypr_lua_table() {
+  local keyword=$1 value=$2
+  awk -v keyword="$keyword" -v value="$value" '
+    BEGIN {
+      n = split(keyword, parts, ":")
+      out = value
+      for (i = n; i >= 1; i--) out = "{ " parts[i] " = " out " }"
+      print out
+    }
+  '
+}
+
 hypr_set() {
   local key=$1 value=$2 spec keyword type
   spec=$(hypr_keyword "$key") || return 1
@@ -171,9 +214,7 @@ hypr_set() {
     bool) [[ $value == true || $value == false ]] || die "'$value' is not true or false" ;;
   esac
 
-  local applied=$value
-  [[ $type == bool ]] && { [[ $value == true ]] && applied=1 || applied=0; }
-  hyprctl keyword "$keyword" "$applied" >/dev/null 2>&1
+  hypr_apply_live "$keyword" "$value" "$type"
 
   local json
   if [[ $type == bool ]]; then json=$value

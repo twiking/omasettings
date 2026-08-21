@@ -8,6 +8,7 @@
 #   core.sh          paths, file writing, first-touch backups
 #   store.sh         OmaSettings' own store of what it has set
 #   hypr.sh          Hyprland options, live and in a generated config
+#   devices.sh       per-device input settings (Hyprland's hl.device)
 #   shell_config.sh  ~/.config/omarchy/shell.json
 #   compose.sh       ~/.XCompose
 #   plugins.sh       installed shell plugins
@@ -27,7 +28,7 @@ set -uo pipefail
 
 OMASETTINGS_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
 
-for module in core store hypr shell_config compose plugins menu herdr tmux neovim bindings wifi bluetooth power audio setters state; do
+for module in core store hypr devices shell_config compose plugins menu herdr tmux neovim bindings wifi bluetooth power audio setters state; do
   # shellcheck source=/dev/null
   source "$OMASETTINGS_LIB/$module.sh"
 done
@@ -42,6 +43,7 @@ case ${1:-state} in
   herdr) shift; herdr_cmd "$@" ;;
   tmux|nvim) app_cmd "$@" ;;
   keys) shift; keys_cmd "$@" ;;
+  devices) shift; devices_cmd "$@" ;;
   wifi) shift; wifi_cmd "$@" ;;
   bluetooth) shift; bluetooth_cmd "$@" ;;
   power) shift; power_cmd "$@" ;;
@@ -59,6 +61,7 @@ usage:
   omasettings herdr state | set <key> <value>
   omasettings tmux state | tmux set <option> <value>
   omasettings nvim state | nvim set <option> <value>
+  omasettings devices state | set <device> <option> <value> keyboard|pointer | clear <device> <option>
   omasettings keys list | add "<KEYS>" "<description>" "<command>" | remove "<KEYS>" | disable "<KEYS>"
   omasettings audio state | default output|input <device> | volume output|input <percent>
                  | mute output|input on|off|toggle

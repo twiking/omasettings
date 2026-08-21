@@ -56,6 +56,37 @@ Item {
 
   readonly property var audio: state.audio !== undefined ? state.audio : ({})
 
+  // Input devices, and which one the Keyboard and Mouse pages are editing.
+  // "" means every device — the global settings — which is what those pages
+  // showed before they could single a device out.
+  readonly property var devices: state.devices !== undefined ? state.devices : ({})
+  property string keyboardDevice: ""
+  property string pointerDevice: ""
+
+  function deviceOptions(list, everything) {
+    var out = [{ value: "", label: everything }]
+    var items = list !== undefined ? list : []
+    for (var i = 0; i < items.length; i++)
+      out.push({ value: String(items[i].name), label: String(items[i].name) })
+    return out
+  }
+
+  // What a device has been given, if anything; otherwise what the global
+  // setting says, so the controls always show what is in force.
+  function deviceSetting(list, name, key, fallback) {
+    var items = list !== undefined ? list : []
+    for (var i = 0; i < items.length; i++) {
+      if (String(items[i].name) !== name) continue
+      var settings = items[i].settings || ({})
+      if (settings[key] !== undefined && settings[key] !== null) return settings[key]
+    }
+    return fallback
+  }
+
+  function setDevice(name, key, value, kind) {
+    run(["devices", "set", name, key, String(value), kind])
+  }
+
   readonly property var power: state.power !== undefined ? state.power : ({})
 
   // Like Wi-Fi: the Bluetooth page keeps its own list current while it is on

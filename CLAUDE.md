@@ -154,8 +154,26 @@ first.
   in this Nerd Font, so signal bars are drawn with rectangles. Omarchy's own
   icon font is resolved by *file* (`fc-list ':family=omarchy:charset=e905'`) and
   loaded with a `FontLoader`, because more than one file can claim the family.
+- **`hyprctl keyword` does nothing on a Lua config.** It answers "keyword can't
+  work with non-legacy parsers. Use eval." — on stderr, while still exiting 0,
+  so a setting looks applied and is not. `hypr_apply_live` sends
+  `hyprctl eval 'hl.config({...})'` instead, with the keyword form kept for
+  setups still on `.conf`. Per-device settings go the same way, as
+  `hl.device({ name = ..., ... })`.
 - `qmllint` exits 255 with no output when it cannot resolve `qs.*`. The
   authoritative check is the shell loading the file.
+
+## Per-device input
+
+Hyprland lets one keyboard or pointer depart from the global input settings
+(`hl.device`). The Keyboard and Mouse pages carry a picker that switches what
+their controls write: "Every keyboard" writes `input`, a named device writes
+that device. A control shows the device's value when it has one and the global
+value when it does not, so it always shows what is in force.
+
+`hyprctl devices` reports far more devices than anyone has on a desk — power
+buttons, lid switches, video buses, virtual keyboards — so `devices.sh` filters
+them out. The picker hides itself entirely when only one real device exists.
 
 ## Design
 

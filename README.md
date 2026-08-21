@@ -15,6 +15,7 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 | Windows | Gaps, border, rounding, window opacity, dim, animations, blur | Hyprland |
 | Keyboard | Layouts, variant, XKB options, repeat rate and delay, num lock | Hyprland |
 | Keybindings | Every binding, searchable; add your own, turn Omarchy's off, put them back | `~/.config/hypr/bindings.lua` |
+| Keyboard, Mouse & Touchpad | Also per device: one keyboard or pointer can depart from the global settings, via Hyprland's `hl.device` |  |
 | Mouse & Touchpad | Sensitivity, acceleration, focus-follows-mouse, natural scroll, tap to click, two-finger right click, disable-while-typing, scroll speed | Hyprland |
 | Displays | Per-monitor scale | Hyprland |
 | Idle & Lock | Screensaver and lock timeouts | `~/.config/omarchy/shell.json` |
@@ -183,6 +184,7 @@ lib/                   One module per thing being configured
   core.sh                paths, file writing, first-touch backups
   store.sh               OmaSettings' own store of what it has set
   hypr.sh                Hyprland options, live and in a generated config
+  devices.sh             per-device input settings (Hyprland's hl.device)
   shell_config.sh        ~/.config/omarchy/shell.json
   compose.sh             ~/.XCompose
   plugins.sh             installed shell plugins

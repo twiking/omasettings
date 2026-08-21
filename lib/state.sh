@@ -37,6 +37,7 @@ state() {
   tmuxstate=$(tmux_state)
   nvimstate=$(nvim_state)
   bindings=$(bindings_state)
+  devices=$(devices_state)
   wifi=$(wifi_state)
   bluetooth=$(bluetooth_state)
   power=$(power_state)
@@ -62,6 +63,7 @@ state() {
     --argjson tmux "${tmuxstate:-{\}}" \
     --argjson nvim "${nvimstate:-{\}}" \
     --argjson bindings "${bindings:-{\}}" \
+    --argjson devices "${devices:-{\}}" \
     --argjson wifi "${wifi:-{\}}" \
     --argjson bluetooth "${bluetooth:-{\}}" \
     --argjson power "${power:-{\}}" \
@@ -94,6 +96,7 @@ state() {
       tmux: $tmux,
       nvim: $nvim,
       bindings: $bindings,
+      devices: $devices,
       wifi: $wifi,
       bluetooth: $bluetooth,
       power: $power,

@@ -179,8 +179,8 @@ A note earns its place by adding a fact you cannot see: that an uninstalled app
 gets set up when you pick it, that a bar widget still needs a slot in the bar.
 
 **Don't repeat state that is visible below.** The header says whether Bluetooth
-is on, not which devices are connected — the Connected group is already saying
-that, three rows down.
+is on, not which devices are connected, and the Wi-Fi switch does not name the
+network you are on — the list under both is already saying it, a few rows down.
 
 ## Shell conventions
 

@@ -12,7 +12,6 @@ Ui.SectionBody {
 
     Ui.SwitchRow {
       label: "Wi-Fi"
-      description: app.wifi.connected ? "Connected to " + app.wifi.connected : "Not connected"
       checked: app.wifi.enabled === true
       onRequested: function(next) { app.run(["wifi", "radio", next ? "on" : "off"]) }
     }

@@ -1,0 +1,121 @@
+#!/bin/bash
+# omasettings — state reader and mutator behind the OmaSettings panel.
+#
+# The panel stays declarative: it asks for `state` as one JSON blob and calls
+# `set <key> <value>` for every change, so all the shelling out, jq surgery and
+# omarchy-command knowledge lives here rather than in QML.
+
+set -uo pipefail
+
+SHELL_JSON="${OMARCHY_SHELL_JSON:-$HOME/.config/omarchy/shell.json}"
+
+json_string() { jq -Rn --arg v "$1" '$v'; }
+
+# Lines to a JSON array, dropping blanks.
+lines_to_array() { jq -Rn '[inputs | select(length > 0)]'; }
+
+read_shell_json() {
+  [[ -f $SHELL_JSON ]] && jq -c . "$SHELL_JSON" 2>/dev/null && return
+  echo '{}'
+}
+
+# jq-edit shell.json in place through a temp file, so a failed filter or a
+# crash mid-write can never leave the shell with a truncated config.
+edit_shell_json() {
+  local filter=$1
+  shift
+  local current tmp
+  current=$(read_shell_json)
+  tmp=$(mktemp "${SHELL_JSON}.omasettings.XXXXXX") || return 1
+  if ! jq "$@" "$filter" <<<"$current" >"$tmp"; then
+    rm -f "$tmp"
+    echo "omasettings: failed to update $SHELL_JSON" >&2
+    return 1
+  fi
+  mkdir -p "$(dirname "$SHELL_JSON")"
+  mv "$tmp" "$SHELL_JSON"
+}
+
+nightlight_enabled() {
+  local status
+  status=$(omarchy-toggle-nightlight --status 2>/dev/null)
+  [[ -n $status ]] && jq -r '.enabled' <<<"$status" 2>/dev/null && return
+  echo false
+}
+
+state() {
+  local cfg themes fonts theme font nightlight
+  cfg=$(read_shell_json)
+  themes=$(omarchy-theme-list 2>/dev/null | lines_to_array)
+  fonts=$(omarchy font list 2>/dev/null | lines_to_array)
+  theme=$(omarchy-theme-current 2>/dev/null | head -n1)
+  font=$(omarchy font current 2>/dev/null | head -n1)
+  nightlight=$(nightlight_enabled)
+
+  jq -cn \
+    --argjson cfg "$cfg" \
+    --argjson themes "${themes:-[]}" \
+    --argjson fonts "${fonts:-[]}" \
+    --arg theme "$theme" \
+    --arg font "$font" \
+    --argjson nightlight "${nightlight:-false}" \
+    '{
+      theme: $theme,
+      themes: $themes,
+      font: $font,
+      fonts: $fonts,
+      nightlight: $nightlight,
+      barPosition: (($cfg.bar.position // "top") | tostring),
+      barTransparent: (($cfg.bar.transparent // false) == true),
+      idleScreensaver: (($cfg.idle.screensaver // 150) | tonumber? // 150),
+      idleLock: (($cfg.idle.lock // 300) | tonumber? // 300)
+    }'
+}
+
+require_value() {
+  [[ -n ${1:-} ]] && return 0
+  echo "omasettings: missing value for '$2'" >&2
+  return 1
+}
+
+set_key() {
+  local key=${1:-} value=${2:-}
+  case $key in
+    theme)
+      require_value "$value" "$key" || return 1
+      omarchy-theme-set "$value" ;;
+    font)
+      require_value "$value" "$key" || return 1
+      omarchy font set "$value" ;;
+    nightlight)
+      # The toggle script has no absolute set, so only flip when the requested
+      # state differs from the live one — repeated clicks stay idempotent.
+      local current
+      current=$(nightlight_enabled)
+      [[ $current == "$value" ]] || omarchy-toggle-nightlight ;;
+    bar-position)
+      case $value in
+        top|bottom|left|right) omarchy bar position "$value" ;;
+        *) echo "omasettings: bad bar position '$value'" >&2; return 1 ;;
+      esac ;;
+    bar-transparent)
+      case $value in
+        true|false|toggle) omarchy bar transparent "$value" ;;
+        *) echo "omasettings: bad bar transparency '$value'" >&2; return 1 ;;
+      esac ;;
+    idle-screensaver|idle-lock)
+      local field=${key#idle-}
+      [[ $value =~ ^[0-9]+$ ]] || { echo "omasettings: '$value' is not a number of seconds" >&2; return 1; }
+      edit_shell_json '.idle = ((.idle // {}) | .[$field] = ($seconds | tonumber))' \
+        --arg field "$field" --arg seconds "$value" ;;
+    *)
+      echo "omasettings: unknown key '$key'" >&2
+      return 1 ;;
+  esac
+}
+
+case ${1:-state} in
+  state) state ;;
+  set) shift; set_key "$@" ;;
+  *) echo "usage: omasettings [state | set <key> <value>]" >&2; exit 1 ;;
+esac

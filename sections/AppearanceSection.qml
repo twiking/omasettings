@@ -69,7 +69,6 @@ Ui.SectionBody {
 
   Ui.SettingGroup {
     title: "Branding"
-    note: "What the screensaver and the about screen show."
 
     Ui.BrandingRow {
       label: "Screensaver"

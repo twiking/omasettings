@@ -168,6 +168,11 @@ the reader — "Off lets the terminal handle clicks, so links stay clickable",
 not "runs omarchy-bar transparent toggle". Implementation belongs in code
 comments and the README.
 
+**A note that restates its own rows is noise.** "Paired — yours, but not
+connected right now" tells the reader nothing the heading and the rows did not.
+A note earns its place by adding a fact you cannot see: that an uninstalled app
+gets set up when you pick it, that a bar widget still needs a slot in the bar.
+
 **Don't repeat state that is visible below.** The header says whether Bluetooth
 is on, not which devices are connected — the Connected group is already saying
 that, three rows down.

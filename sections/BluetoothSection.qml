@@ -55,7 +55,6 @@ Ui.SectionBody {
 
   Ui.SettingGroup {
     title: "Paired"
-    note: "Yours, but not connected right now."
     visible: bluetooth.powered === true && pairedDevices.length > 0
 
     Repeater {

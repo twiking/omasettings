@@ -65,8 +65,31 @@ Ui.SectionBody {
 
   // One group per keyboard, for the ones that should not follow the settings
   // above — an external board on a different layout, say.
+
+  // A device is only worth a group of its own once it departs from the
+  // settings above. The rest are one dropdown away, so a page with five
+  // devices and no overrides stays a page about keyboards, not a list of
+  // hardware.
+  property var opened: []
+
+  function isCustomised(device) {
+    return Object.keys(device.settings || ({})).length > 0
+      || Object.keys(device.configured || ({})).length > 0
+      || opened.indexOf(String(device.name)) !== -1
+  }
+
+  readonly property var allDevices: app.devices.keyboards !== undefined ? app.devices.keyboards : []
+  readonly property var customised: allDevices.filter(isCustomised)
+  readonly property var untouched: allDevices.filter(function(device) { return !isCustomised(device) })
+
+  function openDevice(name) {
+    var next = opened.slice()
+    next.push(String(name))
+    opened = next
+  }
+
   Repeater {
-    model: app.devices.keyboards !== undefined ? app.devices.keyboards : []
+    model: customised
 
     delegate: Ui.SettingGroup {
       required property var modelData
@@ -134,6 +157,23 @@ Ui.SectionBody {
         buttonText: "Clear"
         onTriggered: app.clearDevice(name)
       }
+    }
+  }
+
+  Ui.SettingGroup {
+    visible: untouched.length > 0
+
+    Ui.PickerRow {
+      label: "Settings for one keyboard"
+      description: "Give a single keyboard its own settings, apart from the ones above."
+      value: ""
+      options: [{ value: "", label: "Pick a keyboard…" }].concat(untouched.map(function(device) {
+        return {
+          value: String(device.name),
+          label: String(device.name) + (device.connected === false ? " (not connected)" : "")
+        }
+      }))
+      onPicked: function(next) { if (next !== "") openDevice(next) }
     }
   }
 }

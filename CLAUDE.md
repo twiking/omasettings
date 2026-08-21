@@ -176,8 +176,20 @@ It was fewer rows and it was wrong — the same slider meaning different things
 depending on a dropdown three groups up is a trap, not a saving. If a control
 can write to two places, show two controls.
 
+Only a device that has departed from the global settings gets a group. The
+rest sit behind one "Settings for one pointer" dropdown, so a machine with five
+input devices and no overrides still reads as a page about pointers rather than
+a list of hardware.
+
 A device row shows the value in force for it: what was set here, else what the
 user's own config gives it, else the global setting above.
+
+`hyprctl devices` also reports **displays** as input devices: a monitor's HID
+control endpoint advertises keyboard and pointer capability, so DP-3 arrives as
+a keyboard `dp-3` and a mouse `dp-3-1`. They are filtered by DRM connector
+shape (`dp-1`, `hdmi-a-2`, `edp-1`, and their numbered siblings) rather than
+against the connected monitors, because an unplugged display leaves its input
+device behind.
 
 `hyprctl devices` reports far more devices than anyone has on a desk — power
 buttons, lid switches, video buses, virtual keyboards — so `devices.sh` filters

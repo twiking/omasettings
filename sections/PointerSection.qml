@@ -83,8 +83,31 @@ Ui.SectionBody {
   //
   // A device shows the value in force for it — what was set here, else what
   // the user's own config gives it, else the global setting above.
+
+  // A device is only worth a group of its own once it departs from the
+  // settings above. The rest are one dropdown away, so a page with five
+  // devices and no overrides stays a page about pointers, not a list of
+  // hardware.
+  property var opened: []
+
+  function isCustomised(device) {
+    return Object.keys(device.settings || ({})).length > 0
+      || Object.keys(device.configured || ({})).length > 0
+      || opened.indexOf(String(device.name)) !== -1
+  }
+
+  readonly property var allDevices: app.devices.pointers !== undefined ? app.devices.pointers : []
+  readonly property var customised: allDevices.filter(isCustomised)
+  readonly property var untouched: allDevices.filter(function(device) { return !isCustomised(device) })
+
+  function openDevice(name) {
+    var next = opened.slice()
+    next.push(String(name))
+    opened = next
+  }
+
   Repeater {
-    model: app.devices.pointers !== undefined ? app.devices.pointers : []
+    model: customised
 
     delegate: Ui.SettingGroup {
       required property var modelData
@@ -151,6 +174,23 @@ Ui.SectionBody {
         buttonText: "Clear"
         onTriggered: app.clearDevice(name)
       }
+    }
+  }
+
+  Ui.SettingGroup {
+    visible: untouched.length > 0
+
+    Ui.PickerRow {
+      label: "Settings for one pointer"
+      description: "Give a single pointer its own settings, apart from the ones above."
+      value: ""
+      options: [{ value: "", label: "Pick a pointer…" }].concat(untouched.map(function(device) {
+        return {
+          value: String(device.name),
+          label: String(device.name) + (device.connected === false ? " (not connected)" : "")
+        }
+      }))
+      onPicked: function(next) { if (next !== "") openDevice(next) }
     }
   }
 }

@@ -89,12 +89,28 @@ device_config_settings() {
 # desk: power buttons, video buses and lid switches all arrive as input
 # devices. A device with no real settings to give is only noise in a list.
 devices_state() {
-  local raw
+  local raw monitors
   raw=$(hyprctl -j devices 2>/dev/null) || { echo '{}'; return; }
 
-  jq -c --argjson store "$(read_store)" --argjson configured "$(device_config_settings)" '
+  # A display shows up as an input device: a monitor's HID control endpoint
+  # advertises keyboard and pointer capability, so DP-3 arrives as both a
+  # keyboard "dp-3" and a mouse "dp-3-1". Neither is something you configure
+  # as a mouse, so every output name is excluded along with its numbered
+  # siblings.
+  monitors=$(hyprctl -j monitors all 2>/dev/null \
+    | jq -c '[.[].name | ascii_downcase]' 2>/dev/null || echo '[]')
+
+  jq -c --argjson store "$(read_store)" --argjson configured "$(device_config_settings)" \
+    --argjson monitors "${monitors:-[]}" '
     def uninteresting:
-      test("^(power-button|video-bus|sleep-button|lid-switch|hl-virtual.*|.*-wireless-radio-control|.*-consumer-control.*)$");
+      . as $name
+      | test("^(power-button|video-bus|sleep-button|lid-switch|hl-virtual.*|.*-wireless-radio-control|.*-consumer-control.*)$")
+        # Display connectors, named the way DRM names them, plus the numbered
+        # siblings Hyprland derives from them. Matched by shape rather than
+        # against the connected monitors, since an unplugged display leaves
+        # its input device behind.
+        or test("^(dp|hdmi-a|hdmi|edp|dvi-[di]|vga|virtual)-[0-9]+(-[0-9]+)?$")
+        or ($monitors | any(. as $output | $name | test("^" + $output + "(-[0-9]+)?$")));
 
     { keyboards: [ .keyboards[]
         | select(.name | uninteresting | not)

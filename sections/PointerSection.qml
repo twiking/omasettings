@@ -106,6 +106,12 @@ Ui.SectionBody {
     opened = next
   }
 
+  // Closing a group that was only opened to look at it: nothing was written,
+  // so nothing has to be removed.
+  function closeDevice(name) {
+    opened = opened.filter(function(entry) { return entry !== String(name) })
+  }
+
   Repeater {
     model: customised
 
@@ -169,10 +175,18 @@ Ui.SectionBody {
       }
 
       Ui.ActionRow {
+        readonly property bool theirs: Object.keys(configured).length > 0
+
         label: "Follow the settings above"
-        visible: ours
-        buttonText: "Clear"
-        onTriggered: app.clearDevice(name)
+        description: theirs
+          ? "The hl.device block in your config is commented out, not deleted."
+          : ""
+        buttonText: "Remove"
+        onTriggered: {
+          if (theirs) app.removeDevice(name)
+          else if (ours) app.clearDevice(name)
+          else closeDevice(name)
+        }
       }
     }
   }

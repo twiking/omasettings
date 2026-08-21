@@ -184,6 +184,54 @@ device_clear() {
   hyprctl reload >/dev/null 2>&1
 }
 
+# Removing a device's settings altogether, including a block the user wrote.
+#
+# Their line is commented out rather than deleted: it is their config, and a
+# setting that turns out to have been load-bearing should be recoverable by
+# deleting two dashes rather than from a backup. The file is checked with
+# `luac -p` afterwards and put back if the edit broke it.
+device_remove() {
+  local name=$1 file previous
+  [[ -n $name ]] || die "no device given"
+
+  device_clear "$name"
+
+  for file in "$HYPR_DIR"/*.lua; do
+    [[ -f $file ]] || continue
+    [[ $file == "$MANAGED_LUA" ]] && continue
+    grep -q "hl\.device" "$file" || continue
+    grep -qF "\"$name\"" "$file" || continue
+
+    previous=$(cat "$file")
+    backup_once "$file"
+
+    awk -v name="$name" '
+      function flush(disable,   i) {
+        for (i = 1; i <= count; i++)
+          print (disable ? "-- " block[i] : block[i])
+        if (disable) print "-- ^ removed in OmaSettings; delete the dashes to bring it back."
+        count = 0
+      }
+      /hl\.device[ \t]*\(/ && !inside { inside = 1; count = 0; matched = 0 }
+      inside {
+        block[++count] = $0
+        if (index($0, "\"" name "\"")) matched = 1
+        if ($0 ~ /\}\)/) { inside = 0; flush(matched) }
+        next
+      }
+      { print }
+      END { if (count) flush(0) }
+    ' "$file" | write_file "$file" managed
+
+    if ! luac -p "$file" 2>/dev/null; then
+      printf '%s' "$previous" | write_file "$file" managed
+      die "removing that device would have broken $(basename "$file"), so nothing changed"
+    fi
+  done
+
+  hyprctl reload >/dev/null 2>&1
+}
+
 devices_cmd() {
   local action=${1:-} name=${2:-} key=${3:-} value=${4:-} kind=${5:-}
   case $action in
@@ -192,6 +240,7 @@ devices_cmd() {
       [[ -n $kind ]] || kind=pointer
       device_set "$name" "$key" "$value" "$kind" ;;
     clear) device_clear "$name" "$key" ;;
+    remove) device_remove "$name" ;;
     *) die "unknown devices action '$action'" ;;
   esac
 }

@@ -184,6 +184,12 @@ a list of hardware.
 A device row shows the value in force for it: what was set here, else what the
 user's own config gives it, else the global setting above.
 
+Removing a device takes its `hl.device` with it, including one the user wrote:
+that block is **commented out rather than deleted**, with a line saying how to
+bring it back, and the file is checked with `luac -p` and restored if the edit
+broke it. Their config is still never regenerated — this is the same targeted
+in-place edit the per-application configs get.
+
 `hyprctl devices` also reports **displays** as input devices: a monitor's HID
 control endpoint advertises keyboard and pointer capability, so DP-3 arrives as
 a keyboard `dp-3` and a mouse `dp-3-1`. They are filtered by DRM connector

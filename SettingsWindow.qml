@@ -66,6 +66,10 @@ Item {
 
   function clearDevice(name) { run(["devices", "clear", name]) }
 
+  // Removes everything for a device, including an hl.device the user wrote
+  // themselves — that one is commented out rather than deleted.
+  function removeDevice(name) { run(["devices", "remove", name]) }
+
   readonly property var power: state.power !== undefined ? state.power : ({})
 
   // Like Wi-Fi: the Bluetooth page keeps its own list current while it is on

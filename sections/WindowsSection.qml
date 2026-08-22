@@ -9,7 +9,7 @@ import "../ui" as Ui
 Ui.SectionBody {
   property var app: null
   Ui.SettingGroup {
-    title: "Layout"
+    title: "Gaps and borders"
 
     Ui.NumberRow {
       label: "Inner gaps"
@@ -39,12 +39,81 @@ Ui.SectionBody {
     }
 
     Ui.NumberRow {
+      label: "Floating gaps"
+      description: "Gap around floating windows. 0 follows the inner gap."
+      suffix: "px"
+      value: app.hyprValue("float-gaps", 0)
+      from: 0
+      to: 40
+      onCommitted: function(next) { app.setHypr("float-gaps", next) }
+    }
+
+    Ui.NumberRow {
+      label: "Workspace gaps"
+      description: "Extra space between workspaces while they slide past."
+      suffix: "px"
+      value: app.hyprValue("gaps-workspaces", 0)
+      from: 0
+      to: 100
+      onCommitted: function(next) { app.setHypr("gaps-workspaces", next) }
+    }
+
+    Ui.SwitchRow {
+      label: "Border inside window"
+      description: "Counts the border as part of the window rather than drawing it outside."
+      checked: app.hyprValue("border-part-of-window", true) === true
+      onRequested: function(next) { app.setHypr("border-part-of-window", next ? "true" : "false") }
+    }
+
+    Ui.NumberRow {
       label: "Corner rounding"
       suffix: "px"
       value: app.hyprValue("rounding", 0)
       from: 0
-      to: 24
+      to: 30
       onCommitted: function(next) { app.setHypr("rounding", next) }
+    }
+
+    Ui.FactorRow {
+      label: "Roundness curve"
+      description: "2.0 is a circle; higher gets you a squircle."
+      minimum: 1
+      maximum: 10
+      value: app.hyprValue("rounding-power", 2)
+      onCommitted: function(next) { app.setHypr("rounding-power", next) }
+    }
+  }
+
+  Ui.SettingGroup {
+    title: "Snapping"
+
+    Ui.SwitchRow {
+      label: "Snapping"
+      description: "Snap floating windows to each other and to screen edges."
+      checked: app.hyprValue("snap", false) === true
+      onRequested: function(next) { app.setHypr("snap", next ? "true" : "false") }
+    }
+
+    Ui.NumberRow {
+      label: "Snap distance"
+      description: "How close a floating window gets before it snaps to another."
+      suffix: "px"
+      enabled: app.hyprValue("snap", false) === true
+      value: app.hyprValue("snap-window-gap", 10)
+      from: 0
+      to: 50
+      onCommitted: function(next) { app.setHypr("snap-window-gap", next) }
+    }
+
+    Ui.NumberRow {
+      label: "Snap to edges"
+      description: "How close a floating window gets before it snaps to a screen edge."
+      suffix: "px"
+      enabled: app.hyprValue("snap", false) === true
+      value: app.hyprValue("snap-monitor-gap", 10)
+      from: 0
+      to: 50
+      onCommitted: function(next) { app.setHypr("snap-monitor-gap", next) }
     }
   }
 
@@ -63,6 +132,13 @@ Ui.SectionBody {
       onCommitted: function(next) { app.setHypr("inactive-opacity", next) }
     }
 
+    Ui.PercentRow {
+      label: "Fullscreen opacity"
+      description: "Opacity while a window is fullscreen."
+      value: app.hyprValue("fullscreen-opacity", 1)
+      onCommitted: function(next) { app.setHypr("fullscreen-opacity", next) }
+    }
+
     Ui.SwitchRow {
       label: "Dim inactive windows"
       checked: app.hyprValue("dim-inactive", false) === true
@@ -75,10 +151,31 @@ Ui.SectionBody {
       value: app.hyprValue("dim-strength", 0.5)
       onCommitted: function(next) { app.setHypr("dim-strength", next) }
     }
+
+    Ui.PercentRow {
+      label: "Special workspace dim"
+      description: "Dimming applied behind a special workspace."
+      value: app.hyprValue("dim-special", 0.2)
+      onCommitted: function(next) { app.setHypr("dim-special", next) }
+    }
+
+    Ui.PercentRow {
+      label: "Dim around"
+      description: "Dimming behind windows using the dimaround window rule."
+      value: app.hyprValue("dim-around", 0.4)
+      onCommitted: function(next) { app.setHypr("dim-around", next) }
+    }
+
+    Ui.SwitchRow {
+      label: "Dim behind modals"
+      description: "Darkens a window while one of its dialogs is open."
+      checked: app.hyprValue("dim-modal", true) === true
+      onRequested: function(next) { app.setHypr("dim-modal", next ? "true" : "false") }
+    }
   }
 
   Ui.SettingGroup {
-    title: "Effects"
+    title: "Animations"
 
     Ui.SwitchRow {
       label: "Animations"
@@ -87,28 +184,11 @@ Ui.SectionBody {
     }
 
     Ui.SwitchRow {
-      label: "Blur"
-      description: "Blurs whatever is behind translucent windows and layers."
-      checked: app.hyprValue("blur", false) === true
-      onRequested: function(next) { app.setHypr("blur", next ? "true" : "false") }
-    }
-
-    Ui.NumberRow {
-      label: "Blur size"
-      enabled: app.hyprValue("blur", false) === true
-      value: app.hyprValue("blur-size", 8)
-      from: 1
-      to: 20
-      onCommitted: function(next) { app.setHypr("blur-size", next) }
-    }
-
-    Ui.NumberRow {
-      label: "Blur passes"
-      enabled: app.hyprValue("blur", false) === true
-      value: app.hyprValue("blur-passes", 1)
-      from: 1
-      to: 5
-      onCommitted: function(next) { app.setHypr("blur-passes", next) }
+      label: "Wrap workspaces"
+      description: "Slides the short way when moving between the first and last workspace."
+      enabled: app.hyprValue("animations", true) === true
+      checked: app.hyprValue("animations-wraparound", false) === true
+      onRequested: function(next) { app.setHypr("animations-wraparound", next ? "true" : "false") }
     }
   }
 

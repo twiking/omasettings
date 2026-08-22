@@ -333,6 +333,9 @@ Item {
     { id: "appearance", title: "Appearance", icon: "\uf1fc", source: "~/.config/omarchy/shell.toml" },
     { id: "bar", title: "Bar", icon: "\uf0ca", source: "~/.config/omarchy/shell.json" },
     { id: "windows", title: "Windows", icon: "\uf2d0", source: "~/.config/hypr/looknfeel.lua" },
+    { id: "layout", title: "Layout", icon: "\uf009", source: "~/.config/hypr/looknfeel.lua" },
+    { id: "effects", title: "Effects", icon: "\uf0eb", source: "~/.config/hypr/looknfeel.lua" },
+    { id: "groups", title: "Groups", icon: "\uf009", source: "~/.config/hypr/looknfeel.lua" },
     { id: "keyboard", title: "Keyboard", icon: "\uf11c", source: "~/.config/hypr/input.lua" },
     { id: "bindings", title: "Keybindings", icon: "\uf11c", source: "~/.config/hypr/bindings.lua" },
     { id: "pointer", title: "Mouse & Touchpad", icon: "\uf245", source: "~/.config/hypr/input.lua" },
@@ -434,6 +437,9 @@ Item {
     case "datetime": return "sections/DateTimeSection.qml"
     case "network": return "sections/NetworkSection.qml"
     case "bluetooth": return "sections/BluetoothSection.qml"
+    case "layout": return "sections/LayoutSection.qml"
+    case "effects": return "sections/EffectsSection.qml"
+    case "groups": return "sections/GroupsSection.qml"
     case "power": return "sections/PowerSection.qml"
     case "audio": return "sections/AudioSection.qml"
     case "apps.defaults": return "sections/DefaultsSection.qml"

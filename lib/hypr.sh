@@ -18,6 +18,63 @@ hypr_keyword() {
     blur-size) echo "decoration:blur:size int" ;;
     blur-passes) echo "decoration:blur:passes int" ;;
     animations) echo "animations:enabled bool" ;;
+    animations-wraparound) echo "animations:workspace_wraparound bool" ;;
+
+    # Gaps and borders beyond the two everyone changes.
+    float-gaps) echo "general:float_gaps css" ;;
+    gaps-workspaces) echo "general:gaps_workspaces int" ;;
+    border-part-of-window) echo "decoration:border_part_of_window bool" ;;
+    snap) echo "general:snap:enabled bool" ;;
+    snap-window-gap) echo "general:snap:window_gap int" ;;
+    snap-monitor-gap) echo "general:snap:monitor_gap int" ;;
+
+    # The tiling engine, and the knobs that belong to whichever one is on.
+    layout) echo "general:layout str" ;;
+    dwindle-preserve-split) echo "dwindle:preserve_split bool" ;;
+    dwindle-smart-split) echo "dwindle:smart_split bool" ;;
+    dwindle-force-split) echo "dwindle:force_split int" ;;
+    dwindle-split-width-multiplier) echo "dwindle:split_width_multiplier float" ;;
+    dwindle-default-split-ratio) echo "dwindle:default_split_ratio float" ;;
+    master-mfact) echo "master:mfact float" ;;
+    master-orientation) echo "master:orientation str" ;;
+    master-new-status) echo "master:new_status str" ;;
+    scrolling-column-width) echo "scrolling:column_width float" ;;
+    scrolling-fullscreen-on-one-column) echo "scrolling:fullscreen_on_one_column bool" ;;
+
+    rounding-power) echo "decoration:rounding_power float" ;;
+    fullscreen-opacity) echo "decoration:fullscreen_opacity float" ;;
+    dim-around) echo "decoration:dim_around float" ;;
+    dim-modal) echo "decoration:dim_modal bool" ;;
+    dim-special) echo "decoration:dim_special float" ;;
+
+    blur-noise) echo "decoration:blur:noise float" ;;
+    blur-contrast) echo "decoration:blur:contrast float" ;;
+    blur-brightness) echo "decoration:blur:brightness float" ;;
+    blur-vibrancy) echo "decoration:blur:vibrancy float" ;;
+    blur-vibrancy-darkness) echo "decoration:blur:vibrancy_darkness float" ;;
+    blur-xray) echo "decoration:blur:xray bool" ;;
+    blur-special) echo "decoration:blur:special bool" ;;
+    blur-popups) echo "decoration:blur:popups bool" ;;
+
+    shadow) echo "decoration:shadow:enabled bool" ;;
+    shadow-range) echo "decoration:shadow:range int" ;;
+    shadow-render-power) echo "decoration:shadow:render_power int" ;;
+    shadow-scale) echo "decoration:shadow:scale float" ;;
+    shadow-sharp) echo "decoration:shadow:sharp bool" ;;
+
+    glow) echo "decoration:glow:enabled bool" ;;
+    glow-range) echo "decoration:glow:range int" ;;
+    glow-render-power) echo "decoration:glow:render_power int" ;;
+
+    groupbar) echo "group:groupbar:enabled bool" ;;
+    groupbar-height) echo "group:groupbar:height int" ;;
+    groupbar-font-size) echo "group:groupbar:font_size int" ;;
+    groupbar-render-titles) echo "group:groupbar:render_titles bool" ;;
+    groupbar-indicator-height) echo "group:groupbar:indicator_height int" ;;
+    groupbar-rounding) echo "group:groupbar:rounding int" ;;
+    groupbar-gradients) echo "group:groupbar:gradients bool" ;;
+    groupbar-stacked) echo "group:groupbar:stacked bool" ;;
+    groupbar-disable-when-only) echo "group:groupbar:disable_when_only bool" ;;
     kb-layout) echo "input:kb_layout str" ;;
     kb-variant) echo "input:kb_variant str" ;;
     kb-options) echo "input:kb_options str" ;;
@@ -60,13 +117,37 @@ hypr_read() {
   esac
 }
 
+# Every key the window reads on open. One list rather than a second copy of
+# the case above: a setting added there and forgotten here is a control that
+# never shows its value.
+hypr_keys() {
+  cat <<'KEYS'
+gaps-in gaps-out float-gaps gaps-workspaces border-size border-part-of-window
+snap snap-window-gap snap-monitor-gap
+layout dwindle-preserve-split dwindle-smart-split dwindle-force-split
+dwindle-split-width-multiplier dwindle-default-split-ratio
+master-mfact master-orientation master-new-status
+scrolling-column-width scrolling-fullscreen-on-one-column
+rounding rounding-power
+active-opacity inactive-opacity fullscreen-opacity
+dim-inactive dim-strength dim-around dim-modal dim-special
+blur blur-size blur-passes blur-noise blur-contrast blur-brightness
+blur-vibrancy blur-vibrancy-darkness blur-xray blur-special blur-popups
+shadow shadow-range shadow-render-power shadow-scale shadow-sharp
+glow glow-range glow-render-power
+animations animations-wraparound
+groupbar groupbar-height groupbar-font-size groupbar-render-titles
+groupbar-indicator-height groupbar-rounding groupbar-gradients
+groupbar-stacked groupbar-disable-when-only
+kb-layout kb-variant kb-options repeat-rate repeat-delay numlock
+sensitivity accel-profile follow-mouse natural-scroll
+disable-while-typing clickfinger tap-to-click scroll-factor
+KEYS
+}
+
 hypr_state() {
   local out='{}' key value
-  for key in gaps-in gaps-out border-size rounding active-opacity inactive-opacity \
-             dim-inactive dim-strength blur blur-size blur-passes animations \
-             kb-layout kb-variant kb-options repeat-rate repeat-delay numlock \
-             sensitivity accel-profile follow-mouse natural-scroll \
-             disable-while-typing clickfinger tap-to-click scroll-factor; do
+  for key in $(hypr_keys); do
     value=$(hypr_read "$key") || continue
     out=$(jq -c --arg k "$key" --argjson v "$value" '.[$k] = $v' <<<"$out")
   done

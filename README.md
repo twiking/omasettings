@@ -138,6 +138,8 @@ Remove it with `omarchy plugin remove io.github.twiking.omasettings`.
 
 - **Left click** the gear in the bar to open and close the window;
   **right click** opens the Omarchy menu.
+- **SUPER+SPACE**, then "OmaSettings" — it installs a launcher entry, so it is
+  reachable as an application and not only from the bar.
 - **Escape** closes the window.
 - From anywhere: `omarchy-shell omasettings toggle` (also `show` / `hide`) —
   handy on a keybinding:
@@ -150,6 +152,12 @@ Remove it with `omarchy plugin remove io.github.twiking.omasettings`.
 Sliders write when you let go, not while you drag, so a drag across the track
 is one change rather than one per pixel. Text fields commit on Enter or when
 they lose focus.
+
+**The launcher entry** is installed by the plugin, because Omarchy has no
+install hook. Enabling writes `~/.local/share/applications/omasettings.desktop`
+with the icon that ships beside it; disabling or removing deletes it again.
+Only a file carrying `X-OmaSettings-Managed=true` is ever touched, so your own
+entry at that path is left alone.
 
 ## Layout
 

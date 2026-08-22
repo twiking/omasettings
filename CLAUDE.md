@@ -94,6 +94,23 @@ sentence PulseAudio assembles. Both now feed this page too.
 Before building a page over something the bar already shows, read the widget
 and use the same source, the same filter, and the same labels.
 
+## The launcher entry
+
+The plugin is an app as well as a bar widget: `Service.qml` is a `service`
+entry point that writes `~/.local/share/applications/omasettings.desktop` from
+the template beside it, substituting the icon path, and deletes it again on
+disable or remove. Omarchy has no install hook, which is why this lives in the
+plugin rather than in a package.
+
+Both halves guard on `X-OmaSettings-Managed=true`: a file at that path without
+the marker is never written and never deleted, so a hand-written entry
+survives. Every failure in the script is a quiet exit — a launcher entry is a
+convenience, and none of it is worth interrupting the shell over.
+
+Changing either file means testing the whole cycle, not just the write:
+`omarchy plugin disable`, check the file is gone, `omarchy plugin enable`,
+check it is back, and `desktop-file-validate` what it wrote.
+
 ## Testing
 
 There is no hot reload worth trusting for structural changes. The loop is:

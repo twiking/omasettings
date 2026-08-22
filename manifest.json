@@ -5,13 +5,15 @@
   "version": "1.0.0",
   "author": "Tobias Wiking",
   "license": "MIT",
-  "description": "One window for the settings scattered across shell.json, the Hyprland config, and .XCompose: appearance, bar, windows, input, displays, idle, plugins, and compose keys.",
+  "description": "One window for the settings scattered across shell.json, the Hyprland config, and .XCompose: appearance, bar, windows, input, displays, idle, plugins, and compose keys. Opens from the bar, from the launcher, or with: omarchy-shell omasettings toggle",
   "homepage": "https://github.com/twiking/omasettings",
   "kinds": [
-    "bar-widget"
+    "bar-widget",
+    "service"
   ],
   "entryPoints": {
-    "barWidget": "Panel.qml"
+    "barWidget": "Panel.qml",
+    "service": "Service.qml"
   },
   "barWidget": {
     "displayName": "OmaSettings",

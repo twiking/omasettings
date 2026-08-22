@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=OmaSettings
+GenericName=System Settings
+Comment=One window for appearance, bar, windows, input, displays, idle, plugins and compose keys
+Exec=omarchy-shell omasettings toggle
+TryExec=omarchy-shell
+Icon=@ICON@
+Terminal=false
+StartupNotify=false
+Categories=Settings;DesktopSettings;HardwareSettings;
+Keywords=settings;omarchy;hyprland;preferences;appearance;bar;keyboard;audio;display;plugins;
+X-OmaSettings-Managed=true

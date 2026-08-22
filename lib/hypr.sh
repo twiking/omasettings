@@ -145,13 +145,42 @@ disable-while-typing clickfinger tap-to-click scroll-factor
 KEYS
 }
 
+# Reading them one at a time costs an hyprctl and a jq per setting, which was
+# tolerable at a dozen settings and is not at seventy-odd: the window sat on
+# "Loading..." for seconds while the pages showed their fallbacks. Hyprland
+# answers a whole batch in one call, so ask once and sort the answers out here.
 hypr_state() {
-  local out='{}' key value
+  local key spec keyword type batch="" pairs=""
+
   for key in $(hypr_keys); do
-    value=$(hypr_read "$key") || continue
-    out=$(jq -c --arg k "$key" --argjson v "$value" '.[$k] = $v' <<<"$out")
+    spec=$(hypr_keyword "$key") || continue
+    keyword=${spec%% *}
+    type=${spec##* }
+    batch+="getoption $keyword ; "
+    pairs+="$key	$keyword	$type"$'\n'
   done
-  echo "$out"
+  [[ -n $batch ]] || { echo '{}'; return; }
+
+  hyprctl -j --batch "${batch% ; }" 2>/dev/null | jq -s -c --arg pairs "$pairs" '
+    def value(o; t):
+      if t == "int" then (o.int // 0)
+      # Gaps come back as a CSS-style "2 2 2 2" box rather than an int; the
+      # window edits them as one number, so read the first side.
+      elif t == "css" then ((o.css // "0") | split(" ") | .[0] | tonumber? // 0)
+      elif t == "float" then ((((o.float // 0) * 1000) | round) / 1000)
+      # Hyprland answers booleans with a bool field; older builds only had int,
+      # and reading int alone made every switch read "off" no matter what the
+      # compositor was doing.
+      elif t == "bool" then (if (o | has("bool")) then (o.bool == true) else ((o.int // 0) != 0) end)
+      # Hyprland spells "no value set" as [[EMPTY]]; the window wants "".
+      else ((o.str // "") | if . == "[[EMPTY]]" then "" else . end)
+      end;
+    (map(select(.option != null)) | INDEX(.option)) as $answers
+    | [ $pairs | split("\n")[] | select(length > 0) | split("\t")
+        | { key: .[0], answer: $answers[.[1]], type: .[2] }
+        | select(.answer != null)
+        | { key: .key, value: value(.answer; .type) } ]
+    | from_entries' 2>/dev/null || echo '{}'
 }
 
 lua_value() {

@@ -54,9 +54,10 @@ case ${1:-state} in
 usage:
   omasettings state
   omasettings set <key> <value>
-  omasettings plugin enable|disable <id>
+  omasettings plugin enable|disable|remove|update <id> | plugin updates
   omasettings compose list | add "<Multi_key> <a> <b>" "text" | remove "<Multi_key> <a> <b>"
   omasettings agents list | run <agent-id>
+  omasettings bar move <widget-id> left|center|right | bar shift <widget-id> up|down
   omasettings menu run <entry-id>            (runs an Omarchy menu entry's action)
   omasettings herdr state | set <key> <value>
   omasettings tmux state | tmux set <option> <value>

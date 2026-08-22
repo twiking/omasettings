@@ -48,10 +48,24 @@ set_key() {
 
 plugin_cmd() {
   local action=${1:-} id=${2:-}
+  # The update sweep is about every plugin at once, so it is the one action
+  # that takes no id.
+  [[ $action == updates ]] && { plugin_updates; return; }
+  [[ $action == updates-cached ]] && { plugin_updates_cache; return; }
   [[ -n $id ]] || die "no plugin id given"
   case $action in
     enable) omarchy plugin enable "$id" ;;
     disable) omarchy plugin disable "$id" ;;
+    # Removal asks for confirmation and prints what it deleted, so it belongs
+    # in a terminal of its own — and one that outlives this window.
+    remove)
+      setsid bash -lc "omarchy-launch-floating-terminal-with-presentation $(printf '%q' "omarchy-plugin-remove $(printf '%q' "$id")")" >/dev/null 2>&1 &
+      disown 2>/dev/null || true ;;
+    # Updating shows the incoming diff and asks before pulling, so it gets a
+    # terminal of its own too.
+    update)
+      setsid bash -lc "omarchy-launch-floating-terminal-with-presentation $(printf '%q' "omarchy-plugin-update $(printf '%q' "$id")")" >/dev/null 2>&1 &
+      disown 2>/dev/null || true ;;
     *) die "unknown plugin action '$action'" ;;
   esac
 }

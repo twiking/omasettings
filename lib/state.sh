@@ -10,7 +10,7 @@ nightlight_enabled() {
 }
 
 state() {
-  local cfg themes fonts theme font nightlight hypr monitors compose plugins agents groups iconfonts datetime herdr textscale
+  local cfg themes fonts theme font nightlight hypr monitors compose plugins pluginupdates agents groups iconfonts datetime herdr textscale
   cfg=$(read_shell_json)
   # omarchy-theme-list finds every directory under the theme folders, dotted
   # ones included, so anything a stray tool left behind there shows up as a
@@ -24,6 +24,7 @@ state() {
   monitors=$(hyprctl -j monitors 2>/dev/null | jq -c '[.[] | {name, scale, width, height, refreshRate: (.refreshRate | floor), transform}]' 2>/dev/null || echo '[]')
   compose=$(compose_entries)
   plugins=$(plugins_state)
+  pluginupdates=$(plugin_updates_cache)
   agents=$(agents_state)
   groups=$(jq -cn \
     --argjson browser "$(menu_group_state "setup.default.browser")" \
@@ -55,6 +56,7 @@ state() {
     --argjson monitors "${monitors:-[]}" \
     --argjson compose "${compose:-[]}" \
     --argjson plugins "${plugins:-[]}" \
+    --argjson pluginUpdates "${pluginupdates:-{\}}" \
     --argjson agents "${agents:-null}" \
     --argjson iconFonts "${iconfonts:-{\}}" \
     --argjson datetime "${datetime:-{\}}" \
@@ -89,6 +91,7 @@ state() {
       monitors: $monitors,
       compose: $compose,
       plugins: $plugins,
+      pluginUpdates: $pluginUpdates,
       agents: $agents,
       groups: $groups,
       datetime: $datetime,

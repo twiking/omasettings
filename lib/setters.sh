@@ -52,6 +52,8 @@ plugin_cmd() {
   # that takes no id.
   [[ $action == updates ]] && { plugin_updates; return; }
   [[ $action == updates-cached ]] && { plugin_updates_cache; return; }
+  [[ $action == self ]] && { self_update_state; return; }
+  [[ $action == self-check ]] && { self_check; return; }
   [[ -n $id ]] || die "no plugin id given"
   case $action in
     enable) omarchy plugin enable "$id" ;;

@@ -69,3 +69,54 @@ plugin_updates() {
     <"$out" >"$UPDATE_CACHE.tmp" 2>/dev/null && mv "$UPDATE_CACHE.tmp" "$UPDATE_CACHE"
   rm -f "$out" "$UPDATE_CACHE.tmp"
 }
+
+# ------------------------------------------------------- our own update
+#
+# The window is itself a plugin, and a plugin that is behind says so in its
+# own corner rather than waiting to be noticed on the Plugins page. The id
+# comes from the manifest beside this code, so a fork or a clone reports on
+# itself rather than on whoever it was forked from.
+OMASETTINGS_DIR="${OMASETTINGS_DIR:-$(cd "$OMASETTINGS_LIB/.." 2>/dev/null && pwd)}"
+
+self_id() {
+  jq -r '.id // empty' "$OMASETTINGS_DIR/manifest.json" 2>/dev/null
+}
+
+# What the last sweep — the Plugins page, or self_check below — learned about
+# us. Reading the cache costs nothing, so the corner can be drawn immediately
+# and corrected once the check behind it lands.
+self_update_state() {
+  local id
+  id=$(self_id)
+  [[ -n $id ]] || { echo '{"behind":0,"checkedAt":0}'; return; }
+
+  plugin_updates_cache | jq -c --arg id "$id" '
+    { id: $id, behind: ((.results[$id] // 0)), checkedAt: (.checkedAt // 0) }'
+}
+
+# One fetch, ours only, folded into the same cache the Plugins page reads.
+# The window runs it in the background on open: it is a network round trip,
+# and nothing should wait on it.
+self_check() {
+  local id repo behind
+  id=$(self_id)
+  [[ -n $id ]] || return 0
+  repo="$HOME_DIR/.config/omarchy/plugins/$id"
+  [[ -d $repo/.git ]] || { self_update_state; return 0; }
+
+  if GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -oBatchMode=yes}" \
+     git -C "$repo" fetch -q origin HEAD 2>/dev/null; then
+    behind=$(git -C "$repo" rev-list --count HEAD..FETCH_HEAD 2>/dev/null || echo 0)
+  else
+    behind=-2
+  fi
+
+  mkdir -p "$(dirname "$UPDATE_CACHE")"
+  jq -c --arg id "$id" --argjson behind "${behind:-0}" --argjson at "$(date +%s)" \
+    '.checkedAt = $at | .results = ((.results // {}) | .[$id] = $behind)' \
+    <<<"$(plugin_updates_cache)" >"$UPDATE_CACHE.tmp" 2>/dev/null \
+    && mv "$UPDATE_CACHE.tmp" "$UPDATE_CACHE"
+  rm -f "$UPDATE_CACHE.tmp"
+
+  self_update_state
+}

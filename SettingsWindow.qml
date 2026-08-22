@@ -21,7 +21,11 @@ Item {
   // ---------------- window lifecycle ---------------------------------------
   readonly property bool shown: window.visible
 
-  function show() { window.visible = true; refresh() }
+  function show() {
+    window.visible = true
+    refresh()
+    if (!selfCheckProcess.running) selfCheckProcess.running = true
+  }
   function hide() { window.visible = false }
   function close() { hide() }
 
@@ -316,6 +320,21 @@ Item {
   readonly property var changedSettings: state.hyprChanged !== undefined ? state.hyprChanged : []
   function isChanged(key) { return changedSettings.indexOf(key) !== -1 }
   function resetHypr(key) { run(["reset", key]) }
+
+  // Whether this window is itself behind its remote. The cached answer draws
+  // the corner at once; the check behind it corrects the cache a moment later.
+  readonly property var selfUpdate: state.selfUpdate !== undefined ? state.selfUpdate : ({})
+  readonly property int selfBehind: selfUpdate.behind !== undefined ? Number(selfUpdate.behind) : 0
+  readonly property string selfId: selfUpdate.id !== undefined ? String(selfUpdate.id) : ""
+
+  Process {
+    id: selfCheckProcess
+    command: ["bash", root.helperPath, "plugin", "self-check"]
+    // Once per opening, and never on the path of anything the user is waiting
+    // for: a fetch is a network round trip.
+    running: false
+    onRunningChanged: if (!running) Qt.callLater(function() { root.refresh() })
+  }
 
   function hyprValue(key, fallback) {
     var value = hypr ? hypr[key] : undefined
@@ -654,11 +673,47 @@ Item {
 
             Item { Layout.fillHeight: true }
 
+            // The corner says something only when there is something to say:
+            // while a write is in flight, before the first state lands, or
+            // when this window is itself behind its remote. "Ready" was none
+            // of those — it reported that nothing was happening.
             Text {
-              text: root.busy ? "Applying…" : (root.loaded ? "Ready" : "Loading…")
+              visible: root.busy || !root.loaded
+              text: root.busy ? "Applying…" : "Loading…"
               color: root.muted
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
+            }
+
+            Column {
+              visible: !root.busy && root.loaded && root.selfBehind > 0
+              spacing: Style.space(2)
+
+              Text {
+                text: "\uf0aa  Update available"
+                color: root.accent
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+
+              Text {
+                id: updateLink
+                text: root.selfBehind === 1 ? "1 commit behind · update"
+                  : root.selfBehind + " commits behind · update"
+                color: updateMouse.containsMouse ? root.accent : root.muted
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.underline: updateMouse.containsMouse
+
+                MouseArea {
+                  id: updateMouse
+                  anchors.fill: parent
+                  anchors.margins: -Style.space(4)
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: if (root.selfId !== "") root.run(["plugin", "update", root.selfId])
+                }
+              }
             }
           }
         }

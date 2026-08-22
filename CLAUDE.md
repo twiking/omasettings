@@ -160,8 +160,26 @@ first.
   `hyprctl eval 'hl.config({...})'` instead, with the keyword form kept for
   setups still on `.conf`. Per-device settings go the same way, as
   `hl.device({ name = ..., ... })`.
-- `qmllint` exits 255 with no output when it cannot resolve `qs.*`. The
-  authoritative check is the shell loading the file.
+- `qmllint` on `PATH` is Qt 5's (`qt5-declarative`), and Quickshell is Qt 6.
+  It cannot parse a typed function signature — `function show(): void`, which
+  `IpcHandler` requires — and exits 255 with no output when it meets one, so
+  `Panel.qml` never gets linted by it. It also passes nearly everything else
+  regardless of merit, which makes a clean run from it worth nothing. Use the
+  Qt 6 binary, and give it the `qs.*` root, which Quickshell aliases to the
+  shell directory:
+
+  ```bash
+  mkdir -p /tmp/qsimports && ln -sfn /usr/share/omarchy/shell /tmp/qsimports/qs
+  /usr/lib/qt6/bin/qmllint -I /tmp/qsimports SettingsWindow.qml sections/*.qml
+  ```
+
+  Two warnings are expected and are not yours to fix: `Property "state"
+  already exists in base type` (the window has carried it from the start) and
+  `Type PanelWindow is not creatable`, which Omarchy's own bar and menu raise
+  on the same type. Unqualified-access and missing-property notes on `Style`
+  and `Color` are singletons qmllint cannot follow.
+
+  Even so, the authoritative check is the shell loading the file.
 
 ## Per-device input
 

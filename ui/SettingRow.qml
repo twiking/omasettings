@@ -26,47 +26,29 @@ Item {
     width: parent.width * 0.5
     spacing: Style.space(2)
 
-    Text {
-      text: settingRow.label
-      color: Local.Palette.foreground
-      font.family: Local.Palette.fontFamily
-      font.pixelSize: Style.font.body
-    }
-
-    Text {
-      visible: settingRow.description !== ""
-      width: parent.width
-      text: settingRow.description
-      wrapMode: Text.WordWrap
-      color: Local.Palette.muted
-      font.family: Local.Palette.fontFamily
-      font.pixelSize: Style.font.caption
-    }
-
-    // Under the label rather than beside the control: it belongs to what the
-    // setting is, not to what it is set to, and there is room here for the
-    // way out to say what it does.
+    // A setting this window has changed says so on its own title line: the
+    // mark ahead of the name, the way out after it.
     Row {
-      visible: settingRow.changed
       spacing: Style.space(6)
 
-      // The mark, then what it means, then the way out of it.
       Text {
+        visible: settingRow.changed
         text: "\u25cf"
         color: Local.Palette.accent
         font.family: Local.Palette.fontFamily
-        font.pixelSize: Style.font.caption
+        font.pixelSize: Style.font.body
       }
 
       Text {
-        text: "Changed"
-        color: Local.Palette.accent
+        text: settingRow.label
+        color: Local.Palette.foreground
         font.family: Local.Palette.fontFamily
-        font.pixelSize: Style.font.caption
+        font.pixelSize: Style.font.body
       }
 
       Text {
         id: resetLink
+        visible: settingRow.changed
         text: "(reset)"
         color: resetMouse.containsMouse ? Local.Palette.accent : Local.Palette.muted
         font.family: Local.Palette.fontFamily
@@ -83,6 +65,20 @@ Item {
         }
       }
     }
+
+    Text {
+      visible: settingRow.description !== ""
+      width: parent.width
+      text: settingRow.description
+      wrapMode: Text.WordWrap
+      color: Local.Palette.muted
+      font.family: Local.Palette.fontFamily
+      font.pixelSize: Style.font.caption
+    }
+
+    // Under the label rather than beside the control: it belongs to what the
+    // setting is, not to what it is set to, and there is room here for the
+    // way out to say what it does.
   }
 
   Item {

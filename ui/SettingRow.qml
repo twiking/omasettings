@@ -50,8 +50,16 @@ Item {
       visible: settingRow.changed
       spacing: Style.space(6)
 
+      // The mark, then what it means, then the way out of it.
       Text {
-        text: "\u25cf Changed"
+        text: "\u25cf"
+        color: Local.Palette.accent
+        font.family: Local.Palette.fontFamily
+        font.pixelSize: Style.font.caption
+      }
+
+      Text {
+        text: "Changed"
         color: Local.Palette.accent
         font.family: Local.Palette.fontFamily
         font.pixelSize: Style.font.caption
@@ -59,7 +67,7 @@ Item {
 
       Text {
         id: resetLink
-        text: "Reset"
+        text: "(reset)"
         color: resetMouse.containsMouse ? Local.Palette.accent : Local.Palette.muted
         font.family: Local.Palette.fontFamily
         font.pixelSize: Style.font.caption

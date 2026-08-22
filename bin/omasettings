@@ -38,6 +38,7 @@ case ${1:-state} in
   state) state ;;
   set) shift; set_key "$@" ;;
   plugin) shift; plugin_cmd "$@" ;;
+  bar) shift; bar_cmd "$@" ;;
   compose) shift; compose_cmd "$@" ;;
   agents) shift; agents_cmd "$@" ;;
   herdr) shift; herdr_cmd "$@" ;;

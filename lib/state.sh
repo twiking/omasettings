@@ -81,7 +81,15 @@ state() {
       bar: {
         position: (($cfg.bar.position // "top") | tostring),
         transparent: (($cfg.bar.transparent // false) == true),
-        centerAnchor: (($cfg.bar.centerAnchor // "") | tostring)
+        centerAnchor: (($cfg.bar.centerAnchor // "") | tostring),
+        # Just the ids, in bar order: the window pairs them with the plugin
+        # list for names, and per-widget settings stay in shell.json where
+        # only the widget itself cares about them.
+        layout: {
+          left: [($cfg.bar.layout.left // [])[] | .id],
+          center: [($cfg.bar.layout.center // [])[] | .id],
+          right: [($cfg.bar.layout.right // [])[] | .id]
+        }
       },
       idle: {
         screensaver: (($cfg.idle.screensaver // 150) | tonumber? // 150),

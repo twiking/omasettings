@@ -18,6 +18,8 @@ Ui.SectionBody {
       from: 0
       to: 40
       onCommitted: function(next) { app.setHypr("gaps-in", next) }
+      changed: app.isChanged("gaps-in")
+      onResetRequested: app.resetHypr("gaps-in")
     }
 
     Ui.NumberRow {
@@ -27,6 +29,8 @@ Ui.SectionBody {
       from: 0
       to: 60
       onCommitted: function(next) { app.setHypr("gaps-out", next) }
+      changed: app.isChanged("gaps-out")
+      onResetRequested: app.resetHypr("gaps-out")
     }
 
     Ui.NumberRow {
@@ -36,6 +40,8 @@ Ui.SectionBody {
       from: 0
       to: 10
       onCommitted: function(next) { app.setHypr("border-size", next) }
+      changed: app.isChanged("border-size")
+      onResetRequested: app.resetHypr("border-size")
     }
 
     Ui.NumberRow {
@@ -46,6 +52,8 @@ Ui.SectionBody {
       from: 0
       to: 40
       onCommitted: function(next) { app.setHypr("float-gaps", next) }
+      changed: app.isChanged("float-gaps")
+      onResetRequested: app.resetHypr("float-gaps")
     }
 
     Ui.NumberRow {
@@ -56,6 +64,8 @@ Ui.SectionBody {
       from: 0
       to: 100
       onCommitted: function(next) { app.setHypr("gaps-workspaces", next) }
+      changed: app.isChanged("gaps-workspaces")
+      onResetRequested: app.resetHypr("gaps-workspaces")
     }
 
     Ui.SwitchRow {
@@ -63,6 +73,8 @@ Ui.SectionBody {
       description: "Counts the border as part of the window rather than drawing it outside."
       checked: app.hyprValue("border-part-of-window", true) === true
       onRequested: function(next) { app.setHypr("border-part-of-window", next ? "true" : "false") }
+      changed: app.isChanged("border-part-of-window")
+      onResetRequested: app.resetHypr("border-part-of-window")
     }
 
     Ui.NumberRow {
@@ -72,6 +84,8 @@ Ui.SectionBody {
       from: 0
       to: 30
       onCommitted: function(next) { app.setHypr("rounding", next) }
+      changed: app.isChanged("rounding")
+      onResetRequested: app.resetHypr("rounding")
     }
 
     Ui.FactorRow {
@@ -81,6 +95,8 @@ Ui.SectionBody {
       maximum: 10
       value: app.hyprValue("rounding-power", 2)
       onCommitted: function(next) { app.setHypr("rounding-power", next) }
+      changed: app.isChanged("rounding-power")
+      onResetRequested: app.resetHypr("rounding-power")
     }
   }
 
@@ -92,6 +108,8 @@ Ui.SectionBody {
       description: "Snap floating windows to each other and to screen edges."
       checked: app.hyprValue("snap", false) === true
       onRequested: function(next) { app.setHypr("snap", next ? "true" : "false") }
+      changed: app.isChanged("snap")
+      onResetRequested: app.resetHypr("snap")
     }
 
     Ui.NumberRow {
@@ -103,6 +121,8 @@ Ui.SectionBody {
       from: 0
       to: 50
       onCommitted: function(next) { app.setHypr("snap-window-gap", next) }
+      changed: app.isChanged("snap-window-gap")
+      onResetRequested: app.resetHypr("snap-window-gap")
     }
 
     Ui.NumberRow {
@@ -114,6 +134,8 @@ Ui.SectionBody {
       from: 0
       to: 50
       onCommitted: function(next) { app.setHypr("snap-monitor-gap", next) }
+      changed: app.isChanged("snap-monitor-gap")
+      onResetRequested: app.resetHypr("snap-monitor-gap")
     }
   }
 
@@ -124,12 +146,16 @@ Ui.SectionBody {
       label: "Active window opacity"
       value: app.hyprValue("active-opacity", 1)
       onCommitted: function(next) { app.setHypr("active-opacity", next) }
+      changed: app.isChanged("active-opacity")
+      onResetRequested: app.resetHypr("active-opacity")
     }
 
     Ui.PercentRow {
       label: "Inactive window opacity"
       value: app.hyprValue("inactive-opacity", 1)
       onCommitted: function(next) { app.setHypr("inactive-opacity", next) }
+      changed: app.isChanged("inactive-opacity")
+      onResetRequested: app.resetHypr("inactive-opacity")
     }
 
     Ui.PercentRow {
@@ -137,12 +163,16 @@ Ui.SectionBody {
       description: "Opacity while a window is fullscreen."
       value: app.hyprValue("fullscreen-opacity", 1)
       onCommitted: function(next) { app.setHypr("fullscreen-opacity", next) }
+      changed: app.isChanged("fullscreen-opacity")
+      onResetRequested: app.resetHypr("fullscreen-opacity")
     }
 
     Ui.SwitchRow {
       label: "Dim inactive windows"
       checked: app.hyprValue("dim-inactive", false) === true
       onRequested: function(next) { app.setHypr("dim-inactive", next ? "true" : "false") }
+      changed: app.isChanged("dim-inactive")
+      onResetRequested: app.resetHypr("dim-inactive")
     }
 
     Ui.PercentRow {
@@ -150,6 +180,8 @@ Ui.SectionBody {
       enabled: app.hyprValue("dim-inactive", false) === true
       value: app.hyprValue("dim-strength", 0.5)
       onCommitted: function(next) { app.setHypr("dim-strength", next) }
+      changed: app.isChanged("dim-strength")
+      onResetRequested: app.resetHypr("dim-strength")
     }
 
     Ui.PercentRow {
@@ -157,6 +189,8 @@ Ui.SectionBody {
       description: "Dimming applied behind a special workspace."
       value: app.hyprValue("dim-special", 0.2)
       onCommitted: function(next) { app.setHypr("dim-special", next) }
+      changed: app.isChanged("dim-special")
+      onResetRequested: app.resetHypr("dim-special")
     }
 
     Ui.PercentRow {
@@ -164,6 +198,8 @@ Ui.SectionBody {
       description: "Dimming behind windows using the dimaround window rule."
       value: app.hyprValue("dim-around", 0.4)
       onCommitted: function(next) { app.setHypr("dim-around", next) }
+      changed: app.isChanged("dim-around")
+      onResetRequested: app.resetHypr("dim-around")
     }
 
     Ui.SwitchRow {
@@ -171,6 +207,8 @@ Ui.SectionBody {
       description: "Darkens a window while one of its dialogs is open."
       checked: app.hyprValue("dim-modal", true) === true
       onRequested: function(next) { app.setHypr("dim-modal", next ? "true" : "false") }
+      changed: app.isChanged("dim-modal")
+      onResetRequested: app.resetHypr("dim-modal")
     }
   }
 
@@ -181,6 +219,8 @@ Ui.SectionBody {
       label: "Animations"
       checked: app.hyprValue("animations", true) === true
       onRequested: function(next) { app.setHypr("animations", next ? "true" : "false") }
+      changed: app.isChanged("animations")
+      onResetRequested: app.resetHypr("animations")
     }
 
     Ui.SwitchRow {
@@ -189,6 +229,8 @@ Ui.SectionBody {
       enabled: app.hyprValue("animations", true) === true
       checked: app.hyprValue("animations-wraparound", false) === true
       onRequested: function(next) { app.setHypr("animations-wraparound", next ? "true" : "false") }
+      changed: app.isChanged("animations-wraparound")
+      onResetRequested: app.resetHypr("animations-wraparound")
     }
   }
 

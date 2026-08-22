@@ -28,6 +28,8 @@ Ui.SectionBody {
         { value: "scrolling", label: "Scrolling" }
       ]
       onPicked: function(next) { app.setHypr("layout", next) }
+      changed: app.isChanged("layout")
+      onResetRequested: app.resetHypr("layout")
     }
   }
 
@@ -40,6 +42,8 @@ Ui.SectionBody {
       description: "Keeps the split direction when a window closes."
       checked: app.hyprValue("dwindle-preserve-split", true) === true
       onRequested: function(next) { app.setHypr("dwindle-preserve-split", next ? "true" : "false") }
+      changed: app.isChanged("dwindle-preserve-split")
+      onResetRequested: app.resetHypr("dwindle-preserve-split")
     }
 
     Ui.SwitchRow {
@@ -47,6 +51,8 @@ Ui.SectionBody {
       description: "Picks the split direction from where in the window you drop."
       checked: app.hyprValue("dwindle-smart-split", false) === true
       onRequested: function(next) { app.setHypr("dwindle-smart-split", next ? "true" : "false") }
+      changed: app.isChanged("dwindle-smart-split")
+      onResetRequested: app.resetHypr("dwindle-smart-split")
     }
 
     Ui.ChoiceRow {
@@ -59,6 +65,8 @@ Ui.SectionBody {
         { value: "2", label: "After" }
       ]
       onPicked: function(next) { app.setHypr("dwindle-force-split", next) }
+      changed: app.isChanged("dwindle-force-split")
+      onResetRequested: app.resetHypr("dwindle-force-split")
     }
 
     Ui.FactorRow {
@@ -68,6 +76,8 @@ Ui.SectionBody {
       maximum: 2
       value: app.hyprValue("dwindle-split-width-multiplier", 1)
       onCommitted: function(next) { app.setHypr("dwindle-split-width-multiplier", next) }
+      changed: app.isChanged("dwindle-split-width-multiplier")
+      onResetRequested: app.resetHypr("dwindle-split-width-multiplier")
     }
 
     Ui.FactorRow {
@@ -77,6 +87,8 @@ Ui.SectionBody {
       maximum: 1.5
       value: app.hyprValue("dwindle-default-split-ratio", 1)
       onCommitted: function(next) { app.setHypr("dwindle-default-split-ratio", next) }
+      changed: app.isChanged("dwindle-default-split-ratio")
+      onResetRequested: app.resetHypr("dwindle-default-split-ratio")
     }
   }
 
@@ -89,6 +101,8 @@ Ui.SectionBody {
       description: "Fraction of the screen the master window takes."
       value: app.hyprValue("master-mfact", 0.55)
       onCommitted: function(next) { app.setHypr("master-mfact", next) }
+      changed: app.isChanged("master-mfact")
+      onResetRequested: app.resetHypr("master-mfact")
     }
 
     Ui.ChoiceRow {
@@ -103,6 +117,8 @@ Ui.SectionBody {
         { value: "center", label: "Center" }
       ]
       onPicked: function(next) { app.setHypr("master-orientation", next) }
+      changed: app.isChanged("master-orientation")
+      onResetRequested: app.resetHypr("master-orientation")
     }
 
     Ui.ChoiceRow {
@@ -115,6 +131,8 @@ Ui.SectionBody {
         { value: "inherit", label: "Inherit" }
       ]
       onPicked: function(next) { app.setHypr("master-new-status", next) }
+      changed: app.isChanged("master-new-status")
+      onResetRequested: app.resetHypr("master-new-status")
     }
   }
 
@@ -127,6 +145,8 @@ Ui.SectionBody {
       description: "Fraction of the screen one column takes. 97% shows one at a time."
       value: app.hyprValue("scrolling-column-width", 0.5)
       onCommitted: function(next) { app.setHypr("scrolling-column-width", next) }
+      changed: app.isChanged("scrolling-column-width")
+      onResetRequested: app.resetHypr("scrolling-column-width")
     }
 
     Ui.SwitchRow {
@@ -134,6 +154,8 @@ Ui.SectionBody {
       description: "Lets a lone column use the whole screen."
       checked: app.hyprValue("scrolling-fullscreen-on-one-column", false) === true
       onRequested: function(next) { app.setHypr("scrolling-fullscreen-on-one-column", next ? "true" : "false") }
+      changed: app.isChanged("scrolling-fullscreen-on-one-column")
+      onResetRequested: app.resetHypr("scrolling-fullscreen-on-one-column")
     }
   }
 }

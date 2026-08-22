@@ -8,6 +8,11 @@ Item {
   id: settingRow
   property string label: ""
   property string description: ""
+  // Set by pages whose settings this window owns: whether the value on screen
+  // was chosen here, and how to hand it back. A row that says nothing shows
+  // nothing, so rows backed by live system state stay unmarked.
+  property bool changed: false
+  signal resetRequested()
   default property alias control: controlHolder.data
 
   width: parent ? parent.width : 0
@@ -36,6 +41,39 @@ Item {
       color: Local.Palette.muted
       font.family: Local.Palette.fontFamily
       font.pixelSize: Style.font.caption
+    }
+
+    // Under the label rather than beside the control: it belongs to what the
+    // setting is, not to what it is set to, and there is room here for the
+    // way out to say what it does.
+    Row {
+      visible: settingRow.changed
+      spacing: Style.space(6)
+
+      Text {
+        text: "\u25cf Changed"
+        color: Local.Palette.accent
+        font.family: Local.Palette.fontFamily
+        font.pixelSize: Style.font.caption
+      }
+
+      Text {
+        id: resetLink
+        text: "Reset"
+        color: resetMouse.containsMouse ? Local.Palette.accent : Local.Palette.muted
+        font.family: Local.Palette.fontFamily
+        font.pixelSize: Style.font.caption
+        font.underline: resetMouse.containsMouse
+
+        MouseArea {
+          id: resetMouse
+          anchors.fill: parent
+          anchors.margins: -Style.space(4)
+          hoverEnabled: true
+          cursorShape: Qt.PointingHandCursor
+          onClicked: settingRow.resetRequested()
+        }
+      }
     }
   }
 

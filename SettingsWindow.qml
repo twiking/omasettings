@@ -308,6 +308,15 @@ Item {
     source: root.omarchyFontPath !== "" ? "file://" + root.omarchyFontPath : ""
   }
 
+  // Which Hyprland settings this window has written, and the way to hand one
+  // back. Anything not in this list is showing a value the system supplies,
+  // which is not ours to reset.
+  // Not "hyprChanged": the hypr property above already generates a signal of
+  // that name, and the two would collide.
+  readonly property var changedSettings: state.hyprChanged !== undefined ? state.hyprChanged : []
+  function isChanged(key) { return changedSettings.indexOf(key) !== -1 }
+  function resetHypr(key) { run(["reset", key]) }
+
   function hyprValue(key, fallback) {
     var value = hypr ? hypr[key] : undefined
     return value === undefined || value === null ? fallback : value

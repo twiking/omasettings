@@ -25,6 +25,8 @@ Ui.SectionBody {
       label: "Blur"
       checked: blurOn
       onRequested: function(next) { app.setHypr("blur", next ? "true" : "false") }
+      changed: app.isChanged("blur")
+      onResetRequested: app.resetHypr("blur")
     }
 
     Ui.NumberRow {
@@ -35,6 +37,8 @@ Ui.SectionBody {
       from: 1
       to: 20
       onCommitted: function(next) { app.setHypr("blur-size", next) }
+      changed: app.isChanged("blur-size")
+      onResetRequested: app.resetHypr("blur-size")
     }
 
     Ui.NumberRow {
@@ -45,6 +49,8 @@ Ui.SectionBody {
       from: 1
       to: 5
       onCommitted: function(next) { app.setHypr("blur-passes", next) }
+      changed: app.isChanged("blur-passes")
+      onResetRequested: app.resetHypr("blur-passes")
     }
 
     Ui.FactorRow {
@@ -55,6 +61,8 @@ Ui.SectionBody {
       maximum: 0.2
       value: app.hyprValue("blur-noise", 0.02)
       onCommitted: function(next) { app.setHypr("blur-noise", next) }
+      changed: app.isChanged("blur-noise")
+      onResetRequested: app.resetHypr("blur-noise")
     }
 
     Ui.FactorRow {
@@ -64,6 +72,8 @@ Ui.SectionBody {
       maximum: 2
       value: app.hyprValue("blur-contrast", 1)
       onCommitted: function(next) { app.setHypr("blur-contrast", next) }
+      changed: app.isChanged("blur-contrast")
+      onResetRequested: app.resetHypr("blur-contrast")
     }
 
     Ui.FactorRow {
@@ -73,6 +83,8 @@ Ui.SectionBody {
       maximum: 2
       value: app.hyprValue("blur-brightness", 1)
       onCommitted: function(next) { app.setHypr("blur-brightness", next) }
+      changed: app.isChanged("blur-brightness")
+      onResetRequested: app.resetHypr("blur-brightness")
     }
 
     Ui.PercentRow {
@@ -81,6 +93,8 @@ Ui.SectionBody {
       enabled: blurOn
       value: app.hyprValue("blur-vibrancy", 0.17)
       onCommitted: function(next) { app.setHypr("blur-vibrancy", next) }
+      changed: app.isChanged("blur-vibrancy")
+      onResetRequested: app.resetHypr("blur-vibrancy")
     }
 
     Ui.PercentRow {
@@ -89,6 +103,8 @@ Ui.SectionBody {
       enabled: blurOn
       value: app.hyprValue("blur-vibrancy-darkness", 0)
       onCommitted: function(next) { app.setHypr("blur-vibrancy-darkness", next) }
+      changed: app.isChanged("blur-vibrancy-darkness")
+      onResetRequested: app.resetHypr("blur-vibrancy-darkness")
     }
 
     Ui.SwitchRow {
@@ -97,6 +113,8 @@ Ui.SectionBody {
       enabled: blurOn
       checked: app.hyprValue("blur-xray", false) === true
       onRequested: function(next) { app.setHypr("blur-xray", next ? "true" : "false") }
+      changed: app.isChanged("blur-xray")
+      onResetRequested: app.resetHypr("blur-xray")
     }
 
     Ui.SwitchRow {
@@ -105,6 +123,8 @@ Ui.SectionBody {
       enabled: blurOn
       checked: app.hyprValue("blur-special", false) === true
       onRequested: function(next) { app.setHypr("blur-special", next ? "true" : "false") }
+      changed: app.isChanged("blur-special")
+      onResetRequested: app.resetHypr("blur-special")
     }
 
     Ui.SwitchRow {
@@ -113,6 +133,8 @@ Ui.SectionBody {
       enabled: blurOn
       checked: app.hyprValue("blur-popups", false) === true
       onRequested: function(next) { app.setHypr("blur-popups", next ? "true" : "false") }
+      changed: app.isChanged("blur-popups")
+      onResetRequested: app.resetHypr("blur-popups")
     }
   }
 
@@ -124,6 +146,8 @@ Ui.SectionBody {
       label: "Shadow"
       checked: shadowOn
       onRequested: function(next) { app.setHypr("shadow", next ? "true" : "false") }
+      changed: app.isChanged("shadow")
+      onResetRequested: app.resetHypr("shadow")
     }
 
     Ui.NumberRow {
@@ -135,6 +159,8 @@ Ui.SectionBody {
       from: 0
       to: 50
       onCommitted: function(next) { app.setHypr("shadow-range", next) }
+      changed: app.isChanged("shadow-range")
+      onResetRequested: app.resetHypr("shadow-range")
     }
 
     Ui.NumberRow {
@@ -145,6 +171,8 @@ Ui.SectionBody {
       from: 1
       to: 4
       onCommitted: function(next) { app.setHypr("shadow-render-power", next) }
+      changed: app.isChanged("shadow-render-power")
+      onResetRequested: app.resetHypr("shadow-render-power")
     }
 
     Ui.PercentRow {
@@ -153,6 +181,8 @@ Ui.SectionBody {
       enabled: shadowOn
       value: app.hyprValue("shadow-scale", 1)
       onCommitted: function(next) { app.setHypr("shadow-scale", next) }
+      changed: app.isChanged("shadow-scale")
+      onResetRequested: app.resetHypr("shadow-scale")
     }
 
     Ui.SwitchRow {
@@ -161,6 +191,8 @@ Ui.SectionBody {
       enabled: shadowOn
       checked: app.hyprValue("shadow-sharp", false) === true
       onRequested: function(next) { app.setHypr("shadow-sharp", next ? "true" : "false") }
+      changed: app.isChanged("shadow-sharp")
+      onResetRequested: app.resetHypr("shadow-sharp")
     }
   }
 
@@ -172,6 +204,8 @@ Ui.SectionBody {
       label: "Glow"
       checked: glowOn
       onRequested: function(next) { app.setHypr("glow", next ? "true" : "false") }
+      changed: app.isChanged("glow")
+      onResetRequested: app.resetHypr("glow")
     }
 
     Ui.NumberRow {
@@ -183,6 +217,8 @@ Ui.SectionBody {
       from: 0
       to: 50
       onCommitted: function(next) { app.setHypr("glow-range", next) }
+      changed: app.isChanged("glow-range")
+      onResetRequested: app.resetHypr("glow-range")
     }
 
     Ui.NumberRow {
@@ -193,6 +229,8 @@ Ui.SectionBody {
       from: 1
       to: 4
       onCommitted: function(next) { app.setHypr("glow-render-power", next) }
+      changed: app.isChanged("glow-render-power")
+      onResetRequested: app.resetHypr("glow-render-power")
     }
   }
 }

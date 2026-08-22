@@ -15,6 +15,8 @@ Ui.SectionBody {
       description: "How far the pointer travels for the same hand movement."
       value: (Number(app.hyprValue("sensitivity", 0)) + 1) / 2
       onCommitted: function(next) { app.setHypr("sensitivity", (next * 2 - 1).toFixed(2)) }
+      changed: app.isChanged("sensitivity")
+      onResetRequested: app.resetHypr("sensitivity")
     }
 
     Ui.PickerRow {
@@ -26,6 +28,8 @@ Ui.SectionBody {
         { value: "adaptive", label: "Adaptive" }
       ]
       onPicked: function(next) { app.setHypr("accel-profile", next) }
+      changed: app.isChanged("accel-profile")
+      onResetRequested: app.resetHypr("accel-profile")
     }
 
     Ui.PickerRow {
@@ -38,6 +42,8 @@ Ui.SectionBody {
         { value: "3", label: "On, without raising" }
       ]
       onPicked: function(next) { app.setHypr("follow-mouse", next) }
+      changed: app.isChanged("follow-mouse")
+      onResetRequested: app.resetHypr("follow-mouse")
     }
   }
 
@@ -48,12 +54,16 @@ Ui.SectionBody {
       label: "Natural scrolling"
       checked: app.hyprValue("natural-scroll", false) === true
       onRequested: function(next) { app.setHypr("natural-scroll", next ? "true" : "false") }
+      changed: app.isChanged("natural-scroll")
+      onResetRequested: app.resetHypr("natural-scroll")
     }
 
     Ui.SwitchRow {
       label: "Tap to click"
       checked: app.hyprValue("tap-to-click", true) === true
       onRequested: function(next) { app.setHypr("tap-to-click", next ? "true" : "false") }
+      changed: app.isChanged("tap-to-click")
+      onResetRequested: app.resetHypr("tap-to-click")
     }
 
     Ui.SwitchRow {
@@ -61,18 +71,24 @@ Ui.SectionBody {
       description: "Off uses the lower-right corner instead."
       checked: app.hyprValue("clickfinger", false) === true
       onRequested: function(next) { app.setHypr("clickfinger", next ? "true" : "false") }
+      changed: app.isChanged("clickfinger")
+      onResetRequested: app.resetHypr("clickfinger")
     }
 
     Ui.SwitchRow {
       label: "Disable while typing"
       checked: app.hyprValue("disable-while-typing", true) === true
       onRequested: function(next) { app.setHypr("disable-while-typing", next ? "true" : "false") }
+      changed: app.isChanged("disable-while-typing")
+      onResetRequested: app.resetHypr("disable-while-typing")
     }
 
     Ui.FactorRow {
       label: "Scroll speed"
       value: Number(app.hyprValue("scroll-factor", 1))
       onCommitted: function(next) { app.setHypr("scroll-factor", next) }
+      changed: app.isChanged("scroll-factor")
+      onResetRequested: app.resetHypr("scroll-factor")
     }
   }
 
@@ -142,6 +158,8 @@ Ui.SectionBody {
         label: "Sensitivity"
         value: (Number(inForce("sensitivity", app.hyprValue("sensitivity", 0))) + 1) / 2
         onCommitted: function(next) { app.setDevice(name, "sensitivity", (next * 2 - 1).toFixed(2), "pointer") }
+        changed: app.isChanged("sensitivity")
+        onResetRequested: app.resetHypr("sensitivity")
       }
 
       Ui.PickerRow {
@@ -153,12 +171,16 @@ Ui.SectionBody {
           { value: "adaptive", label: "Adaptive" }
         ]
         onPicked: function(next) { app.setDevice(name, "accel_profile", next, "pointer") }
+        changed: app.isChanged("accel-profile")
+        onResetRequested: app.resetHypr("accel-profile")
       }
 
       Ui.SwitchRow {
         label: "Natural scrolling"
         checked: inForce("natural_scroll", app.hyprValue("natural-scroll", false)) === true
         onRequested: function(next) { app.setDevice(name, "natural_scroll", next ? "true" : "false", "pointer") }
+        changed: app.isChanged("natural-scroll")
+        onResetRequested: app.resetHypr("natural-scroll")
       }
 
       Ui.SwitchRow {
@@ -173,6 +195,8 @@ Ui.SectionBody {
         maximum: 3
         value: Number(inForce("scroll_factor", app.hyprValue("scroll-factor", 1)))
         onCommitted: function(next) { app.setDevice(name, "scroll_factor", next, "pointer") }
+        changed: app.isChanged("scroll-factor")
+        onResetRequested: app.resetHypr("scroll-factor")
       }
 
       // No label: what the button removes is the group it sits in, and how

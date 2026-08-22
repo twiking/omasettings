@@ -10,7 +10,7 @@ nightlight_enabled() {
 }
 
 state() {
-  local cfg themes fonts theme font nightlight hypr monitors compose plugins pluginupdates agents groups iconfonts datetime herdr textscale
+  local cfg themes fonts theme font nightlight hypr hyprchanged monitors compose plugins pluginupdates agents groups iconfonts datetime herdr textscale
   cfg=$(read_shell_json)
   # omarchy-theme-list finds every directory under the theme folders, dotted
   # ones included, so anything a stray tool left behind there shows up as a
@@ -21,6 +21,7 @@ state() {
   font=$(omarchy font current 2>/dev/null | head -n1)
   nightlight=$(nightlight_enabled)
   hypr=$(hypr_state)
+  hyprchanged=$(hypr_changed)
   monitors=$(hyprctl -j monitors 2>/dev/null | jq -c '[.[] | {name, scale, width, height, refreshRate: (.refreshRate | floor), transform}]' 2>/dev/null || echo '[]')
   compose=$(compose_entries)
   plugins=$(plugins_state)
@@ -53,6 +54,7 @@ state() {
     --arg font "$font" \
     --argjson nightlight "${nightlight:-false}" \
     --argjson hypr "${hypr:-{\}}" \
+    --argjson hyprChanged "${hyprchanged:-[]}" \
     --argjson monitors "${monitors:-[]}" \
     --argjson compose "${compose:-[]}" \
     --argjson plugins "${plugins:-[]}" \
@@ -96,6 +98,9 @@ state() {
         lock: (($cfg.idle.lock // 300) | tonumber? // 300)
       },
       hypr: $hypr,
+      # The settings this window has written, so a page can say which of its
+      # values were chosen here rather than supplied by the system.
+      hyprChanged: $hyprChanged,
       monitors: $monitors,
       compose: $compose,
       plugins: $plugins,

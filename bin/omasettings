@@ -37,6 +37,7 @@ unset module
 case ${1:-state} in
   state) state ;;
   set) shift; set_key "$@" ;;
+  reset) shift; hypr_reset "${1:-}" ;;
   plugin) shift; plugin_cmd "$@" ;;
   bar) shift; bar_cmd "$@" ;;
   compose) shift; compose_cmd "$@" ;;
@@ -55,6 +56,7 @@ case ${1:-state} in
 usage:
   omasettings state
   omasettings set <key> <value>
+  omasettings reset <key>|--all           (hands a Hyprland setting back to the system)
   omasettings plugin enable|disable|remove|update <id> | plugin updates
   omasettings compose list | add "<Multi_key> <a> <b>" "text" | remove "<Multi_key> <a> <b>"
   omasettings agents list | run <agent-id>

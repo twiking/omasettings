@@ -336,3 +336,36 @@ hypr_set() {
   fi
   edit_store '.hypr = ((.hypr // {}) | .[$key] = $value)' --arg key "$key" --argjson value "$json"
 }
+
+# ------------------------------------------------------------------- reset
+#
+# What the window has changed is not a guess: the store holds exactly the keys
+# this window has written, and nothing else. Handing a setting back is
+# therefore deleting its key and re-rendering — the value then comes from
+# wherever it came from before, be that Omarchy's defaults, a theme, or the
+# user's own looknfeel.lua.
+#
+# There is no live undo to send: Hyprland has no "unset this keyword", so the
+# generated file is rewritten without the key and the config reloaded, which
+# is what makes the old value take effect again.
+hypr_changed() {
+  jq -c '(.hypr // {}) | keys' <<<"$(read_store)"
+}
+
+hypr_reset() {
+  local key=$1
+  [[ -n $key ]] || die "no setting given"
+
+  if [[ $key == --all ]]; then
+    edit_store '.hypr = {}'
+  else
+    hypr_keyword "$key" >/dev/null || die "unknown setting '$key'"
+    jq -e --arg k "$key" '(.hypr // {}) | has($k)' <<<"$(read_store)" >/dev/null \
+      || return 0
+    edit_store 'if .hypr then .hypr |= del(.[$key]) else . end' --arg key "$key"
+  fi
+
+  # edit_store has already re-rendered the managed file; the reload is what
+  # makes Hyprland forget the value it is still holding.
+  hyprctl reload >/dev/null 2>&1 || true
+}

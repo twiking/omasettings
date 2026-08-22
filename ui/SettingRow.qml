@@ -31,7 +31,11 @@ Item {
     Row {
       spacing: Style.space(6)
 
+      // A Row lines its children up by the top, which leaves the smaller
+      // (reset) floating above the name it belongs to. Both sit on the
+      // name's baseline instead, so the three read as one line.
       Text {
+        anchors.baseline: titleText.baseline
         visible: settingRow.changed
         text: "\u25cf"
         color: Local.Palette.accent
@@ -40,6 +44,7 @@ Item {
       }
 
       Text {
+        id: titleText
         text: settingRow.label
         color: Local.Palette.foreground
         font.family: Local.Palette.fontFamily
@@ -48,6 +53,7 @@ Item {
 
       Text {
         id: resetLink
+        anchors.baseline: titleText.baseline
         visible: settingRow.changed
         text: "(reset)"
         color: resetMouse.containsMouse ? Local.Palette.accent : Local.Palette.muted

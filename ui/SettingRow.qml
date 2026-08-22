@@ -13,11 +13,61 @@ Item {
   // nothing, so rows backed by live system state stay unmarked.
   property bool changed: false
   signal resetRequested()
+
+  // ---------------- keyboard cursor ---------------------------------------
+  // The window drives one cursor down the page; a row says what the cursor
+  // means for its own control. A row that answers neither signal is still
+  // navigable, it just has nothing to do when activated.
+  property bool current: false
+  // While a row owns the keyboard outright — a dropdown is open, a field is
+  // being typed into — the window stops handling keys and lets it through.
+  property bool navBlocking: false
+  signal navActivate()
+  signal navStep(int delta)
+
+  // Rows are nested several layers inside a page, so the controller is found
+  // by walking up rather than passed down through every group.
+  // The walk stops at the page rather than the window — a window is not the
+  // visual parent of what it shows — so what is looked for is the page's own
+  // handle on the window, which every section is given when it is loaded.
+  function navController() {
+    var node = settingRow.parent
+    while (node) {
+      if (node.registerNavRow !== undefined) return node
+      if (node.app !== undefined && node.app !== null
+          && node.app.registerNavRow !== undefined) return node.app
+      node = node.parent
+    }
+    return null
+  }
+
+  Component.onCompleted: {
+    var nav = navController()
+    if (nav) nav.registerNavRow(settingRow)
+  }
+
+  Component.onDestruction: {
+    var nav = navController()
+    if (nav) nav.unregisterNavRow(settingRow)
+  }
   default property alias control: controlHolder.data
 
   width: parent ? parent.width : 0
   implicitHeight: Math.max(labelColumn.implicitHeight, controlHolder.implicitHeight)
   opacity: enabled ? 1 : 0.45
+
+  Rectangle {
+    // Wider than the row itself, so the cursor reads as a band across the
+    // page rather than a box drawn around the text.
+    anchors.fill: parent
+    anchors.leftMargin: -Style.space(10)
+    anchors.rightMargin: -Style.space(10)
+    anchors.topMargin: -Style.space(6)
+    anchors.bottomMargin: -Style.space(6)
+    radius: Style.cornerRadius
+    color: Qt.rgba(Local.Palette.accent.r, Local.Palette.accent.g, Local.Palette.accent.b, 0.14)
+    visible: settingRow.current
+  }
 
   Column {
     id: labelColumn

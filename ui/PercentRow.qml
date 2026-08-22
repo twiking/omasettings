@@ -9,7 +9,23 @@ SettingRow {
   property real value: 1
   signal committed(real next)
 
-  readonly property real shown: percentSlider.dragging ? percentSlider.liveValue : value
+  // One step of the slider per key press, the same step dragging snaps to,
+  // and each press builds on the last rather than on the value last read back.
+  property real pending: value
+  property bool stepping: false
+  readonly property real effective: stepping ? pending : value
+  readonly property real shown: percentSlider.dragging ? percentSlider.liveValue : effective
+
+  onValueChanged: if (stepping && Math.abs(value - pending) < 0.001) stepping = false
+
+  onNavStep: function(delta) {
+    var base = percentRow.effective
+    var next = Math.max(0, Math.min(1, Math.round((base + delta * 0.05) * 100) / 100))
+    if (Math.abs(next - base) < 0.001) return
+    percentRow.pending = next
+    percentRow.stepping = true
+    percentRow.committed(next)
+  }
 
   Row {
     width: parent.width
@@ -22,7 +38,7 @@ SettingRow {
       minimum: 0
       maximum: 1
       step: 0.05
-      value: Math.max(0, Math.min(1, percentRow.value))
+      value: Math.max(0, Math.min(1, percentRow.effective))
       enabled: percentRow.enabled
       onReleased: function(v) {
         var next = Math.round(v * 100) / 100

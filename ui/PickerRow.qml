@@ -22,7 +22,24 @@ SettingRow {
     return out
   }
 
+  // Space opens the list, the way clicking the control would; stepping picks
+  // a neighbour without opening anything. While the list is open it owns the
+  // keyboard — its own Up/Down and Escape are the ones that should run.
+  onNavActivate: if (dropdownLoader.item) dropdownLoader.item.open()
+  navBlocking: dropdownLoader.item ? dropdownLoader.item.popupOpen === true : false
+
+  onNavStep: function(delta) {
+    var list = pickerRow.normalized
+    if (list.length === 0) return
+    var at = 0
+    for (var i = 0; i < list.length; i++)
+      if (String(list[i].value) === String(pickerRow.value)) { at = i; break }
+    var next = Math.max(0, Math.min(list.length - 1, at + delta))
+    if (next !== at) pickerRow.picked(String(list[next].value))
+  }
+
   Loader {
+    id: dropdownLoader
     width: parent.width
     sourceComponent: pickerRow.searchable ? searchableComponent : plainComponent
   }

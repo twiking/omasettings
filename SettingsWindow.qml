@@ -336,6 +336,136 @@ Item {
     onRunningChanged: if (!running) Qt.callLater(function() { root.refresh() })
   }
 
+  // ---------------- keyboard navigation ------------------------------------
+  //
+  // One cursor runs down the settings of the open page, and a second one — the
+  // sidebar — is reached with Alt. The vocabulary is the shell's own, the one
+  // PanelKeyCatcher defines for every Omarchy panel: Up/Down or j/k to move,
+  // Left/Right or h/l to change a value, Enter or Space to act, Tab to change
+  // section, Escape to close.
+  property var navRows: []
+  property int navIndex: -1
+  // Alt puts the cursor on the sidebar; moving in the page takes it back, so
+  // Enter always acts on whichever list was last moved.
+  property bool navInSidebar: false
+  property int sidebarIndex: 0
+
+  function registerNavRow(row) {
+    var rows = navRows.slice()
+    rows.push(row)
+    navRows = rows
+  }
+
+  function unregisterNavRow(row) {
+    var rows = []
+    for (var i = 0; i < navRows.length; i++)
+      if (navRows[i] !== row && navRows[i] !== null) rows.push(navRows[i])
+    navRows = rows
+    if (navIndex >= rows.length) navIndex = rows.length - 1
+  }
+
+  // Registration order follows construction, which is not reading order once a
+  // page has groups that come and go. Sorting by where a row actually sits
+  // keeps the cursor moving the way the page looks.
+  function navOrdered() {
+    var out = []
+    for (var i = 0; i < navRows.length; i++) {
+      var row = navRows[i]
+      if (!row || !row.visible || !row.enabled) continue
+      var point = row.mapToItem(bodyLoader, 0, 0)
+      if (!point) continue
+      out.push({ row: row, y: point.y })
+    }
+    out.sort(function(a, b) { return a.y - b.y })
+    return out
+  }
+
+  function navCurrent() {
+    var ordered = navOrdered()
+    if (navIndex < 0 || navIndex >= ordered.length) return null
+    return ordered[navIndex].row
+  }
+
+  function navSync() {
+    var ordered = navOrdered()
+    for (var i = 0; i < ordered.length; i++)
+      ordered[i].row.current = (!navInSidebar && i === navIndex)
+  }
+
+  function navMove(delta) {
+    var ordered = navOrdered()
+    if (ordered.length === 0) return
+    navInSidebar = false
+    navIndex = navIndex < 0
+      ? (delta > 0 ? 0 : ordered.length - 1)
+      : Math.max(0, Math.min(ordered.length - 1, navIndex + delta))
+    navSync()
+    navReveal(ordered[navIndex])
+  }
+
+  function navJump(where) {
+    var ordered = navOrdered()
+    if (ordered.length === 0) return
+    navInSidebar = false
+    navIndex = where < 0 ? 0 : ordered.length - 1
+    navSync()
+    navReveal(ordered[navIndex])
+  }
+
+  // Keep the cursor on screen, with a margin so it never sits flush against
+  // the edge it just arrived from.
+  function navReveal(entry) {
+    if (!entry) return
+    var margin = Style.space(24)
+    var top = entry.y - margin
+    var bottom = entry.y + entry.row.height + margin
+    if (top < bodyScroll.contentY) bodyScroll.contentY = Math.max(0, top)
+    else if (bottom > bodyScroll.contentY + bodyScroll.height)
+      bodyScroll.contentY = Math.min(Math.max(0, bodyScroll.contentHeight - bodyScroll.height),
+                                     bottom - bodyScroll.height)
+  }
+
+  function navActivate() {
+    if (navInSidebar) {
+      var entry = sidebarRows[sidebarIndex]
+      if (!entry) return
+      if (entry.expandable) toggleSection(entry.id)
+      else pageId = entry.id
+      return
+    }
+    var row = navCurrent()
+    if (row) row.navActivate()
+  }
+
+  function navStep(delta) {
+    if (navInSidebar) return
+    var row = navCurrent()
+    if (row) row.navStep(delta)
+  }
+
+  // Alt walks the sidebar as it is drawn, submenu entries included. Landing on
+  // a page opens it; landing on a parent waits for Enter, since opening a
+  // submenu is not the same as opening a page.
+  function navSidebar(delta) {
+    var rows = sidebarRows
+    if (rows.length === 0) return
+    if (!navInSidebar) {
+      navInSidebar = true
+      for (var i = 0; i < rows.length; i++)
+        if (rows[i].id === pageId) { sidebarIndex = i; break }
+    }
+    sidebarIndex = Math.max(0, Math.min(rows.length - 1, sidebarIndex + delta))
+    navSync()
+    if (rows[sidebarIndex].selectable) pageId = rows[sidebarIndex].id
+  }
+
+  // A row that has taken the keyboard — an open dropdown, a field being typed
+  // into — keeps it until it is done.
+  readonly property bool navBlocked: {
+    var row = navCurrent()
+    return row ? row.navBlocking === true : false
+  }
+
   function hyprValue(key, fallback) {
     var value = hypr ? hypr[key] : undefined
     return value === undefined || value === null ? fallback : value
@@ -402,7 +532,13 @@ Item {
   // A section is either a page of its own or a parent holding pages; the
   // sidebar renders parents as headings and only pages are selectable.
   property string pageId: "appearance"
-  onPageIdChanged: bodyLoader.setSource(sectionSource(pageId), { app: root })
+  // A new page brings new rows, so the cursor starts at its top rather than
+  // wherever it happened to be on the page before.
+  onPageIdChanged: {
+    navIndex = -1
+    navRows = []
+    bodyLoader.setSource(sectionSource(pageId), { app: root })
+  }
 
   // A page may say something truer about itself than its file path — what the
   // adapter is connected to, say. When it does, that is what the header shows.
@@ -575,9 +711,45 @@ Item {
       anchors.fill: parent
       focus: true
 
+      // The vocabulary every Omarchy panel uses, plus Alt for the sidebar and
+      // Home/End for the ends of a long page. Keys.BeforeItem is what lets
+      // Up/Down drive the cursor rather than being eaten by the Flickable —
+      // except when a row has taken the keyboard for itself.
       Keys.priority: Keys.BeforeItem
       Keys.onPressed: function(event) {
-        if (event.key === Qt.Key_Escape) { root.close(); event.accepted = true }
+        // A row holding the keyboard gets every key, Escape included: closing
+        // an open dropdown is what Escape means while one is open.
+        if (root.navBlocked) return
+        if (event.key === Qt.Key_Escape) { root.close(); event.accepted = true; return }
+
+        var alt = (event.modifiers & Qt.AltModifier) !== 0
+
+        if (event.key === Qt.Key_Down || event.text === "j") {
+          alt ? root.navSidebar(1) : root.navMove(1)
+          event.accepted = true; return
+        }
+        if (event.key === Qt.Key_Up || event.text === "k") {
+          alt ? root.navSidebar(-1) : root.navMove(-1)
+          event.accepted = true; return
+        }
+        if (event.key === Qt.Key_Right || event.text === "l") {
+          root.navStep(1); event.accepted = true; return
+        }
+        if (event.key === Qt.Key_Left || event.text === "h") {
+          root.navStep(-1); event.accepted = true; return
+        }
+        if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+          root.navActivate(); event.accepted = true; return
+        }
+        if (event.key === Qt.Key_Home) { root.navJump(-1); event.accepted = true; return }
+        if (event.key === Qt.Key_End) { root.navJump(1); event.accepted = true; return }
+        // Tab moves between the two lists rather than through every control,
+        // which is what the sidebar and a page of settings actually are.
+        if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+          if (root.navInSidebar) { root.navInSidebar = false; root.navSync() }
+          else root.navSidebar(0)
+          event.accepted = true; return
+        }
       }
 
       RowLayout {
@@ -608,17 +780,25 @@ Item {
               model: root.sidebarRows
               delegate: Rectangle {
                 required property var modelData
+                required property int index
 
                 readonly property bool current: modelData.selectable && modelData.id === root.pageId
+                // Where the keyboard is, which is not always the open page:
+                // Alt can walk onto a parent without opening anything.
+                readonly property bool cursored: root.navInSidebar && index === root.sidebarIndex
 
                 Layout.fillWidth: true
                 implicitHeight: Style.spacing.controlHeight + Style.space(4)
                 radius: Style.cornerRadius
+                border.width: cursored ? Style.normalBorderWidth : 0
+                border.color: root.accent
                 color: current
                   ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.18)
-                  : (navMouse.containsMouse
-                     ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
-                     : "transparent")
+                  : (cursored
+                     ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.10)
+                     : (navMouse.containsMouse
+                        ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+                        : "transparent"))
 
                 Row {
                   anchors.fill: parent

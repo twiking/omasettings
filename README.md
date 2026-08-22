@@ -141,6 +141,26 @@ Remove it with `omarchy plugin remove io.github.twiking.omasettings`.
 - **SUPER+SPACE**, then "OmaSettings" — it installs a launcher entry, so it is
   reachable as an application and not only from the bar.
 - **Escape** closes the window.
+
+### Keyboard
+
+The window is fully drivable from the keyboard, in the vocabulary every
+Omarchy panel uses:
+
+| Key | Does |
+| --- | --- |
+| `Up` / `Down`, or `k` / `j` | Move the cursor through the settings on the page |
+| `Alt+Up` / `Alt+Down` | Move through the sidebar, opening each page as you land on it |
+| `Left` / `Right`, or `h` / `l` | Step a slider, or pick the neighbouring option |
+| `Space` or `Enter` | Flip a switch, open a list, press a button |
+| `Enter` on a sidebar heading | Open or close its submenu |
+| `Home` / `End` | First and last setting on the page |
+| `Tab` | Swap between the sidebar and the page |
+| `Escape` | Close an open list, or the window |
+
+The cursor is a band across the row it is on, and the page scrolls to keep it
+in view. While a list is open it owns the keyboard, so its own `Up`/`Down`
+walk the options and `Escape` closes the list rather than the window.
 - From anywhere: `omarchy-shell omasettings toggle` (also `show` / `hide`) —
   handy on a keybinding:
 

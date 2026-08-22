@@ -94,6 +94,36 @@ sentence PulseAudio assembles. Both now feed this page too.
 Before building a page over something the bar already shows, read the widget
 and use the same source, the same filter, and the same labels.
 
+## Keyboard navigation
+
+`PanelKeyCatcher` in `qs.Ui` defines the vocabulary Omarchy panels answer to,
+and this window follows it rather than inventing one: Up/Down and j/k move,
+Left/Right and h/l change a value, Enter and Space act, Tab changes section,
+Escape closes. Alt+Up/Down for the sidebar and Home/End are the additions a
+window with pages needs.
+
+The cursor lives in `SettingsWindow`, but a row says what it means: `SettingRow`
+carries `current`, `navActivate()` and `navStep(delta)`, and each row type
+answers those in its own terms — a switch flips, a slider steps, a picker
+opens. A row type that answers neither is still navigable and simply does
+nothing when activated.
+
+Rows register themselves on load, by walking up to the page and taking the
+`app` handle it was loaded with — a window is not the visual parent of what it
+shows, so walking to the top does not find it. The order is recomputed from
+where rows actually sit, not from the order they registered, since groups come
+and go with the settings they depend on.
+
+Two things worth knowing before changing this:
+
+- **A row holding the keyboard sets `navBlocking`** — an open dropdown, a field
+  being typed into. The window then forwards every key, Escape included, or
+  Escape would close the window out from under an open list.
+- **Stepping keeps its own `pending` value.** A write takes a state refresh to
+  come back, and two presses inside that window would both compute from the
+  same stale number, so the second would be swallowed. `effective` is what the
+  slider and the next press read.
+
 ## The launcher entry
 
 The plugin is an app as well as a bar widget: `Service.qml` is a `service`

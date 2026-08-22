@@ -12,6 +12,22 @@ SettingRow {
   readonly property int currentMinutes: Math.max(1, Math.round(seconds / 60))
   readonly property int shownMinutes: minutesSlider.dragging ? Math.round(minutesSlider.liveValue) : currentMinutes
 
+  // The slider runs 1..60 whole minutes, so a key press is a minute, and each
+  // press builds on the last rather than on the value last read back.
+  property int pending: currentMinutes
+  property bool stepping: false
+  readonly property int effective: stepping ? pending : currentMinutes
+
+  onCurrentMinutesChanged: if (stepping && currentMinutes === pending) stepping = false
+
+  onNavStep: function(delta) {
+    var next = Math.max(1, Math.min(60, minutesRow.effective + delta))
+    if (next === minutesRow.effective) return
+    minutesRow.pending = next
+    minutesRow.stepping = true
+    minutesRow.committed(next)
+  }
+
   Row {
     width: parent.width
     spacing: Style.space(10)
@@ -24,7 +40,7 @@ SettingRow {
       step: 1
       minimum: 1
       maximum: 60
-      value: minutesRow.currentMinutes
+      value: minutesRow.effective
       onReleased: function(v) {
         var next = Math.max(1, Math.round(v))
         if (next !== minutesRow.currentMinutes) minutesRow.committed(next)

@@ -25,6 +25,21 @@ SettingRow {
     return out
   }
 
+  // A segmented row has its options on screen already, so stepping walks
+  // them and activating takes the next one.
+  function navPick(delta) {
+    var list = choiceRow.normalized
+    if (list.length === 0) return
+    var at = 0
+    for (var i = 0; i < list.length; i++)
+      if (String(list[i].value) === String(choiceRow.value)) { at = i; break }
+    var next = Math.max(0, Math.min(list.length - 1, at + delta))
+    if (next !== at) choiceRow.picked(String(list[next].value))
+  }
+
+  onNavStep: function(delta) { choiceRow.navPick(delta) }
+  onNavActivate: choiceRow.navPick(1)
+
   ButtonGroup {
     anchors.right: parent.right
     options: choiceRow.normalized

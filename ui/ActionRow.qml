@@ -10,6 +10,9 @@ SettingRow {
   property string buttonText: ""
   signal triggered()
 
+  // The row has one button, so activating the row presses it.
+  onNavActivate: actionRow.triggered()
+
   Button {
     anchors.right: parent.right
     text: actionRow.buttonText

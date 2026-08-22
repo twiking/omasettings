@@ -11,7 +11,22 @@ SettingRow {
   property real maximum: 3
   signal committed(string next)
 
-  readonly property real shown: factorSlider.dragging ? factorSlider.liveValue : value
+  property real pending: value
+  property bool stepping: false
+  readonly property real effective: stepping ? pending : value
+  readonly property real shown: factorSlider.dragging ? factorSlider.liveValue : effective
+
+  onValueChanged: if (stepping && Math.abs(value - pending) < 0.001) stepping = false
+
+  onNavStep: function(delta) {
+    var base = factorRow.effective
+    var next = Math.max(factorRow.minimum, Math.min(factorRow.maximum, base + delta * 0.05))
+    next = Math.round(next * 20) / 20
+    if (Math.abs(next - base) < 0.001) return
+    factorRow.pending = next
+    factorRow.stepping = true
+    factorRow.committed(next.toFixed(2))
+  }
 
   Row {
     width: parent.width
@@ -24,7 +39,7 @@ SettingRow {
       minimum: factorRow.minimum
       maximum: factorRow.maximum
       step: 0.05
-      value: Math.max(factorRow.minimum, Math.min(factorRow.maximum, factorRow.value))
+      value: Math.max(factorRow.minimum, Math.min(factorRow.maximum, factorRow.effective))
       enabled: factorRow.enabled
       onReleased: function(v) {
         var next = (Math.round(v * 20) / 20).toFixed(2)

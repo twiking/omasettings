@@ -13,7 +13,24 @@ SettingRow {
   property string suffix: ""
   signal committed(int next)
 
-  readonly property int shown: numberSlider.dragging ? Math.round(numberSlider.liveValue) : value
+  // Keys step from where the last key left off. A write takes a refresh to
+  // come back, and two presses inside that window would otherwise compute the
+  // same number twice and the second would be swallowed.
+  property int pending: value
+  property bool stepping: false
+  readonly property int effective: stepping ? pending : value
+  readonly property int shown: numberSlider.dragging ? Math.round(numberSlider.liveValue) : effective
+
+  onValueChanged: if (stepping && value === pending) stepping = false
+
+  onNavStep: function(delta) {
+    var base = numberRow.effective
+    var next = Math.max(numberRow.from, Math.min(numberRow.to, base + delta * numberRow.step))
+    if (next === base) return
+    numberRow.pending = next
+    numberRow.stepping = true
+    numberRow.committed(next)
+  }
 
   Row {
     width: parent.width
@@ -27,7 +44,7 @@ SettingRow {
       step: numberRow.step
       minimum: numberRow.from
       maximum: numberRow.to
-      value: numberRow.value
+      value: numberRow.effective
       enabled: numberRow.enabled
       onReleased: function(v) {
         var next = Math.round(v)

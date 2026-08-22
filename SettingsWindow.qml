@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
 import "ui" as Ui
@@ -500,13 +501,47 @@ Item {
     }
   }
 
-  FloatingWindow {
+  // A layer-shell surface rather than an ordinary window: a toplevel is the
+  // tiler's to place, so it landed beside whatever was open and only floated
+  // for someone who had written a Hyprland rule for it by hand. On the overlay
+  // layer the settings open above the current windows on any machine, with
+  // nothing to install and nothing to configure — the same way the Omarchy
+  // menu and the bar panels do it.
+  PanelWindow {
     id: window
-    title: "OmaSettings"
-    color: root.background
-    implicitWidth: Style.space(940)
-    implicitHeight: Style.space(680)
-    minimumSize: Qt.size(Style.space(720), Style.space(520))
+    visible: false
+    anchors { top: true; bottom: true; left: true; right: true }
+    color: "transparent"
+    WlrLayershell.namespace: "omasettings"
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+    exclusionMode: ExclusionMode.Ignore
+
+    // Dimming what is behind says the settings are in front of it, and gives
+    // the click-outside-to-close target somewhere to live.
+    Rectangle {
+      anchors.fill: parent
+      color: Qt.rgba(0, 0, 0, 0.45)
+    }
+
+    MouseArea {
+      anchors.fill: parent
+      onClicked: root.hide()
+    }
+
+    Rectangle {
+      id: card
+      anchors.centerIn: parent
+      // Nine tenths of the screen it is on, whatever screen that is.
+      width: Math.round(window.width * 0.9)
+      height: Math.round(window.height * 0.9)
+      color: root.background
+      radius: Style.cornerRadius
+      border.width: 1
+      border.color: root.hairline
+
+      // The card is not the scrim: a click that lands on it stays on it.
+      MouseArea { anchors.fill: parent }
 
     FocusScope {
       anchors.fill: parent
@@ -709,6 +744,7 @@ Item {
           }
         }
       }
+    }
     }
   }
 

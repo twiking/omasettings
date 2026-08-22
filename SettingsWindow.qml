@@ -97,7 +97,31 @@ Item {
   // themselves — that one is commented out rather than deleted.
   function removeDevice(name) { run(["devices", "remove", name]) }
 
-  readonly property var power: state.power !== undefined ? state.power : ({})
+  // The profile is moved by the bar's power plugin, the menu and the daemon
+  // itself, and the battery reading changes on its own. While the Power page
+  // is up, those events are followed directly rather than waited for.
+  property var powerLive: null
+  readonly property var power: powerLive !== null ? powerLive
+    : (state.power !== undefined ? state.power : ({}))
+
+  Process {
+    id: powerWatchProcess
+    command: ["bash", root.helperPath, "power", "watch"]
+    running: root.shown && root.pageId === "power"
+    stdout: SplitParser {
+      splitMarker: "\n"
+      onRead: function(line) {
+        try {
+          var next = JSON.parse(line)
+          if (next && typeof next === "object") root.powerLive = next
+        } catch (e) {
+          // A half-written line is not worth acting on; the next event
+          // brings the whole state again.
+        }
+      }
+    }
+    onRunningChanged: if (!running) root.powerLive = null
+  }
 
   // Like Wi-Fi: the Bluetooth page keeps its own list current while it is on
   // screen, without re-reading the whole state to do it.

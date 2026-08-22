@@ -71,10 +71,44 @@ power_state() {
        forBattery: (if $savedBattery != "" then $savedBattery else "balanced" end) }'
 }
 
+# The profile is not this window's alone: the bar's power plugin, the menu and
+# powerprofilesctl itself all move it, and the battery drains regardless. Three
+# things are worth waking for — the daemon's active profile, UPower's battery
+# and AC readings, and the files omarchy-powerprofiles-set writes to remember a
+# profile per power source — so all three feed one stream of state lines.
+power_watch() {
+  command -v powerprofilesctl >/dev/null 2>&1 || { echo '{"available": false}'; return; }
+
+  mkdir -p "$POWERPROFILES_STATE" 2>/dev/null
+  power_state
+
+  local reader=$$
+  {
+    local pids=()
+    # The monitors outlive nothing: when this subshell goes, so do they.
+    trap 'kill "${pids[@]}" 2>/dev/null' EXIT
+
+    gdbus monitor --system --dest net.hadess.PowerProfiles 2>/dev/null & pids+=($!)
+    gdbus monitor --system --dest org.freedesktop.UPower 2>/dev/null & pids+=($!)
+    inotifywait -q -m -e close_write,create,moved_to "$POWERPROFILES_STATE" 2>/dev/null & pids+=($!)
+
+    # None of them notices the page closing, and a write to a gone reader is
+    # only noticed at the next event — which may be hours away. Watch for the
+    # reader instead, so the monitors never outlast the window.
+    while kill -0 "$reader" 2>/dev/null; do sleep 2; done
+  } | while read -r _; do
+        # UPower is chatty and a profile change lands as several signals;
+        # draining the burst keeps this to one state read per change.
+        while read -r -t 0.2 _; do :; done
+        power_state
+      done
+}
+
 power_cmd() {
   local action=${1:-} source=${2:-} profile=${3:-}
   case $action in
     state) power_state ;;
+    watch) power_watch ;;
     profile)
       [[ $source == ac || $source == battery ]] || die "expected ac or battery"
       [[ -n $profile ]] || die "no profile given"

@@ -51,7 +51,10 @@ hypr_read() {
     # window edits them as one number, so read the first side.
     css) jq -c '((.css // "0") | split(" ") | .[0] | tonumber? // 0)' <<<"$raw" ;;
     float) jq -c '((.float // 0) * 1000 | round) / 1000' <<<"$raw" ;;
-    bool) jq -c '((.int // 0) != 0)' <<<"$raw" ;;
+    # Hyprland answers booleans with a bool field; older builds only had int,
+    # and reading int alone made every switch on this page read "off" no
+    # matter what the compositor was actually doing.
+    bool) jq -c 'if has("bool") then (.bool == true) else ((.int // 0) != 0) end' <<<"$raw" ;;
     # Hyprland spells "no value set" as [[EMPTY]]; the window wants "".
     str) jq -c '((.str // "") | if . == "[[EMPTY]]" then "" else . end)' <<<"$raw" ;;
   esac

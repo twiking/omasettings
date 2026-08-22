@@ -54,7 +54,34 @@ Item {
   readonly property var datetime: state.datetime !== undefined ? state.datetime : ({})
   readonly property var groups: state.groups !== undefined ? state.groups : ({})
 
-  readonly property var audio: state.audio !== undefined ? state.audio : ({})
+  // Mute and volume are the server's, not this window's: the media keys, the
+  // bar widget and any other panel move them too. While the Audio page is up,
+  // PulseAudio's event stream is followed directly so the switches and sliders
+  // track what is actually happening rather than what was true at last read.
+  property var audioLive: null
+  readonly property var audio: audioLive !== null ? audioLive
+    : (state.audio !== undefined ? state.audio : ({}))
+
+  Process {
+    id: audioWatchProcess
+    command: ["bash", root.helperPath, "audio", "watch"]
+    running: root.shown && root.pageId === "audio"
+    stdout: SplitParser {
+      splitMarker: "\n"
+      onRead: function(line) {
+        try {
+          var next = JSON.parse(line)
+          if (next && typeof next === "object") root.audioLive = next
+        } catch (e) {
+          // A half-written line is not worth acting on; the next event
+          // brings the whole state again.
+        }
+      }
+    }
+    // A stale live reading is worse than none: the page falls back to the
+    // state document once nothing is watching.
+    onRunningChanged: if (!running) root.audioLive = null
+  }
 
   // Input devices. Each page lists its own, one group per device, so the
   // Keyboard and Mouse pages never have to say which device a control means.

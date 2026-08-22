@@ -66,9 +66,9 @@ usage:
   omasettings devices state | set <device> <option> <value> keyboard|pointer
                  | clear <device> [option] | remove <device>
   omasettings keys list | add "<KEYS>" "<description>" "<command>" | remove "<KEYS>" | disable "<KEYS>"
-  omasettings audio state | default output|input <device> | volume output|input <percent>
+  omasettings audio state | audio watch | default output|input <device> | volume output|input <percent>
                  | mute output|input on|off|toggle
-  omasettings power state | profile ac|battery <power-saver|balanced|performance>
+  omasettings power state | power watch | profile ac|battery <power-saver|balanced|performance>
   omasettings bluetooth state | power on|off | scan | poll | pair|connect|disconnect|forget <address>
   omasettings wifi list | rescan | poll | connect <ssid> [password] | disconnect | forget <ssid>
                  | radio on|off | band auto|2.4|5|6

@@ -44,21 +44,59 @@ audio_devices() {
           volume: (( .volume | to_entries | map(.value.value_percent | rtrimstr("%") | tonumber) | add / length ) | round) } ]'
 }
 
+# Loudness for the current output does not necessarily live on the current
+# output: a speaker tuning or EasyEffects sits in front as a DSP sink, and the
+# volume and mute that matter are the physical sink's underneath. The media
+# keys resolve through it; so must this, or the panel moves one sink while the
+# keyboard moves another and neither agrees with the OSD.
+audio_output_sink() {
+  local sink
+  sink=$(omarchy-audio-output-sink 2>/dev/null)
+  [[ -n $sink ]] && printf '%s\n' "$sink" && return
+  pactl get-default-sink 2>/dev/null
+}
+
 audio_state() {
   command -v pactl >/dev/null 2>&1 || { echo '{"available": false}'; return; }
 
-  jq -cn --argjson outputs "$(audio_devices sinks)" \
+  jq -cn --arg resolved "$(audio_output_sink)" \
+    --argjson outputs "$(audio_devices sinks)" \
     --argjson inputs "$(audio_devices sources)" \
     --argjson availability "$(audio_availability)" \
     --arg defaultOutput "$(pactl get-default-sink 2>/dev/null)" \
     --arg defaultInput "$(pactl get-default-source 2>/dev/null)" \
-    '{ available: true,
+    '# What the selected output really sounds like, taken from the sink the
+     # keys move rather than from the DSP sink fronting it.
+     ($outputs | map(select(.name == $resolved)) | first) as $real
+     | { available: true,
        outputs: [$outputs[]
          | . + { default: (.name == $defaultOutput) }
+         | if .default and $real != null and .name != $resolved
+           then . + { muted: $real.muted, volume: $real.volume }
+           else . end
          # Whatever is playing right now stays listed even if it reports
          # itself unavailable, so the current output is never missing.
          | select(.default or ($availability[.name] != false))],
        inputs: [$inputs[] | . + { default: (.name == $defaultInput) }] }'
+}
+
+# The server owns mute and volume, and the keyboard keys, the bar widget and
+# any other panel all move them behind this window's back. Rather than re-read
+# on a timer, follow PulseAudio's own event stream and print the whole audio
+# state again whenever something about a sink, a source or the server itself
+# changes — one compact line per change, so the window can just parse and show.
+audio_watch() {
+  command -v pactl >/dev/null 2>&1 || { echo '{"available": false}'; return; }
+
+  audio_state
+  pactl subscribe 2>/dev/null \
+    | grep --line-buffered -E "on (sink|source|server)" \
+    | while read -r _; do
+        # A single key press emits several events; draining the burst first
+        # means one state read per change rather than four.
+        while read -r -t 0.1 _; do :; done
+        audio_state
+      done
 }
 
 # Switching the default alone leaves whatever is already playing on the old
@@ -78,13 +116,19 @@ audio_move_streams() {
 audio_cmd() {
   local action=${1:-} kind=${2:-} value=${3:-}
   command -v pactl >/dev/null 2>&1 || die "PulseAudio is not available"
-  [[ $action == state ]] || [[ $kind == output || $kind == input ]] || die "expected output or input"
+  [[ $action == state || $action == watch ]] || [[ $kind == output || $kind == input ]] || die "expected output or input"
 
   local device=sink
   [[ $kind == input ]] && device=source
 
+  # Output actions land on the resolved sink, the same one the media keys use;
+  # input has no DSP equivalent, so it stays on the default source.
+  local target="@DEFAULT_SOURCE@"
+  [[ $kind == output ]] && target=$(audio_output_sink)
+
   case $action in
     state) audio_state ;;
+    watch) audio_watch ;;
     default)
       [[ -n $value ]] || die "no device given"
       pactl "set-default-$device" "$value" >/dev/null 2>&1 || die "could not switch to that device"
@@ -92,7 +136,7 @@ audio_cmd() {
     volume)
       [[ $value =~ ^[0-9]+$ ]] || die "'$value' is not a percentage"
       ((value <= 150)) || die "that is louder than this will go"
-      pactl "set-$device-volume" @DEFAULT_${device^^}@ "${value}%" >/dev/null 2>&1 \
+      pactl "set-$device-volume" "$target" "${value}%" >/dev/null 2>&1 \
         || die "could not set the volume" ;;
     mute)
       case $value in
@@ -100,7 +144,7 @@ audio_cmd() {
           local flag=$value
           [[ $value == on ]] && flag=1
           [[ $value == off ]] && flag=0
-          pactl "set-$device-mute" @DEFAULT_${device^^}@ "$flag" >/dev/null 2>&1 \
+          pactl "set-$device-mute" "$target" "$flag" >/dev/null 2>&1 \
             || die "could not change the mute" ;;
         *) die "expected on, off or toggle" ;;
       esac ;;

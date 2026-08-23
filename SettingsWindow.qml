@@ -1248,7 +1248,9 @@ Item {
           anchors.left: parent.left
           anchors.leftMargin: Style.spacing.panelPadding
           anchors.verticalCenter: parent.verticalCenter
-          spacing: Style.space(16)
+          // Wide enough between entries that each key and what it does read as
+          // one thing, rather than the whole bar reading as one long line.
+          spacing: Style.space(28)
 
           Repeater {
             model: root.navLegend

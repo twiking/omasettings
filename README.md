@@ -49,6 +49,9 @@ the bar has room for widgets that earn it.
 | Applications → Tmux | Prefix, copy-mode keys, status bar, window and pane numbering, mouse, scrollback, clipboard | `~/.config/tmux/tmux.conf` |
 | Applications → Neovim | Gutter, wrapping, column guide, scrolloff, spell, indentation | `~/.config/nvim/lua/config/options.lua` |
 
+A page for an application you do not have does not appear at all — Tmux,
+Neovim and Herdr show up only if the application is installed.
+
 The Style, Setup and Update sections are read from the Omarchy menu's own definition
 (`omarchy-menu.jsonc`, defaults plus your extensions) rather than a second
 list that can drift, so its entries and actions are exactly the menu's

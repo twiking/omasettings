@@ -409,7 +409,21 @@ Item {
     return matchesTerm("", "", pageNames(pageId))
   }
 
+  // A page for an application you do not have is a page of settings with
+  // nowhere to go. The binary is the test, not its config file: an application
+  // can be installed and never yet configured, and a config can outlive the
+  // thing it configured.
+  function pageAvailable(id) {
+    switch (id) {
+    case "apps.tmux": return state.tmux === undefined || state.tmux.installed !== false
+    case "apps.nvim": return state.nvim === undefined || state.nvim.installed !== false
+    case "apps.herdr": return state.herdr === undefined || state.herdr.installed !== false
+    default: return true
+    }
+  }
+
   function pageMatchCount(pageId) {
+    if (!pageAvailable(pageId)) return 0
     if (!searching) return 0
     var entries = searchIndex[pageId]
     if (!entries) return 0
@@ -430,17 +444,22 @@ Item {
 
   // Whether a page belongs in the menu at all: something on it matched, or it
   // is itself what was searched for.
+  // An application removed while its page is open leaves the window on a page
+  // that is no longer there; step off it.
+  onStateChanged: if (!pageAvailable(pageId)) pageId = "appearance"
+
   function sectionShows(section) {
     if (!searching) return true
     if (sectionMatchCount(section) > 0) return true
     if (pageTitleMatches(section.id)) return true
     var children = section.children || []
     for (var i = 0; i < children.length; i++)
-      if (pageTitleMatches(children[i].id)) return true
+      if (pageAvailable(children[i].id) && pageTitleMatches(children[i].id)) return true
     return false
   }
 
   function pageShows(pageId) {
+    if (!pageAvailable(pageId)) return false
     return !searching || pageMatchCount(pageId) > 0 || pageTitleMatches(pageId)
   }
 
@@ -805,6 +824,7 @@ Item {
       })
       if (!(open || (searching && children.length > 0))) continue
       for (var c = 0; c < children.length; c++) {
+        if (!pageAvailable(children[c].id)) continue
         var childCount = pageMatchCount(children[c].id)
         if (!pageShows(children[c].id)) continue
         rows.push({

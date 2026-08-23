@@ -64,6 +64,18 @@ Two invariants on top:
   the option to the running server. On failure, restore the previous content and
   `die` with the tool's own message.
 
+## Pages for applications you may not have
+
+Tmux, Neovim and Herdr get a page each, and an application you do not have is
+a page of settings with nowhere to go — so `pageAvailable()` drops it from the
+menu, from the search counts and from Alt navigation, and steps off it if the
+application goes away while its page is open.
+
+**The binary is the test, not the config file.** An application can be
+installed and never yet configured, and a config file can outlive the thing it
+configured; only `command -v` answers the question actually being asked. Each
+of the three reports it in its own state as `installed`.
+
 ## Where each page writes
 
 This app stores almost nothing. Each page writes into whatever owns the

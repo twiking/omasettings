@@ -121,13 +121,23 @@ app_cmd() {
       [[ -n $spec ]] || die "unknown tmux setting '$key'"
       type=${spec%%$'\t'*}
       scope=${spec##*$'\t'}
-      tmux_write "$key" "$value" "$type" "$scope" ;;
+      # Read before the write: afterwards it would say what it has become.
+      local before_tmux
+      before_tmux=$(setting_value_now "tmux:$key")
+      tmux_write "$key" "$value" "$type" "$scope"
+      # Written from the window, so the window can say so and put it back.
+      [[ ${OMASETTINGS_TRACKING:-1} == 1 ]] && track_write "tmux:$key" "$value" "$before_tmux"
+      true ;;
     nvim/state) nvim_state ;;
     nvim/set)
       local type
       type=$(nvim_schema | awk -F'\t' -v k="$key" '$1 == k { print $2 }')
       [[ -n $type ]] || die "unknown neovim setting '$key'"
-      nvim_write "$key" "$value" "$type" ;;
+      local before_nvim
+      before_nvim=$(setting_value_now "nvim:$key")
+      nvim_write "$key" "$value" "$type"
+      [[ ${OMASETTINGS_TRACKING:-1} == 1 ]] && track_write "nvim:$key" "$value" "$before_nvim"
+      true ;;
     *) die "unknown app command '$app $action'" ;;
   esac
 }

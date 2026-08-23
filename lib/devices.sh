@@ -244,3 +244,11 @@ devices_cmd() {
     *) die "unknown devices action '$action'" ;;
   esac
 }
+
+# A per-device setting is an override: it exists only because this window put
+# it there, and clearing it hands the device back to the global setting. So
+# the store is the whole record, and needs no remembered original.
+devices_changed() {
+  jq -c '[(.devices // {}) | to_entries[] | .key as $name
+          | (.value | keys[]) | "device:" + $name + ":" + .]' <<<"$(read_store)"
+}

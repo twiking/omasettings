@@ -174,7 +174,11 @@ herdr_cmd() {
       local type
       type=$(herdr_schema | awk -F'\t' -v k="$key" '$1 == k { print $2 }')
       [[ -n $type ]] || die "unknown herdr setting '$key'"
-      herdr_write "$key" "$value" "$type" ;;
+      local before_herdr
+      before_herdr=$(setting_value_now "herdr:$key")
+      herdr_write "$key" "$value" "$type"
+      [[ ${OMASETTINGS_TRACKING:-1} == 1 ]] && track_write "herdr:$key" "$value" "$before_herdr"
+      true ;;
     *) die "unknown herdr action '$action'" ;;
   esac
 }

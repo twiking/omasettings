@@ -28,6 +28,8 @@ Ui.SectionBody {
         { value: "vesper", label: "Vesper" }
       ]
       onPicked: function(next) { app.setHerdr("theme.name", next) }
+      changed: app.isChanged("herdr:theme.name")
+      onResetRequested: app.resetSetting("herdr:theme.name")
     }
 
     Ui.TextRow {
@@ -36,6 +38,8 @@ Ui.SectionBody {
       placeholder: "cyan"
       value: String(app.herdrValue("ui.accent", "cyan"))
       onCommitted: function(next) { app.setHerdr("ui.accent", next) }
+      changed: app.isChanged("herdr:ui.accent")
+      onResetRequested: app.resetSetting("herdr:ui.accent")
     }
 
     Ui.PickerRow {
@@ -46,12 +50,16 @@ Ui.SectionBody {
         { value: "bottom", label: "Bottom" }
       ]
       onPicked: function(next) { app.setHerdr("ui.tab_bar_position", next) }
+      changed: app.isChanged("herdr:ui.tab_bar_position")
+      onResetRequested: app.resetSetting("herdr:ui.tab_bar_position")
     }
 
     Ui.SwitchRow {
       label: "Hide the tab bar with one tab"
       checked: app.herdrValue("ui.hide_tab_bar_when_single_tab", false) === true
       onRequested: function(next) { app.setHerdr("ui.hide_tab_bar_when_single_tab", next ? "true" : "false") }
+      changed: app.isChanged("herdr:ui.hide_tab_bar_when_single_tab")
+      onResetRequested: app.resetSetting("herdr:ui.hide_tab_bar_when_single_tab")
     }
   }
 
@@ -62,6 +70,8 @@ Ui.SectionBody {
       label: "Borders"
       checked: app.herdrValue("ui.pane_borders", true) === true
       onRequested: function(next) { app.setHerdr("ui.pane_borders", next ? "true" : "false") }
+      changed: app.isChanged("herdr:ui.pane_borders")
+      onResetRequested: app.resetSetting("herdr:ui.pane_borders")
     }
 
     Ui.SwitchRow {
@@ -69,18 +79,24 @@ Ui.SectionBody {
       description: "Off gives tmux-style splitters with no frame around the edge."
       checked: app.herdrValue("ui.pane_outer_borders", true) === true
       onRequested: function(next) { app.setHerdr("ui.pane_outer_borders", next ? "true" : "false") }
+      changed: app.isChanged("herdr:ui.pane_outer_borders")
+      onResetRequested: app.resetSetting("herdr:ui.pane_outer_borders")
     }
 
     Ui.SwitchRow {
       label: "Gaps between panes"
       checked: app.herdrValue("ui.pane_gaps", true) === true
       onRequested: function(next) { app.setHerdr("ui.pane_gaps", next ? "true" : "false") }
+      changed: app.isChanged("herdr:ui.pane_gaps")
+      onResetRequested: app.resetSetting("herdr:ui.pane_gaps")
     }
 
     Ui.SwitchRow {
       label: "Scrollbars"
       checked: app.herdrValue("ui.pane_scrollbars", true) === true
       onRequested: function(next) { app.setHerdr("ui.pane_scrollbars", next ? "true" : "false") }
+      changed: app.isChanged("herdr:ui.pane_scrollbars")
+      onResetRequested: app.resetSetting("herdr:ui.pane_scrollbars")
     }
 
     Ui.SwitchRow {
@@ -88,6 +104,8 @@ Ui.SectionBody {
       description: "Shown when a pane has no name of its own."
       checked: app.herdrValue("ui.show_agent_labels_on_pane_borders", false) === true
       onRequested: function(next) { app.setHerdr("ui.show_agent_labels_on_pane_borders", next ? "true" : "false") }
+      changed: app.isChanged("herdr:ui.show_agent_labels_on_pane_borders")
+      onResetRequested: app.resetSetting("herdr:ui.show_agent_labels_on_pane_borders")
     }
   }
 
@@ -101,6 +119,8 @@ Ui.SectionBody {
       from: 12
       to: 60
       onCommitted: function(next) { app.setHerdr("ui.sidebar_width", next) }
+      changed: app.isChanged("herdr:ui.sidebar_width")
+      onResetRequested: app.resetSetting("herdr:ui.sidebar_width")
     }
 
     Ui.SwitchRow {
@@ -108,6 +128,8 @@ Ui.SectionBody {
       description: "Takes effect the next time Herdr launches."
       checked: app.herdrValue("ui.sidebar_start_collapsed", false) === true
       onRequested: function(next) { app.setHerdr("ui.sidebar_start_collapsed", next ? "true" : "false") }
+      changed: app.isChanged("herdr:ui.sidebar_start_collapsed")
+      onResetRequested: app.resetSetting("herdr:ui.sidebar_start_collapsed")
     }
 
     Ui.PickerRow {
@@ -118,6 +140,8 @@ Ui.SectionBody {
         { value: "hidden", label: "Hide it completely" }
       ]
       onPicked: function(next) { app.setHerdr("ui.sidebar_collapsed_mode", next) }
+      changed: app.isChanged("herdr:ui.sidebar_collapsed_mode")
+      onResetRequested: app.resetSetting("herdr:ui.sidebar_collapsed_mode")
     }
   }
 
@@ -133,6 +157,8 @@ Ui.SectionBody {
         { value: "current", label: "Herdr's own folder" }
       ]
       onPicked: function(next) { app.setHerdr("terminal.new_cwd", next) }
+      changed: app.isChanged("herdr:terminal.new_cwd")
+      onResetRequested: app.resetSetting("herdr:terminal.new_cwd")
     }
 
     Ui.SwitchRow {
@@ -140,12 +166,16 @@ Ui.SectionBody {
       description: "Off lets the terminal handle clicks, so links stay clickable."
       checked: app.herdrValue("ui.mouse_capture", true) === true
       onRequested: function(next) { app.setHerdr("ui.mouse_capture", next ? "true" : "false") }
+      changed: app.isChanged("herdr:ui.mouse_capture")
+      onResetRequested: app.resetSetting("herdr:ui.mouse_capture")
     }
 
     Ui.SwitchRow {
       label: "Copy on selection"
       checked: app.herdrValue("ui.copy_on_select", true) === true
       onRequested: function(next) { app.setHerdr("ui.copy_on_select", next ? "true" : "false") }
+      changed: app.isChanged("herdr:ui.copy_on_select")
+      onResetRequested: app.resetSetting("herdr:ui.copy_on_select")
     }
 
     Ui.NumberRow {
@@ -155,24 +185,32 @@ Ui.SectionBody {
       from: 1
       to: 10
       onCommitted: function(next) { app.setHerdr("ui.mouse_scroll_lines", next) }
+      changed: app.isChanged("herdr:ui.mouse_scroll_lines")
+      onResetRequested: app.resetSetting("herdr:ui.mouse_scroll_lines")
     }
 
     Ui.SwitchRow {
       label: "Confirm before closing"
       checked: app.herdrValue("ui.confirm_close", true) === true
       onRequested: function(next) { app.setHerdr("ui.confirm_close", next ? "true" : "false") }
+      changed: app.isChanged("herdr:ui.confirm_close")
+      onResetRequested: app.resetSetting("herdr:ui.confirm_close")
     }
 
     Ui.SwitchRow {
       label: "Ask for a tab name"
       checked: app.herdrValue("ui.prompt_new_tab_name", true) === true
       onRequested: function(next) { app.setHerdr("ui.prompt_new_tab_name", next ? "true" : "false") }
+      changed: app.isChanged("herdr:ui.prompt_new_tab_name")
+      onResetRequested: app.resetSetting("herdr:ui.prompt_new_tab_name")
     }
 
     Ui.SwitchRow {
       label: "Ask for a workspace name"
       checked: app.herdrValue("ui.prompt_new_workspace_name", false) === true
       onRequested: function(next) { app.setHerdr("ui.prompt_new_workspace_name", next ? "true" : "false") }
+      changed: app.isChanged("herdr:ui.prompt_new_workspace_name")
+      onResetRequested: app.resetSetting("herdr:ui.prompt_new_workspace_name")
     }
   }
 
@@ -189,6 +227,8 @@ Ui.SectionBody {
         { value: "system", label: "Desktop notifications" }
       ]
       onPicked: function(next) { app.setHerdr("ui.toast.delivery", next) }
+      changed: app.isChanged("herdr:ui.toast.delivery")
+      onResetRequested: app.resetSetting("herdr:ui.toast.delivery")
     }
 
     Ui.SwitchRow {
@@ -196,6 +236,8 @@ Ui.SectionBody {
       description: "Played when an agent changes state in a background workspace."
       checked: app.herdrValue("ui.sound.enabled", true) === true
       onRequested: function(next) { app.setHerdr("ui.sound.enabled", next ? "true" : "false") }
+      changed: app.isChanged("herdr:ui.sound.enabled")
+      onResetRequested: app.resetSetting("herdr:ui.sound.enabled")
     }
   }
 
@@ -208,6 +250,8 @@ Ui.SectionBody {
       placeholder: "ctrl+b"
       value: String(app.herdrValue("keys.prefix", "ctrl+b"))
       onCommitted: function(next) { app.setHerdr("keys.prefix", next) }
+      changed: app.isChanged("herdr:keys.prefix")
+      onResetRequested: app.resetSetting("herdr:keys.prefix")
     }
 
     Ui.ActionRow {
@@ -234,6 +278,8 @@ Ui.SectionBody {
       placeholder: "{hostname}: {workspace}"
       value: String(app.herdrValue("ui.window_title", ""))
       onCommitted: function(next) { app.setHerdr("ui.window_title", next) }
+      changed: app.isChanged("herdr:ui.window_title")
+      onResetRequested: app.resetSetting("herdr:ui.window_title")
     }
   }
 }

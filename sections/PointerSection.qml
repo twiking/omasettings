@@ -187,6 +187,8 @@ Ui.SectionBody {
         label: "Left handed"
         checked: inForce("left_handed", false) === true
         onRequested: function(next) { app.setDevice(name, "left_handed", next ? "true" : "false", "pointer") }
+        changed: app.isChanged("device:" + name + ":left_handed")
+        onResetRequested: app.resetSetting("device:" + name + ":left_handed")
       }
 
       Ui.FactorRow {

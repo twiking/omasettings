@@ -449,11 +449,18 @@ Item {
   onSearchTermChanged: {
     if (!searching) return
     if (pageShows(pageId)) return
-    for (var i = 0; i < sidebarRows.length; i++) {
-      if (sidebarRows[i].selectable) {
-        pageId = sidebarRows[i].id
-        return
+    // Walked from the sections rather than from sidebarRows: that list is a
+    // binding on this very term, and read from inside the change it is still
+    // the list for the term before, which lands you on a page that no longer
+    // matches.
+    for (var i = 0; i < sections.length; i++) {
+      var children = sections[i].children || []
+      if (children.length === 0) {
+        if (pageShows(sections[i].id)) { pageId = sections[i].id; return }
+        continue
       }
+      for (var c = 0; c < children.length; c++)
+        if (pageShows(children[c].id)) { pageId = children[c].id; return }
     }
   }
 

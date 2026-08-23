@@ -145,6 +145,26 @@ Glow went on claiming a change after being turned off again. Writing that value 
 back exactly as a reset does. A key written before this existed has no
 original recorded, so it stays marked until reset once.
 
+## What can be marked, and what cannot
+
+Three kinds of change, three ways back:
+
+- **A Hyprland key** is an override. Drop it and the value comes from wherever
+  it came from before. So is a **per-device** setting: clearing it hands the
+  device back to the global one, and the store is the whole record.
+- **A value in someone else's config** — theme, font, text size, the bar, the
+  idle timeouts, tmux, Neovim, Herdr, a monitor scale — has no unset. The way
+  back is the value found before the first write, kept in `.written` under a
+  prefixed key (`tmux:mouse`, `device:...`, `monitor:DP-2`).
+- **A list you add to** — compose entries, keybindings — is not a setting with
+  a default at all. Those rows carry their own Remove, Turn off and Restore,
+  which is the honest affordance for a thing you created rather than changed.
+
+`track_write` is the one place the second kind is recorded. Two things it will
+not forgive: read the previous value **before** the write, or the recorded
+original is the value it has just become; and read it with `has()`, never
+`//`, which treats false as empty.
+
 ## Two kinds of putting back
 
 A Hyprland setting has an unset state: dropping our key hands it back to

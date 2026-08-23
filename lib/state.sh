@@ -23,7 +23,10 @@ state() {
   hypr=$(hypr_state)
   # One list for the window: a setting is changed whether it is a Hyprland key
   # we override or a value we wrote into Omarchy's own config.
-  hyprchanged=$(jq -c -s 'add' <(hypr_changed) <(written_changed))
+  # Everything this window has a hand in: the Hyprland keys it overrides, the
+  # values it wrote into other people's config, and the per-device overrides,
+  # which are their own kind of override again.
+  hyprchanged=$(jq -c -s 'add' <(hypr_changed) <(written_changed) <(devices_changed))
 
   monitors=$(hyprctl -j monitors 2>/dev/null | jq -c '[.[] | {name, scale, width, height, refreshRate: (.refreshRate | floor), transform}]' 2>/dev/null || echo '[]')
   compose=$(compose_entries)

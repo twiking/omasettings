@@ -15,12 +15,16 @@ Ui.SectionBody {
       label: "Line numbers"
       checked: app.nvimValue("number", true) === true
       onRequested: function(next) { app.setNvim("number", next ? "true" : "false") }
+      changed: app.isChanged("nvim:number")
+      onResetRequested: app.resetSetting("nvim:number")
     }
 
     Ui.SwitchRow {
       label: "Relative line numbers"
       checked: app.nvimValue("relativenumber", true) === true
       onRequested: function(next) { app.setNvim("relativenumber", next ? "true" : "false") }
+      changed: app.isChanged("nvim:relativenumber")
+      onResetRequested: app.resetSetting("nvim:relativenumber")
     }
 
     Ui.PickerRow {
@@ -33,6 +37,8 @@ Ui.SectionBody {
         { value: "no", label: "Never" }
       ]
       onPicked: function(next) { app.setNvim("signcolumn", next) }
+      changed: app.isChanged("nvim:signcolumn")
+      onResetRequested: app.resetSetting("nvim:signcolumn")
     }
   }
 
@@ -43,12 +49,16 @@ Ui.SectionBody {
       label: "Wrap long lines"
       checked: app.nvimValue("wrap", false) === true
       onRequested: function(next) { app.setNvim("wrap", next ? "true" : "false") }
+      changed: app.isChanged("nvim:wrap")
+      onResetRequested: app.resetSetting("nvim:wrap")
     }
 
     Ui.SwitchRow {
       label: "Highlight the current line"
       checked: app.nvimValue("cursorline", true) === true
       onRequested: function(next) { app.setNvim("cursorline", next ? "true" : "false") }
+      changed: app.isChanged("nvim:cursorline")
+      onResetRequested: app.resetSetting("nvim:cursorline")
     }
 
     Ui.TextRow {
@@ -57,6 +67,8 @@ Ui.SectionBody {
       placeholder: "100"
       value: String(app.nvimValue("colorcolumn", ""))
       onCommitted: function(next) { app.setNvim("colorcolumn", next) }
+      changed: app.isChanged("nvim:colorcolumn")
+      onResetRequested: app.resetSetting("nvim:colorcolumn")
     }
 
     Ui.NumberRow {
@@ -66,12 +78,16 @@ Ui.SectionBody {
       from: 0
       to: 20
       onCommitted: function(next) { app.setNvim("scrolloff", next) }
+      changed: app.isChanged("nvim:scrolloff")
+      onResetRequested: app.resetSetting("nvim:scrolloff")
     }
 
     Ui.SwitchRow {
       label: "Spell checking"
       checked: app.nvimValue("spell", false) === true
       onRequested: function(next) { app.setNvim("spell", next ? "true" : "false") }
+      changed: app.isChanged("nvim:spell")
+      onResetRequested: app.resetSetting("nvim:spell")
     }
   }
 
@@ -82,6 +98,8 @@ Ui.SectionBody {
       label: "Spaces instead of tabs"
       checked: app.nvimValue("expandtab", true) === true
       onRequested: function(next) { app.setNvim("expandtab", next ? "true" : "false") }
+      changed: app.isChanged("nvim:expandtab")
+      onResetRequested: app.resetSetting("nvim:expandtab")
     }
 
     Ui.NumberRow {
@@ -91,6 +109,8 @@ Ui.SectionBody {
       from: 1
       to: 8
       onCommitted: function(next) { app.setNvim("shiftwidth", next) }
+      changed: app.isChanged("nvim:shiftwidth")
+      onResetRequested: app.resetSetting("nvim:shiftwidth")
     }
 
     Ui.NumberRow {
@@ -100,6 +120,8 @@ Ui.SectionBody {
       from: 1
       to: 8
       onCommitted: function(next) { app.setNvim("tabstop", next) }
+      changed: app.isChanged("nvim:tabstop")
+      onResetRequested: app.resetSetting("nvim:tabstop")
     }
   }
 

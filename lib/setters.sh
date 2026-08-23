@@ -29,7 +29,68 @@ setting_current() {
   esac
 }
 
-setting_tracked() { setting_current "$1" >/dev/null 2>&1; }
+# The pages that keep their settings in someone else's config file. Same shape
+# as the block above — read the value, write it back to undo — but the keys
+# are named by what they configure, so they carry a prefix.
+setting_current_prefixed() {
+  local key=${1:-} name=${key#*:}
+  case $key in
+    monitor:*) hyprctl -j monitors 2>/dev/null | jq -r --arg o "$name" '.[] | select(.name == $o) | .scale | tostring' ;;
+    tmux:*) jq -r --arg k "$name" '.values | if has($k) then .[$k] | tostring else empty end' <<<"$(tmux_state)" ;;
+    nvim:*) jq -r --arg k "$name" '.values | if has($k) then .[$k] | tostring else empty end' <<<"$(nvim_state)" ;;
+    herdr:*) jq -r --arg k "$name" '.values | if has($k) then .[$k] | tostring else empty end' <<<"$(herdr_state)" ;;
+    *) return 1 ;;
+  esac
+}
+
+setting_tracked() {
+  setting_current "$1" >/dev/null 2>&1 && return 0
+  case ${1:-} in tmux:*|nvim:*|herdr:*|monitor:*) return 0 ;; esac
+  return 1
+}
+
+# Whatever a key is, this is what it is set to now.
+setting_value_now() {
+  setting_current "$1" 2>/dev/null || setting_current_prefixed "$1" 2>/dev/null
+}
+
+# Writing a prefixed key means handing it back to the page that owns it.
+setting_write() {
+  local key=${1:-} value=${2:-} name=${key#*:}
+  # The page's own command records for itself; this call is the mechanism, not
+  # a change of its own.
+  local OMASETTINGS_TRACKING=0
+  case $key in
+    monitor:*) set_key_apply monitor-scale "$name=$value" ;;
+    tmux:*) app_cmd tmux set "$name" "$value" ;;
+    nvim:*) app_cmd nvim set "$name" "$value" ;;
+    herdr:*) herdr_cmd set "$name" "$value" ;;
+    *) set_key_apply "$key" "$value" ;;
+  esac
+}
+
+# Remember what a key was before this window first wrote it, and forget it
+# again the moment it is written back to that. Every page that writes through
+# its own command calls this rather than reimplementing it.
+# $3 is what the setting was *before* the write that prompted this. Reading it
+# here instead would read what it has just become, and record the new value as
+# the thing to go back to.
+track_write() {
+  local key=${1:-} value=${2:-} before=${3:-} store original
+  store=$(read_store)
+  if jq -e --arg k "$key" '(.written // {}) | has($k)' <<<"$store" >/dev/null; then
+    original=$(jq -r --arg k "$key" '.written[$k]' <<<"$store")
+  else
+    original=$before
+  fi
+
+  if [[ $value == "$original" ]]; then
+    edit_store 'if .written then .written |= del(.[$k]) else . end' --arg k "$key"
+  else
+    edit_store '.written = ((.written // {}) | (if has($k) then . else .[$k] = $o end))' \
+      --arg k "$key" --arg o "$original"
+  fi
+}
 
 # The keys this window has written and what they were before it did.
 written_changed() {
@@ -40,24 +101,12 @@ set_key() {
   local key=${1:-} value=${2:-}
 
   if setting_tracked "$key"; then
-    local store original
-    store=$(read_store)
-    if jq -e --arg k "$key" '(.written // {}) | has($k)' <<<"$store" >/dev/null; then
-      original=$(jq -r --arg k "$key" '.written[$k]' <<<"$store")
-    else
-      original=$(setting_current "$key")
-    fi
-
-    set_key_apply "$key" "$value"
-
     # Unlike a Hyprland key there is nothing to delete — the value has to be
     # written either way. What goes is only the record that it differs.
-    if [[ $value == "$original" ]]; then
-      edit_store 'if .written then .written |= del(.[$k]) else . end' --arg k "$key"
-    else
-      edit_store '.written = ((.written // {}) | (if has($k) then . else .[$k] = $o end))' \
-        --arg k "$key" --arg o "$original"
-    fi
+    local before
+    before=$(setting_value_now "$key")
+    setting_write "$key" "$value"
+    track_write "$key" "$value" "$before"
     return
   fi
 
@@ -164,11 +213,21 @@ setting_reset() {
     return
   fi
 
+  # A per-device setting is an override like a Hyprland key: clearing it hands
+  # the device back to the global setting, so there is nothing to write back.
+  if [[ $key == device:* ]]; then
+    local rest=${key#device:} name option
+    name=${rest%:*}
+    option=${rest##*:}
+    device_clear "$name" "$option"
+    return
+  fi
+
   if setting_tracked "$key"; then
     local original
     original=$(jq -r --arg k "$key" '(.written // {}) | if has($k) then .[$k] else empty end' <<<"$(read_store)")
     [[ -n $original ]] || return 0
-    set_key_apply "$key" "$original"
+    setting_write "$key" "$original"
     edit_store 'if .written then .written |= del(.[$k]) else . end' --arg k "$key"
     return
   fi

@@ -710,26 +710,38 @@ Item {
   readonly property string pageHeaderNote: bodyLoader.item && bodyLoader.item.headerNote !== undefined
     ? String(bodyLoader.item.headerNote) : ""
 
+  // Ordered the way settings apps are: how it looks, what you type with, the
+  // devices, the system, and what extends it. Appearance leads rather than
+  // the network, which is where GNOME and macOS start — their top task is
+  // getting online, and this window is opened to change how the desktop looks.
   readonly property var sections: [
+    // Look and feel
     { id: "appearance", title: "Appearance", icon: "\uf1fc", source: "~/.config/omarchy/shell.toml" },
     { id: "bar", title: "Bar", icon: "\uf0ca", source: "~/.config/omarchy/shell.json" },
     { id: "windows", title: "Windows", icon: "\uf2d0", source: "~/.config/hypr/looknfeel.lua" },
     { id: "layout", title: "Layout", icon: "\uf009", source: "~/.config/hypr/looknfeel.lua" },
     { id: "effects", title: "Effects", icon: "\uf0eb", source: "~/.config/hypr/looknfeel.lua" },
     { id: "groups", title: "Groups", icon: "\uf009", source: "~/.config/hypr/looknfeel.lua" },
+
+    // Input
     { id: "keyboard", title: "Keyboard", icon: "\uf11c", source: "~/.config/hypr/input.lua" },
     { id: "bindings", title: "Keybindings", icon: "\uf11c", source: "~/.config/hypr/bindings.lua" },
-    { id: "pointer", title: "Mouse & Touchpad", icon: "\uf245", source: "~/.config/hypr/input.lua" },
-    { id: "displays", title: "Displays", icon: "\uf108", source: "~/.config/hypr/monitors.lua" },
-    { id: "idle", title: "Idle & Lock", icon: "\uf023", source: "~/.config/omarchy/shell.json" },
-    { id: "plugins", title: "Plugins", icon: "\uf1e6", source: "~/.config/omarchy/shell.json" },
     { id: "compose", title: "Compose Keys", icon: "\uf031", source: "~/.XCompose" },
-    { id: "datetime", title: "Date & Time", icon: "\uf017", source: "/etc/localtime" },
+    { id: "pointer", title: "Mouse & Touchpad", icon: "\uf245", source: "~/.config/hypr/input.lua" },
+
+    // Devices
+    { id: "displays", title: "Displays", icon: "\uf108", source: "~/.config/hypr/monitors.lua" },
+    { id: "audio", title: "Audio", icon: "\uf028", source: "pactl" },
     { id: "network", title: "Network", icon: "\uf1eb", source: "/etc/systemd/resolved.conf.d" },
     { id: "bluetooth", title: "Bluetooth", icon: "\uf294", source: "bluetoothctl" },
     { id: "power", title: "Power", icon: "\uf0e7", source: "powerprofilesctl" },
-    { id: "audio", title: "Audio", icon: "\uf028", source: "pactl" },
 
+    // System
+    { id: "idle", title: "Idle & Lock", icon: "\uf023", source: "~/.config/omarchy/shell.json" },
+    { id: "datetime", title: "Date & Time", icon: "\uf017", source: "/etc/localtime" },
+
+    // What extends it
+    { id: "plugins", title: "Plugins", icon: "\uf1e6", source: "~/.config/omarchy/shell.json" },
     { id: "apps", title: "Applications", icon: "\uf085", children: [
       { id: "apps.defaults", title: "Defaults", source: "~/.config/omarchy/defaults" },
       { id: "apps.herdr", title: "Herdr", source: "~/.config/herdr/config.toml" },

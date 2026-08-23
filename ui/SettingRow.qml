@@ -25,6 +25,14 @@ Item {
   signal navActivate()
   signal navStep(int delta)
 
+  // Told, not asked: a window that has to work out for itself which row is
+  // holding the keyboard gets it wrong the moment the row list is rebuilt
+  // underneath it.
+  onNavBlockingChanged: {
+    var nav = navController()
+    if (nav && nav.setNavBlocked !== undefined) nav.setNavBlocked(settingRow, navBlocking)
+  }
+
   // Rows are nested several layers inside a page, so the controller is found
   // by walking up rather than passed down through every group.
   // The walk stops at the page rather than the window — a window is not the
@@ -39,6 +47,12 @@ Item {
       node = node.parent
     }
     return null
+  }
+
+  // For a row that takes the keyboard and then gives it back.
+  function navRelease() {
+    var nav = navController()
+    if (nav && nav.navTakeFocus !== undefined) nav.navTakeFocus()
   }
 
   Component.onCompleted: {

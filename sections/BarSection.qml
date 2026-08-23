@@ -98,7 +98,6 @@ Ui.SectionBody {
 
           Row {
             anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
             spacing: Style.space(6)
 
             Button {

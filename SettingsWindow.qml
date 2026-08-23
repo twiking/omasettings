@@ -446,6 +446,11 @@ Item {
     if (row && row.changed) row.resetRequested()
   }
 
+  // A field that has finished editing hands the keyboard back here; clearing
+  // the field's own focus is not enough, since the focus has to land
+  // somewhere and this is where the navigation keys live.
+  function navTakeFocus() { keySink.forceActiveFocus() }
+
   function navStep(delta) {
     if (navInSidebar) return
     var row = navCurrent()
@@ -469,10 +474,15 @@ Item {
   }
 
   // A row that has taken the keyboard — an open dropdown, a field being typed
-  // into — keeps it until it is done.
-  readonly property bool navBlocked: {
-    var row = navCurrent()
-    return row ? row.navBlocking === true : false
+  // into — keeps it until it says otherwise. The row reports it rather than
+  // the window deducing it, so a list rebuilt mid-edit cannot lose track of
+  // who is holding the keys.
+  property var navBlocker: null
+  readonly property bool navBlocked: navBlocker !== null
+
+  function setNavBlocked(row, blocking) {
+    if (blocking) navBlocker = row
+    else if (navBlocker === row) navBlocker = null
   }
 
   function hyprValue(key, fallback) {
@@ -717,8 +727,14 @@ Item {
       MouseArea { anchors.fill: parent }
 
     FocusScope {
+      id: keyScope
       anchors.fill: parent
       focus: true
+
+      // Focus given back to the scope itself lands on whichever child held it
+      // last — the very field being left — so it is given to a sink that
+      // wants nothing, and the navigation keys are handled above it.
+      Item { id: keySink; focus: true }
 
       // The vocabulary every Omarchy panel uses, plus Alt for the sidebar and
       // Home/End for the ends of a long page. Keys.BeforeItem is what lets

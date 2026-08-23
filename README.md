@@ -152,7 +152,8 @@ Omarchy panel uses:
 | `Up` / `Down`, or `k` / `j` | Move the cursor through the settings on the page |
 | `Alt+Up` / `Alt+Down` | Move through the sidebar, opening each page as you land on it |
 | `Left` / `Right`, or `h` / `l` | Step a slider, or pick the neighbouring option |
-| `Space` or `Enter` | Flip a switch, open a list, press a button |
+| `Space` or `Enter` | Flip a switch, open a list, press a button, start typing in a field |
+| `Enter` while typing | Commit the field and hand the keyboard back |
 | `Enter` on a sidebar heading | Open or close its submenu |
 | `Backspace` | Hand the setting under the cursor back to the system, if you changed it |
 | `Home` / `End` | First and last setting on the page |

@@ -116,6 +116,11 @@ and go with the settings they depend on.
 
 Two things worth knowing before changing this:
 
+- **A field commits by losing focus, and stops its own Enter.** `accepted`
+  fires without accepting the event, so an Enter left to bubble reaches the
+  window, which reads it as "activate this row" and drops straight back into
+  the field it just left. Editing is a flag the row owns rather than a reading
+  of `activeFocus`, which the field can take back on its own.
 - **A row holding the keyboard sets `navBlocking`** — an open dropdown, a field
   being typed into. The window then forwards every key, Escape included, or
   Escape would close the window out from under an open list.

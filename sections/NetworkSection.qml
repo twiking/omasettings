@@ -19,7 +19,7 @@ Ui.SectionBody {
   }
 
   Ui.SettingGroup {
-    visible: app.wifi.enabled === true
+    visible: !searchEmpty && app.wifi.enabled === true
 
     // Networks come and go while you are looking at them, so the page keeps
     // its own list current rather than making you ask. It runs only while
@@ -53,7 +53,7 @@ Ui.SectionBody {
 
   Ui.SettingGroup {
     title: "Connection"
-    visible: !searchHidden && app.wifi.connected !== ""
+    visible: !searchEmpty && !searchHidden && app.wifi.connected !== ""
 
     Ui.ReadingRow {
       label: "IP address"

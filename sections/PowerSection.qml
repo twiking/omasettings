@@ -22,7 +22,7 @@ Ui.SectionBody {
   }
 
   Ui.SettingGroup {
-    visible: power.hasBattery === true
+    visible: !searchEmpty && power.hasBattery === true
 
     Ui.ReadingRow {
       label: "Charge"

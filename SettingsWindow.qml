@@ -28,7 +28,6 @@ Item {
   function show() {
     window.visible = true
     refresh()
-    if (!searchIndexProcess.running) searchIndexProcess.running = true
     if (!selfCheckProcess.running) selfCheckProcess.running = true
   }
   function hide() { window.visible = false }
@@ -345,29 +344,15 @@ Item {
 
   // ---------------- search --------------------------------------------------
   //
-  // Only the open page exists, so what the other pages hold is read from their
-  // sources by the helper. That index is what lets a search say "nothing here"
-  // about a page nobody has opened.
+  // Only the open page exists, so what the other pages hold cannot be asked of
+  // them. The index arrives with the state instead: what each page declares,
+  // read from its source, plus the things a page is a list of — this keyboard,
+  // that network, your bindings — which no source can know and only the
+  // running system can say.
   property string searchQuery: ""
-  property var searchIndex: ({})
+  readonly property var searchIndex: state.searchIndex !== undefined ? state.searchIndex : ({})
   readonly property string searchTerm: searchQuery.trim().toLowerCase()
   readonly property bool searching: searchTerm !== ""
-
-  Process {
-    id: searchIndexProcess
-    command: ["bash", root.helperPath, "search"]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: {
-        try {
-          var next = JSON.parse(text)
-          if (next && typeof next === "object") root.searchIndex = next
-        } catch (e) {
-          // No index means no filtering, which is better than a wrong one.
-        }
-      }
-    }
-  }
 
   // Everything that names a setting counts, not just the setting: the heading
   // above it, the page it is on, and the heading that page sits under. So

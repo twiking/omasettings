@@ -10,7 +10,7 @@ nightlight_enabled() {
 }
 
 state() {
-  local cfg themes fonts theme font nightlight hypr hyprchanged monitors compose plugins pluginupdates selfupdate agents groups iconfonts datetime herdr textscale
+  local cfg themes fonts theme font nightlight hypr hyprchanged searchindex monitors compose plugins pluginupdates selfupdate agents groups iconfonts datetime herdr textscale
   cfg=$(read_shell_json)
   # omarchy-theme-list finds every directory under the theme folders, dotted
   # ones included, so anything a stray tool left behind there shows up as a
@@ -24,6 +24,7 @@ state() {
   # One list for the window: a setting is changed whether it is a Hyprland key
   # we override or a value we wrote into Omarchy's own config.
   hyprchanged=$(jq -c -s 'add' <(hypr_changed) <(written_changed))
+
   monitors=$(hyprctl -j monitors 2>/dev/null | jq -c '[.[] | {name, scale, width, height, refreshRate: (.refreshRate | floor), transform}]' 2>/dev/null || echo '[]')
   compose=$(compose_entries)
   plugins=$(plugins_state)
@@ -48,6 +49,28 @@ state() {
   power=$(power_state)
   audio=$(audio_state)
   textscale=$(omarchy display text size 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)?' | head -n1)
+  # What a search can find. The section sources give the settings each page
+  # declares; the rest of the state gives the things a page is a list of —
+  # this keyboard, that network, your bindings — which no source can know.
+  searchindex=$(jq -c -s '.[0] * .[1]' <(search_index) <(jq -cn \
+    --argjson bt "${bluetooth:-{\}}" \
+    --argjson wifi "${wifi:-{\}}" \
+    --argjson audio "${audio:-{\}}" \
+    --argjson bindings "${bindings:-{\}}" \
+    --argjson plugins "${plugins:-[]}" \
+    --argjson monitors "${monitors:-[]}" '''
+    def entries(list; groupName; labelKey; descKey):
+      [ list[]? | { group: groupName,
+                    label: (.[labelKey] // "" | tostring),
+                    description: (.[descKey] // "" | tostring) }
+        | select(.label != "") ];
+    { bluetooth: entries($bt.devices; "Devices"; "name"; "address"),
+      network: entries($wifi.networks; "Networks"; "ssid"; "security"),
+      audio: (entries($audio.outputs; "Output"; "description"; "name")
+              + entries($audio.inputs; "Input"; "description"; "name")),
+      bindings: entries($bindings.items; "Keybindings"; "keys"; "description"),
+      plugins: entries($plugins; "Plugins"; "name"; "id"),
+      displays: entries($monitors; "Displays"; "name"; "name") }'''))
 
   jq -cn \
     --argjson cfg "$cfg" \
@@ -58,6 +81,7 @@ state() {
     --argjson nightlight "${nightlight:-false}" \
     --argjson hypr "${hypr:-{\}}" \
     --argjson hyprChanged "${hyprchanged:-[]}" \
+    --argjson searchIndex "${searchindex:-{\}}" \
     --argjson monitors "${monitors:-[]}" \
     --argjson compose "${compose:-[]}" \
     --argjson plugins "${plugins:-[]}" \
@@ -105,6 +129,7 @@ state() {
       # The settings this window has written, so a page can say which of its
       # values were chosen here rather than supplied by the system.
       hyprChanged: $hyprChanged,
+      searchIndex: $searchIndex,
       monitors: $monitors,
       compose: $compose,
       plugins: $plugins,

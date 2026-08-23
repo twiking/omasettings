@@ -197,7 +197,7 @@ Ui.SectionBody {
   }
 
   Ui.SettingGroup {
-    visible: untouched.length > 0
+    visible: !searchEmpty && untouched.length > 0
 
     Ui.PickerRow {
       label: "Settings for one keyboard"

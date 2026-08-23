@@ -35,7 +35,7 @@ Ui.SectionBody {
 
   Ui.SettingGroup {
     title: "Dwindle"
-    visible: engine === "dwindle"
+    visible: !searchEmpty && engine === "dwindle"
 
     Ui.SwitchRow {
       label: "Preserve split"
@@ -94,7 +94,7 @@ Ui.SectionBody {
 
   Ui.SettingGroup {
     title: "Master"
-    visible: engine === "master"
+    visible: !searchEmpty && engine === "master"
 
     Ui.PercentRow {
       label: "Master size"
@@ -138,7 +138,7 @@ Ui.SectionBody {
 
   Ui.SettingGroup {
     title: "Scrolling"
-    visible: engine === "scrolling"
+    visible: !searchEmpty && engine === "scrolling"
 
     Ui.PercentRow {
       label: "Column width"

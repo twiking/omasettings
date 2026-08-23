@@ -56,7 +56,7 @@ Ui.SectionBody {
 
   Ui.SettingGroup {
     title: "Connected"
-    visible: bluetooth.powered === true && connectedDevices.length > 0
+    visible: !searchEmpty && bluetooth.powered === true && connectedDevices.length > 0
 
     Repeater {
       model: connectedDevices
@@ -66,7 +66,7 @@ Ui.SectionBody {
 
   Ui.SettingGroup {
     title: "Paired"
-    visible: bluetooth.powered === true && pairedDevices.length > 0
+    visible: !searchEmpty && bluetooth.powered === true && pairedDevices.length > 0
 
     Repeater {
       model: pairedDevices
@@ -76,7 +76,7 @@ Ui.SectionBody {
 
   Ui.SettingGroup {
     title: "Nearby"
-    visible: bluetooth.powered === true
+    visible: !searchEmpty && bluetooth.powered === true
 
     Repeater {
       model: nearbyDevices

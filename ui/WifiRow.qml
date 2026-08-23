@@ -27,7 +27,9 @@ Column {
   // Connecting is the one thing worth a key here; a network that wants a
   // passphrase opens the prompt instead, and the prompt takes the keyboard.
   Local.NavCursor {
+    id: nav
     anchors.fill: parent
+    searchText: wifiRow.ssid
     navBlocking: wifiRow.prompting
     navKeys: wifiRow.active ? [{ key: "Space", label: "Disconnect" }]
       : (wifiRow.needsPassword ? [{ key: "Space", label: "Passphrase" }]
@@ -39,6 +41,7 @@ Column {
     }
   }
 
+  visible: !nav.searchHidden
   width: parent ? parent.width : 0
   spacing: Style.space(6)
 

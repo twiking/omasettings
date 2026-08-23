@@ -30,6 +30,13 @@ Item {
   // over the text would tint what it is meant to be pointing at.
   z: -1
 
+  // What this row is called, for the search. A row named by the system rather
+  // than by the source has to say so itself.
+  property string searchText: ""
+  readonly property bool searchHidden: navController !== null
+    && navController.searching === true
+    && !navController.rowMatches(searchText, "", "")
+
   property var navController: null
 
   function findController() {

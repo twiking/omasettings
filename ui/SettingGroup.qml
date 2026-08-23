@@ -33,8 +33,12 @@ Column {
   readonly property bool searchEmpty: {
     if (!group.nav || group.nav.searching !== true) return false
     var kids = groupContent.children
-    for (var i = 0; i < kids.length; i++)
-      if (kids[i].visible === true) return false
+    for (var i = 0; i < kids.length; i++) {
+      // A Repeater sits among the rows it made, visible and no height at all.
+      // Counting it as content left every heading standing over an emptied
+      // group.
+      if (kids[i].visible === true && kids[i].height > 0) return false
+    }
     return true
   }
 

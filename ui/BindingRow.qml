@@ -23,7 +23,9 @@ Item {
   // a turned-off one can come back. The key follows whichever it is, the same
   // way the button does.
   Local.NavCursor {
+    id: nav
     anchors.fill: parent
+    searchText: bindingRow.keys + " " + bindingRow.description + " " + bindingRow.command
     navKeys: bindingRow.mine ? [{ key: "Space", label: "Remove" }]
       : [{ key: "Space", label: bindingRow.off ? "Restore" : "Turn off" }]
     onNavActivate: {
@@ -32,6 +34,7 @@ Item {
     }
   }
 
+  visible: !nav.searchHidden
   width: parent ? parent.width : 0
   implicitHeight: Math.max(Style.spacing.controlHeight, keysText.implicitHeight + Style.space(6))
   opacity: off ? 0.5 : 1

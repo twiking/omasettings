@@ -198,12 +198,16 @@ returns every label, description and heading per page, keyed by the page ids
 taken from `SettingsWindow.qml`'s own routing — so a page renamed or a setting
 added is in the index without a second list to update.
 
-Two things follow from that:
+The index arrives with the state, not from a call of its own, because half of
+it is the state: a page that is a list of things — this keyboard, that
+network, your bindings, the plugins you have — can only be described by the
+running system, and `state.sh` has already asked. The section sources give the
+rest. Rows named by the system say so through `NavCursor.searchText`.
 
-- **A label built from data is not searchable.** Device names, plugin names,
-  binding rows: they are not in the source, so they are not in the index. They
-  still filter correctly on the open page, where the real label exists; they
-  just do not count towards a page total.
+One thing follows from that:
+
+- **The index is only as fresh as the state.** A device that appears while the
+  window is open is searchable at the next read, not the moment it arrives.
 - **The heading is part of the match, in both places.** The index carries the
   group, and rows read their heading off the `SettingGroup` above them, or a
   search for "blur" would count eleven settings and show seven.

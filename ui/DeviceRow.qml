@@ -23,7 +23,9 @@ Item {
 
   // The same thing clicking the row does, which depends on what the device is.
   Local.NavCursor {
+    id: nav
     anchors.fill: parent
+    searchText: deviceRow.title + " " + deviceRow.address + " " + deviceRow.kind
     navKeys: deviceRow.connected ? [{ key: "Space", label: "Disconnect" }]
       : (deviceRow.paired ? [{ key: "Space", label: "Connect" }]
                           : [{ key: "Space", label: "Pair" }])
@@ -38,6 +40,7 @@ Item {
   // than blank.
   readonly property string title: name !== "" ? name : address
 
+  visible: !nav.searchHidden
   width: parent ? parent.width : 0
   implicitHeight: Style.spacing.controlHeight
 

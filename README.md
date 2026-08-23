@@ -161,6 +161,9 @@ that remain carry the number of settings that matched. The open page shows
 those settings and nothing else, headings included, and moving through the
 menu visits only pages that have something.
 
+Your own things are in it too — a Bluetooth device by name, a network, a
+keybinding, an installed plugin — not only the settings the pages ship with.
+
 Everything that names a setting counts, not just the setting: the heading
 above it, the page it is on, and the heading that page sits under. So "blur"
 finds all eleven settings under **Blur**, "bluetooth" finds the whole

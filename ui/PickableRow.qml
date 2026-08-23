@@ -17,11 +17,14 @@ Item {
 
   // A list of things to choose between: the cursor picks one.
   Local.NavCursor {
+    id: nav
     anchors.fill: parent
+    searchText: pickableRow.label + " " + pickableRow.detail
     navKeys: [{ key: "Space", label: "Select" }]
     onNavActivate: pickableRow.picked()
   }
 
+  visible: !nav.searchHidden
   width: parent ? parent.width : 0
   implicitHeight: Style.spacing.controlHeight
 

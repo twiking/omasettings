@@ -99,8 +99,13 @@ Ui.SectionBody {
   Ui.SettingGroup {
     title: "Every binding"
 
+    // This page had a search of its own before the window did. While the
+    // window is searching, that one steps aside rather than filtering the
+    // filtered — two boxes disagreeing about what is on screen is worse than
+    // one box doing less.
     TextField {
       width: parent.width
+      visible: !app.searching
       placeholderText: "Search keys or actions…"
       text: app.bindingFilter
       foreground: app.foreground
@@ -110,6 +115,7 @@ Ui.SectionBody {
 
     Text {
       width: parent.width
+      visible: !app.searching
       text: app.visibleBindings.length + " of " + (app.bindings.items !== undefined ? app.bindings.items.length : 0)
       color: app.muted
       font.family: app.fontFamily

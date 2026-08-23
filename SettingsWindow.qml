@@ -1068,9 +1068,6 @@ Item {
               // Escape gives the keyboard back to the list rather than closing
               // the window out from under a search.
               Keys.onPressed: function(event) {
-        var alt = (event.modifiers & Qt.AltModifier) !== 0
-        var ctrl = (event.modifiers & Qt.ControlModifier) !== 0
-
                 if (event.key === Qt.Key_Escape) {
                   if (text !== "") text = ""
                   root.navTakeFocus()

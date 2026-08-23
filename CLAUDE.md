@@ -99,8 +99,8 @@ and use the same source, the same filter, and the same labels.
 `PanelKeyCatcher` in `qs.Ui` defines the vocabulary Omarchy panels answer to,
 and this window follows it rather than inventing one: Up/Down and j/k move,
 Left/Right and h/l change a value, Enter and Space act, Tab changes section,
-Escape closes. Alt+Up/Down for the sidebar and Home/End are the additions a
-window with pages needs.
+Escape closes. Alt+Up/Down for the sidebar, Home/End, and Backspace for the
+(reset) beside a changed setting are the additions a window with pages needs.
 
 The cursor lives in `SettingsWindow`, but a row says what it means: `SettingRow`
 carries `current`, `navActivate()` and `navStep(delta)`, and each row type

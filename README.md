@@ -154,6 +154,7 @@ Omarchy panel uses:
 | `Left` / `Right`, or `h` / `l` | Step a slider, or pick the neighbouring option |
 | `Space` or `Enter` | Flip a switch, open a list, press a button |
 | `Enter` on a sidebar heading | Open or close its submenu |
+| `Backspace` | Hand the setting under the cursor back to the system, if you changed it |
 | `Home` / `End` | First and last setting on the page |
 | `Tab` | Swap between the sidebar and the page |
 | `Escape` | Close an open list, or the window |

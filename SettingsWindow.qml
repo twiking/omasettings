@@ -437,6 +437,15 @@ Item {
     if (row) row.navActivate()
   }
 
+  // Backspace on a changed setting is the (reset) beside its name. A setting
+  // this window has not written has nothing to hand back, so the key does
+  // nothing rather than something surprising.
+  function navReset() {
+    if (navInSidebar) return
+    var row = navCurrent()
+    if (row && row.changed) row.resetRequested()
+  }
+
   function navStep(delta) {
     if (navInSidebar) return
     var row = navCurrent()
@@ -740,6 +749,9 @@ Item {
         }
         if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
           root.navActivate(); event.accepted = true; return
+        }
+        if (event.key === Qt.Key_Backspace || event.key === Qt.Key_Delete) {
+          root.navReset(); event.accepted = true; return
         }
         if (event.key === Qt.Key_Home) { root.navJump(-1); event.accepted = true; return }
         if (event.key === Qt.Key_End) { root.navJump(1); event.accepted = true; return }

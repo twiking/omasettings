@@ -21,9 +21,14 @@ Item {
   // ---------------- window lifecycle ---------------------------------------
   readonly property bool shown: window.visible
 
+  // While the search box is being typed into it owns the keyboard, the same
+  // way an open dropdown or a field being edited does.
+  readonly property bool searchFocused: searchField.activeFocus
+
   function show() {
     window.visible = true
     refresh()
+    if (!searchIndexProcess.running) searchIndexProcess.running = true
     if (!selfCheckProcess.running) selfCheckProcess.running = true
   }
   function hide() { window.visible = false }
@@ -336,6 +341,74 @@ Item {
     onRunningChanged: if (!running) Qt.callLater(function() { root.refresh() })
   }
 
+  // ---------------- search --------------------------------------------------
+  //
+  // Only the open page exists, so what the other pages hold is read from their
+  // sources by the helper. That index is what lets a search say "nothing here"
+  // about a page nobody has opened.
+  property string searchQuery: ""
+  property var searchIndex: ({})
+  readonly property string searchTerm: searchQuery.trim().toLowerCase()
+  readonly property bool searching: searchTerm !== ""
+
+  Process {
+    id: searchIndexProcess
+    command: ["bash", root.helperPath, "search"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        try {
+          var next = JSON.parse(text)
+          if (next && typeof next === "object") root.searchIndex = next
+        } catch (e) {
+          // No index means no filtering, which is better than a wrong one.
+        }
+      }
+    }
+  }
+
+  // Group, label and description all count: "blur" should find the settings
+  // under a Blur heading whether or not the word is in their own names.
+  function matchesTerm(label, description, group) {
+    if (!searching) return true
+    var hay = (String(label || "") + " " + String(description || "") + " " + String(group || "")).toLowerCase()
+    return hay.indexOf(searchTerm) !== -1
+  }
+
+  function rowMatches(label, description) { return matchesTerm(label, description, "") }
+
+  function pageMatchCount(pageId) {
+    if (!searching) return 0
+    var entries = searchIndex[pageId]
+    if (!entries) return 0
+    var n = 0
+    for (var i = 0; i < entries.length; i++)
+      if (matchesTerm(entries[i].label, entries[i].description, entries[i].group)) n++
+    return n
+  }
+
+  // A parent stands or falls with its children.
+  function sectionMatchCount(section) {
+    var children = section.children || []
+    if (children.length === 0) return pageMatchCount(section.id)
+    var n = 0
+    for (var i = 0; i < children.length; i++) n += pageMatchCount(children[i].id)
+    return n
+  }
+
+  // Searching onto a page with nothing on it would show an empty page; move to
+  // the first page that has something instead.
+  onSearchTermChanged: {
+    if (!searching) return
+    if (pageMatchCount(pageId) > 0) return
+    for (var i = 0; i < sidebarRows.length; i++) {
+      if (sidebarRows[i].selectable && sidebarRows[i].matches > 0) {
+        pageId = sidebarRows[i].id
+        return
+      }
+    }
+  }
+
   // ---------------- keyboard navigation ------------------------------------
   //
   // One cursor runs down the settings of the open page, and a second one — the
@@ -619,17 +692,26 @@ Item {
       var section = sections[i]
       var children = section.children || []
       var open = children.length > 0 && isExpanded(section)
+      var sectionCount = sectionMatchCount(section)
+      // A page with no matches is not dimmed or emptied, it is gone: that is
+      // what says "there is nothing here for what you typed".
+      if (searching && sectionCount === 0) continue
       rows.push({
         id: section.id,
         title: section.title,
         icon: section.icon || "",
         selectable: children.length === 0,
         expandable: children.length > 0,
-        expanded: open,
-        indented: false
+        // A parent holds its children open while searching, or its matches
+        // would be counted but unreachable.
+        expanded: open || (searching && children.length > 0),
+        indented: false,
+        matches: sectionCount
       })
-      if (!open) continue
+      if (!(open || (searching && children.length > 0))) continue
       for (var c = 0; c < children.length; c++) {
+        var childCount = pageMatchCount(children[c].id)
+        if (searching && childCount === 0) continue
         rows.push({
           id: children[c].id,
           title: children[c].title,
@@ -637,7 +719,8 @@ Item {
           selectable: true,
           expandable: false,
           expanded: false,
-          indented: true
+          indented: true,
+          matches: childCount
         })
       }
     }
@@ -744,10 +827,19 @@ Item {
       Keys.onPressed: function(event) {
         // A row holding the keyboard gets every key, Escape included: closing
         // an open dropdown is what Escape means while one is open.
-        if (root.navBlocked) return
+        if (root.navBlocked || root.searchFocused) return
         if (event.key === Qt.Key_Escape) { root.close(); event.accepted = true; return }
 
         var alt = (event.modifiers & Qt.AltModifier) !== 0
+        var ctrl = (event.modifiers & Qt.ControlModifier) !== 0
+
+        // The two things every search box answers to.
+        if (event.text === "/" || (ctrl && event.key === Qt.Key_F)) {
+          searchField.forceActiveFocus()
+          searchField.selectAll()
+          event.accepted = true
+          return
+        }
 
         if (event.key === Qt.Key_Down || event.text === "j") {
           alt ? root.navSidebar(1) : root.navMove(1)
@@ -804,6 +896,33 @@ Item {
               Layout.bottomMargin: Style.space(10)
             }
 
+            // Above the menu, because what it filters is the menu as much as
+            // the page: pages with nothing to show leave the list entirely.
+            TextField {
+              id: searchField
+              Layout.fillWidth: true
+              Layout.bottomMargin: Style.space(10)
+              placeholderText: "Search settings"
+              foreground: root.foreground
+              accent: root.accent
+              font.family: root.fontFamily
+              onTextChanged: root.searchQuery = text
+              // Escape gives the keyboard back to the list rather than closing
+              // the window out from under a search.
+              Keys.onPressed: function(event) {
+                if (event.key === Qt.Key_Escape) {
+                  if (text !== "") text = ""
+                  root.navTakeFocus()
+                  event.accepted = true
+                } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+                           || event.key === Qt.Key_Down) {
+                  root.navTakeFocus()
+                  root.navMove(1)
+                  event.accepted = true
+                }
+              }
+            }
+
             Repeater {
               model: root.sidebarRows
               delegate: Rectangle {
@@ -850,6 +969,16 @@ Item {
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.body
                     font.bold: current
+                  }
+
+                  // How much of what you typed is in there.
+                  Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: root.searching && modelData.matches > 0
+                    text: modelData.matches
+                    color: root.accent
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
                   }
                 }
 

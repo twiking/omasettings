@@ -46,6 +46,8 @@ set_key() {
   esac
 }
 
+search_cmd() { search_index; }
+
 plugin_cmd() {
   local action=${1:-} id=${2:-}
   # The update sweep is about every plugin at once, so it is the one action

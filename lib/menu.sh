@@ -206,3 +206,62 @@ icon_font_state() {
   path=$(icon_font_file omarchy $codepoints)
   jq -cn --arg path "${path:-}" '{ omarchy: $path }'
 }
+
+# ------------------------------------------------------------------ search
+#
+# What settings exist on a page the window has not opened yet. Only the open
+# page is instantiated — that is what keeps the window cheap — so the index is
+# read from the section sources instead, which is also what keeps it honest:
+# a setting added to a page is in the index the moment it is written, with no
+# second list to remember to update.
+#
+# A label built from data rather than written in the source — a device name, a
+# plugin name — cannot be indexed this way and is not searchable.
+search_index() {
+  local dir="$OMASETTINGS_DIR"
+  [[ -d $dir/sections ]] || { echo '{}'; return; }
+
+  # Which file is which page, taken from the window's own routing rather than
+  # a copy of it.
+  local pages
+  pages=$(sed -n 's/.*case "\([a-z.]*\)": return "sections\/\([A-Za-z]*\.qml\)".*/\1\t\2/p' \
+    "$dir/SettingsWindow.qml" 2>/dev/null)
+  [[ -n $pages ]] || { echo '{}'; return; }
+
+  while IFS=$'\t' read -r page file; do
+    [[ -n $page && -f $dir/sections/$file ]] || continue
+    awk -v page="$page" '
+      # A group heading gives a row context a search can match on: "blur" finds
+      # the settings under Blur even when the word is not in their own labels.
+      /^[ \t]*title: "/ {
+        line = $0
+        sub(/^[ \t]*title: "/, "", line)
+        sub(/".*$/, "", line)
+        group = line
+        next
+      }
+      /^[ \t]*label: "/ {
+        if (label != "") print page "\t" group "\t" label "\t" desc
+        line = $0
+        sub(/^[ \t]*label: "/, "", line)
+        sub(/".*$/, "", line)
+        label = line
+        desc = ""
+        next
+      }
+      /^[ \t]*description: "/ {
+        if (label == "" || desc != "") next
+        line = $0
+        sub(/^[ \t]*description: "/, "", line)
+        sub(/".*$/, "", line)
+        desc = line
+      }
+      END { if (label != "") print page "\t" group "\t" label "\t" desc }
+    ' "$dir/sections/$file"
+  done <<<"$pages" | jq -R -s -c '
+    [ split("\n")[] | select(length > 0) | split("\t")
+      | { page: .[0], group: .[1], label: .[2], description: .[3] } ]
+    | group_by(.page)
+    | map({ key: .[0].page, value: map({ group, label, description }) })
+    | from_entries'
+}

@@ -32,13 +32,13 @@ Ui.SectionBody {
 
     Ui.ReadingRow {
       label: reading.state === "charging" ? "Until full" : "Remaining"
-      visible: reading.remaining !== undefined && String(reading.remaining) !== ""
+      visible: !searchHidden && reading.remaining !== undefined && String(reading.remaining) !== ""
       value: String(reading.remaining)
     }
 
     Ui.ReadingRow {
       label: "Drawing"
-      visible: reading.watts !== null && reading.watts !== undefined
+      visible: !searchHidden && reading.watts !== null && reading.watts !== undefined
       value: Number(reading.watts).toFixed(1) + " W"
     }
 

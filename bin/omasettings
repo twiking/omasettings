@@ -40,6 +40,7 @@ case ${1:-state} in
   reset) shift; hypr_reset "${1:-}" ;;
   plugin) shift; plugin_cmd "$@" ;;
   bar) shift; bar_cmd "$@" ;;
+  search) search_index ;;
   compose) shift; compose_cmd "$@" ;;
   agents) shift; agents_cmd "$@" ;;
   herdr) shift; herdr_cmd "$@" ;;
@@ -61,6 +62,7 @@ usage:
   omasettings compose list | add "<Multi_key> <a> <b>" "text" | remove "<Multi_key> <a> <b>"
   omasettings agents list | run <agent-id>
   omasettings plugin self | plugin self-check     (is this window itself behind?)
+  omasettings search                      (every setting the pages declare, for the search box)
   omasettings bar move <widget-id> left|center|right | bar shift <widget-id> up|down
   omasettings menu run <entry-id>            (runs an Omarchy menu entry's action)
   omasettings herdr state | set <key> <value>

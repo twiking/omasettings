@@ -15,6 +15,31 @@ Column {
   width: parent ? parent.width : 0
   spacing: Style.space(10)
 
+  // A group whose rows have all been filtered away goes with them, heading
+  // and all, or the page fills with headings over nothing.
+  property var nav: null
+  Component.onCompleted: {
+    var node = group.parent
+    while (node) {
+      if (node.searching !== undefined) { group.nav = node; break }
+      if (node.app !== undefined && node.app !== null && node.app.searching !== undefined) {
+        group.nav = node.app
+        break
+      }
+      node = node.parent
+    }
+  }
+
+  readonly property bool searchEmpty: {
+    if (!group.nav || group.nav.searching !== true) return false
+    var kids = groupContent.children
+    for (var i = 0; i < kids.length; i++)
+      if (kids[i].visible === true) return false
+    return true
+  }
+
+  visible: !searchEmpty
+
   Text {
     visible: group.title !== ""
     text: group.title

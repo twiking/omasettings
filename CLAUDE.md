@@ -129,6 +129,25 @@ Two things worth knowing before changing this:
   same stale number, so the second would be swallowed. `effective` is what the
   slider and the next press read.
 
+## Search
+
+Only the open page is instantiated, which is what keeps the window cheap and
+what makes searching awkward: the window cannot ask a page it has not built
+what it holds. `omasettings search` reads the section sources instead and
+returns every label, description and heading per page, keyed by the page ids
+taken from `SettingsWindow.qml`'s own routing — so a page renamed or a setting
+added is in the index without a second list to update.
+
+Two things follow from that:
+
+- **A label built from data is not searchable.** Device names, plugin names,
+  binding rows: they are not in the source, so they are not in the index. They
+  still filter correctly on the open page, where the real label exists; they
+  just do not count towards a page total.
+- **The heading is part of the match, in both places.** The index carries the
+  group, and rows read their heading off the `SettingGroup` above them, or a
+  search for "blur" would count eleven settings and show seven.
+
 ## The launcher entry
 
 The plugin is an app as well as a bar widget: `Service.qml` is a `service`

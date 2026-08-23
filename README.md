@@ -142,6 +142,17 @@ Remove it with `omarchy plugin remove io.github.twiking.omasettings`.
   reachable as an application and not only from the bar.
 - **Escape** closes the window.
 
+### Search
+
+The box above the menu filters every page at once. A page with nothing
+matching leaves the menu entirely — that absence is the answer — and the ones
+that remain carry the number of settings that matched. The open page shows
+those settings and nothing else, headings included, and moving through the
+menu visits only pages that have something.
+
+A heading counts as part of the settings under it, so "blur" finds all eleven
+settings under **Blur**, not just the one called Blur.
+
 ### Keyboard
 
 The window is fully drivable from the keyboard, in the vocabulary every
@@ -158,6 +169,8 @@ Omarchy panel uses:
 | `Backspace` | Hand the setting under the cursor back to the system, if you changed it |
 | `Home` / `End` | First and last setting on the page |
 | `Tab` | Swap between the sidebar and the page |
+| `/` or `Ctrl+F` | Jump to the search box |
+| `Escape` in the search box | Clear the search and hand the keyboard back |
 | `Escape` | Close an open list, or the window |
 
 The cursor is a band across the row it is on, and the page scrolls to keep it

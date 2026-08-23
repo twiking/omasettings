@@ -33,6 +33,20 @@ Item {
     if (nav && nav.setNavBlocked !== undefined) nav.setNavBlocked(settingRow, navBlocking)
   }
 
+  // Set once the row is up, so bindings below can follow what the window is
+  // doing without every page having to pass it down.
+  property var nav: null
+
+  // A row the search does not match leaves the page rather than dimming: the
+  // page then reads as the settings that matched, and nothing else.
+  // The heading a row sits under counts as part of it: searching "blur" finds
+  // the settings under Blur whether or not the word is in their own names,
+  // which is also how the index counts them.
+  property string groupTitle: ""
+  readonly property bool searchHidden: nav !== null && nav.searching === true
+    && !nav.matchesTerm(settingRow.label, settingRow.description, settingRow.groupTitle)
+  visible: !searchHidden
+
   // Rows are nested several layers inside a page, so the controller is found
   // by walking up rather than passed down through every group.
   // The walk stops at the page rather than the window — a window is not the
@@ -56,8 +70,13 @@ Item {
   }
 
   Component.onCompleted: {
-    var nav = navController()
-    if (nav) nav.registerNavRow(settingRow)
+    var node = settingRow.parent
+    while (node) {
+      if (node.searchEmpty !== undefined) { settingRow.groupTitle = String(node.title || ""); break }
+      node = node.parent
+    }
+    settingRow.nav = navController()
+    if (settingRow.nav) settingRow.nav.registerNavRow(settingRow)
   }
 
   Component.onDestruction: {

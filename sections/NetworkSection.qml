@@ -53,11 +53,11 @@ Ui.SectionBody {
 
   Ui.SettingGroup {
     title: "Connection"
-    visible: app.wifi.connected !== ""
+    visible: !searchHidden && app.wifi.connected !== ""
 
     Ui.ReadingRow {
       label: "IP address"
-      visible: app.wifi.connected !== ""
+      visible: !searchHidden && app.wifi.connected !== ""
       value: app.wifiConnection.ip
         ? String(app.wifiConnection.ip) + (app.wifiConnection.prefix ? "/" + app.wifiConnection.prefix : "")
         : "—"
@@ -65,13 +65,13 @@ Ui.SectionBody {
 
     Ui.ReadingRow {
       label: "Gateway"
-      visible: app.wifi.connected !== ""
+      visible: !searchHidden && app.wifi.connected !== ""
       value: app.wifiConnection.gateway ? String(app.wifiConnection.gateway) : "—"
     }
 
     Ui.PickerRow {
       label: "Band"
-      visible: app.wifi.connected !== "" && app.bandOptions().length > 1
+      visible: !searchHidden && app.wifi.connected !== "" && app.bandOptions().length > 1
       description: app.wifiBand.selected === "auto" && app.wifiBand.current
         ? "Currently on " + app.wifiBand.current + " GHz"
         : "Pinned; the radio will not move off it."

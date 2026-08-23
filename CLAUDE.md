@@ -129,21 +129,47 @@ Two things worth knowing before changing this:
   same stale number, so the second would be swallowed. `effective` is what the
   slider and the next press read.
 
-## Changed, and changed back
+## Changed, and putting back
 
 "Changed" means the value differs from what the setting was before this window
-first wrote it — not that the window wrote it. The two are not the same: a
-switch flipped and flipped back was writing the key a second time and went on
-claiming a change, offering to reset a setting already sitting at its original
-value.
+first wrote it — not merely that the window wrote it. A switch flipped and
+flipped back is not a change, and must stop saying it is.
 
-The value found before the first write is kept in `.hyprOriginal` beside the
-value itself. Read it with `has()`, never `//`: jq's alternative operator
-treats **false** as empty, so every switch that starts off would read its
-original back as null and never match — which is exactly how Shadow, Blur and
-Glow went on claiming a change after being turned off again. Writing that value again deletes both, which hands the setting
-back exactly as a reset does. A key written before this existed has no
-original recorded, so it stays marked until reset once.
+Three kinds of change, three ways back:
+
+- **A Hyprland key** is an override: drop it and the value comes from wherever
+  it came from before — Omarchy, the theme, a hand-written `looknfeel.lua`.
+  A **per-device** setting is the same shape; clearing it hands the device back
+  to the global one, so the store is the whole record and no original is kept.
+- **A value in someone else's config** — theme, font, text size, the bar, the
+  idle timeouts, tmux, Neovim, Herdr, a monitor scale — has no unset state.
+  The way back is the value found before the first write, kept in `.written`
+  under a key naming what it configures (`tmux:mouse`, `device:<name>:<opt>`,
+  `monitor:DP-2`). Hyprland keys keep theirs in `.hyprOriginal`.
+- **A list you add to** — compose entries, keybindings — is not a setting with
+  a default at all. Those rows carry Remove, Turn off and Restore, which is
+  what a thing you created wants rather than a reset.
+
+The window shows one mark for all of them, because from the outside they are
+the same thing: you changed it, and it can go back. `Ctrl+Backspace` or the
+line under the menu puts back everything at once, after asking — the one
+action here a second click cannot undo.
+
+The live pages are deliberately unmarked: audio, network, bluetooth and power
+move on their own, so "you changed this" would be a guess.
+
+Three things this will not forgive:
+
+- **Read the previous value before the write.** Read after, and the recorded
+  original is the value it has just become.
+- **Read it with `has()`, never `//`.** jq's alternative operator treats
+  **false** as empty, so every switch that starts off reads its original back
+  as null and never matches. This bit twice: Shadow, Blur and Glow went on
+  claiming a change after being turned off again.
+- **Restoring writes the value found at the first change.** If a theme has
+  moved text size since, the reset puts back the older number, not the theme's.
+  A key written before any of this existed has no original at all, and stays
+  marked until reset once.
 
 ## The two that are not keywords
 
@@ -174,45 +200,6 @@ anything is written. It runs for the per-device settings too.
 Options are deliberately not checked: xkb ignores an option it does not know
 rather than failing, so a typo there costs nothing, and a check would only be
 a guess at a list that changes.
-
-## What can be marked, and what cannot
-
-Three kinds of change, three ways back:
-
-- **A Hyprland key** is an override. Drop it and the value comes from wherever
-  it came from before. So is a **per-device** setting: clearing it hands the
-  device back to the global one, and the store is the whole record.
-- **A value in someone else's config** — theme, font, text size, the bar, the
-  idle timeouts, tmux, Neovim, Herdr, a monitor scale — has no unset. The way
-  back is the value found before the first write, kept in `.written` under a
-  prefixed key (`tmux:mouse`, `device:...`, `monitor:DP-2`).
-- **A list you add to** — compose entries, keybindings — is not a setting with
-  a default at all. Those rows carry their own Remove, Turn off and Restore,
-  which is the honest affordance for a thing you created rather than changed.
-
-`track_write` is the one place the second kind is recorded. Two things it will
-not forgive: read the previous value **before** the write, or the recorded
-original is the value it has just become; and read it with `has()`, never
-`//`, which treats false as empty.
-
-## Two kinds of putting back
-
-A Hyprland setting has an unset state: dropping our key hands it back to
-whatever Omarchy, the theme or the user's own config supplies, which is why
-`hypr_reset` deletes rather than writes.
-
-Theme, font, text size, the bar and the idle timeouts have no such state —
-they are written into Omarchy's own config by Omarchy's own commands. The only
-way back is to remember what was there before the first write and write that,
-which is what `.written` holds and `setting_reset` does. `setting_current`
-is the list of which keys work this way; the live pages are deliberately
-absent, since audio, network, bluetooth and power move on their own and
-"changed" would mean nothing there.
-
-The window shows one mark for both, because from the outside they are the same
-thing: you changed it, and it can go back. Worth knowing: restoring writes the
-value found at the first change, so if a theme has moved text size since, the
-reset puts back the older number rather than the theme's.
 
 ## The legend bar
 
@@ -301,6 +288,55 @@ Changing either file means testing the whole cycle, not just the write:
 `omarchy plugin disable`, check the file is gone, `omarchy plugin enable`,
 check it is back, and `desktop-file-validate` what it wrote.
 
+## Watching instead of asking
+
+Two pages follow the system rather than re-reading it. Audio follows
+`pactl subscribe`, because mute and volume belong to the server and the media
+keys, the bar and every other panel move them. Power follows three signals at
+once — the profile daemon over D-Bus, UPower for the battery, and inotify on
+the files `omarchy-powerprofiles-set` writes — because the bar's power plugin,
+the menu and the daemon all move the profile.
+
+Both run only while their page is open, and both drain a burst of events
+before re-reading, or one key press costs four reads. The monitors are killed
+by an EXIT trap *and* by a watchdog on the reader, since neither notices the
+page closing on its own.
+
+Every other page is only as fresh as the last state read. Change a theme
+elsewhere and this window shows the old one until something makes it read
+again — worth knowing before chasing a "stale value" bug that is not one.
+
+## Reading Hyprland in one call
+
+`hypr_state` asks for every setting in a single `hyprctl --batch` and sorts the
+answers out in jq. One call each was fine at a dozen settings and not at
+seventy-odd: it took a second on its own, the window sat on "Loading" for
+seconds, and — the part that actually misleads — every page rendered the
+fallbacks written into its rows rather than the values Hyprland holds. If a
+page shows suspiciously round numbers, suspect that before suspecting the page.
+
+## The bar layout
+
+`bar move` and `bar shift` edit `.bar.layout` in `shell.json`. Both move the
+widget's **whole object**, never rebuild it from its id: a widget keeps its own
+settings in that same object, and half the bar would lose its configuration the
+first time it was reordered.
+
+## The Plugins page
+
+Add and remove hand off to the Omarchy flows in a terminal, because both ask
+questions and print what they did. The update check fetches every plugin at
+once and prints each verdict as it lands, so spinners retire one at a time
+rather than all at the end; the verdicts outlive the sweep in
+`~/.cache/omarchy/omasettings/plugin-updates.json`, since a check costs a
+network round trip per plugin.
+
+The window is a plugin too, and says so in its own corner when it is behind:
+the cached verdict draws it at once and a single background fetch corrects it
+a moment after opening. The comparison is `omarchy-plugin-update`'s own — fetch
+`origin HEAD`, count `HEAD..FETCH_HEAD` — on purpose, so the count never
+promises an update the button then refuses to make.
+
 ## Testing
 
 There is no hot reload worth trusting for structural changes. The loop is:
@@ -316,6 +352,26 @@ journalctl --user --since "-20 s" --no-pager | grep -i omasettings
 QML errors surface **only** in the journal — a page that fails to load leaves
 the window blank with no other sign. Grep for `qml`, `not a type`,
 `non-existent property` and `undefined`.
+
+**Driving it from the keyboard.** `wtype` types into whatever holds keyboard
+focus, and the window takes focus exclusively while it is open — so check it
+is open before every burst:
+
+```bash
+hyprctl layers -j | jq -e '..|select(.namespace?=="omasettings")' >/dev/null \
+  && wtype "/" && wtype "blur"
+```
+
+Skip that check and the keystrokes go to the terminal you are working in. Two
+things close the window out from under a test: `Escape` with nothing focused,
+and `toggle` when it is already open. `Escape` only clears the search when the
+search box has focus.
+
+**Finding it in a screenshot.** `grim -g` takes *logical* coordinates while a
+full `grim` capture is physical pixels, and the card is 90% of the screen
+centred — three different frames of reference. Capture the whole screen, crop
+from that with `magick`, and read the geometry out of
+`hyprctl monitors` rather than assuming it.
 
 To see a page without clicking, set `property string pageId` in
 `SettingsWindow.qml`, restart, screenshot with `grim`, then set it back to
@@ -361,6 +417,27 @@ first.
   in this Nerd Font, so signal bars are drawn with rectangles. Omarchy's own
   icon font is resolved by *file* (`fc-list ':family=omarchy:charset=e905'`) and
   loaded with a `FontLoader`, because more than one file can claim the family.
+- **`forceActiveFocus()` on a `FocusScope` gives focus back to the child that
+  had it last** — which, when a field has just finished editing, is that field.
+  The scope holds a `keySink` Item for focus to land on instead.
+- **A `TextField` emits `accepted` without accepting the event.** An Enter left
+  to bubble reaches the window, which reads it as "activate this row" and drops
+  straight back into the field just left. Handle Enter at the field and accept
+  it there.
+- **A `Repeater` is a visible child with no height**, sitting among the rows it
+  made. Counting children to decide whether a group is empty must skip it, or
+  every heading survives a search that removed everything under it.
+- **A binding read from inside its own change handler is the previous value.**
+  `onSearchTermChanged` reading `sidebarRows` got the list for the term before,
+  and switched to a page that no longer matched. Recompute from the source, not
+  from the binding you are invalidating.
+- **A property named `<x>Changed` collides with `<x>`'s change signal.**
+  `hyprChanged` beside `hypr` is a duplicated name; Qt 6's qmllint catches it,
+  Qt 5's does not.
+- **A child anchored to a parent that sizes itself from its children is a
+  binding loop.** Row content anchored to `verticalCenter` of a holder whose
+  `implicitHeight` is `childrenRect.height` loops silently — it shows up in the
+  journal, not in the lint.
 - **`hyprctl keyword` does nothing on a Lua config.** It answers "keyword can't
   work with non-legacy parsers. Use eval." — on stderr, while still exiting 0,
   so a setting looks applied and is not. `hypr_apply_live` sends

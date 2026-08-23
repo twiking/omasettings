@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "Tobias Wiking",
   "license": "MIT",
-  "description": "Every Omarchy setting in one searchable window \u2014 appearance, bar, windows, layout, effects, input, displays, audio, network, bluetooth, power, plugins and your applications \u2014 so you can see what there is to change without hunting through config files. One bar widget in place of the half-dozen it replaces.",
+  "description": "One window for every Omarchy setting, from Hyprland to your keybindings to tmux. Searchable, and anything you change can be put back.",
   "homepage": "https://github.com/twiking/omasettings",
   "kinds": [
     "bar-widget",

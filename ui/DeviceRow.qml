@@ -21,6 +21,19 @@ Item {
   signal pairRequested()
   signal forgetRequested()
 
+  // The same thing clicking the row does, which depends on what the device is.
+  Local.NavCursor {
+    anchors.fill: parent
+    navKeys: deviceRow.connected ? [{ key: "Space", label: "Disconnect" }]
+      : (deviceRow.paired ? [{ key: "Space", label: "Connect" }]
+                          : [{ key: "Space", label: "Pair" }])
+    onNavActivate: {
+      if (deviceRow.connected) deviceRow.disconnectRequested()
+      else if (deviceRow.paired) deviceRow.connectRequested()
+      else deviceRow.pairRequested()
+    }
+  }
+
   // Falling back to the address keeps a nameless device identifiable rather
   // than blank.
   readonly property string title: name !== "" ? name : address

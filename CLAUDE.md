@@ -175,6 +175,20 @@ nothing to the bar rather than lying about what it does.
 `\u232b Reset` appears only on a row this window has changed, which makes the
 bar the discovery path for the reset as well.
 
+## Rows that are not settings
+
+A device, a network and a binding are lists of things rather than one setting
+each, and their rows are built to look like it — `PickableRow`, `DeviceRow`,
+`WifiRow`, `BindingRow` are not `SettingRow`s. `NavCursor` carries the cursor
+contract into them instead of forcing them into that shape: drop one in,
+anchored over the row, and the row joins the cursor. It registers itself, not
+its parent, and mirrors the geometry the window sorts by, so from the window's
+side it is another row.
+
+Its key is whatever clicking the row does, which is not fixed: connect or
+disconnect depending on the device, remove or turn off depending on whose
+binding it is. The legend says which, because the row does.
+
 ## Search
 
 Only the open page is instantiated, which is what keeps the window cheap and

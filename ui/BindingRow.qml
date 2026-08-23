@@ -19,6 +19,19 @@ Item {
   readonly property bool mine: source === "yours"
   readonly property bool off: source === "disabled"
 
+  // A binding you wrote can go; one of Omarchy's can only be turned off, and
+  // a turned-off one can come back. The key follows whichever it is, the same
+  // way the button does.
+  Local.NavCursor {
+    anchors.fill: parent
+    navKeys: bindingRow.mine ? [{ key: "Space", label: "Remove" }]
+      : [{ key: "Space", label: bindingRow.off ? "Restore" : "Turn off" }]
+    onNavActivate: {
+      if (bindingRow.mine) bindingRow.removeRequested()
+      else bindingRow.disableRequested()
+    }
+  }
+
   width: parent ? parent.width : 0
   implicitHeight: Math.max(Style.spacing.controlHeight, keysText.implicitHeight + Style.space(6))
   opacity: off ? 0.5 : 1

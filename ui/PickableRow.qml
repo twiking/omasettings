@@ -15,6 +15,13 @@ Item {
 
   signal picked()
 
+  // A list of things to choose between: the cursor picks one.
+  Local.NavCursor {
+    anchors.fill: parent
+    navKeys: [{ key: "Space", label: "Select" }]
+    onNavActivate: pickableRow.picked()
+  }
+
   width: parent ? parent.width : 0
   implicitHeight: Style.spacing.controlHeight
 

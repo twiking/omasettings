@@ -24,6 +24,21 @@ Column {
   // A saved network has its password already; only a new secured one needs asking.
   readonly property bool needsPassword: wifiRow.secured && !wifiRow.saved
 
+  // Connecting is the one thing worth a key here; a network that wants a
+  // passphrase opens the prompt instead, and the prompt takes the keyboard.
+  Local.NavCursor {
+    anchors.fill: parent
+    navBlocking: wifiRow.prompting
+    navKeys: wifiRow.active ? [{ key: "Space", label: "Disconnect" }]
+      : (wifiRow.needsPassword ? [{ key: "Space", label: "Passphrase" }]
+                               : [{ key: "Space", label: "Connect" }])
+    onNavActivate: {
+      if (wifiRow.active) wifiRow.disconnectRequested()
+      else if (wifiRow.needsPassword) wifiRow.promptToggled()
+      else wifiRow.connectRequested("")
+    }
+  }
+
   width: parent ? parent.width : 0
   spacing: Style.space(6)
 

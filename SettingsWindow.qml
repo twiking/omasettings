@@ -1253,31 +1253,22 @@ Item {
           Repeater {
             model: root.navLegend
 
+            // Plain text, not keycaps: the legend is there to be glanced at,
+            // and a row of boxes along the foot pulls the eye off the settings
+            // it is meant to be helping with. The key is a shade brighter than
+            // what it does, which is enough to tell them apart.
             delegate: Row {
               required property var modelData
-              spacing: Style.space(6)
+              spacing: Style.space(5)
 
-              Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                implicitWidth: keyLabel.implicitWidth + Style.space(10)
-                implicitHeight: keyLabel.implicitHeight + Style.space(4)
-                radius: Style.cornerRadius > 0 ? Style.space(4) : 0
-                color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.10)
-                border.width: Style.spacing.hairline
-                border.color: root.hairline
-
-                Text {
-                  id: keyLabel
-                  anchors.centerIn: parent
-                  text: modelData.key
-                  color: root.foreground
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.caption
-                }
+              Text {
+                text: modelData.key
+                color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.75)
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
               }
 
               Text {
-                anchors.verticalCenter: parent.verticalCenter
                 text: modelData.label
                 color: root.muted
                 font.family: root.fontFamily

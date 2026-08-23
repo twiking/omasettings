@@ -203,12 +203,19 @@ setting_reset() {
   local key=${1:-}
   [[ -n $key ]] || die "no setting given"
 
+  # Everything this window has a hand in, each by its own way back. The
+  # per-device overrides go through the same door as the rest rather than
+  # being cleared behind their backs.
   if [[ $key == --all ]]; then
     local k
     while read -r k; do
       [[ -n $k ]] || continue
       setting_reset "$k"
     done < <(jq -r '(.written // {}) | keys[]' <<<"$(read_store)")
+    while read -r k; do
+      [[ -n $k ]] || continue
+      setting_reset "$k"
+    done < <(devices_changed | jq -r '.[]')
     hypr_reset --all
     return
   fi

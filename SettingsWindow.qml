@@ -914,6 +914,27 @@ Item {
       // The card is not the scrim: a click that lands on it stays on it.
       MouseArea { anchors.fill: parent }
 
+    // Asked, because this is the one thing here that cannot be undone by
+    // clicking again.
+    ConfirmDialog {
+      id: resetAllDialog
+      anchors.fill: parent
+      z: 100
+      message: root.changedSettings.length === 1
+        ? "Put back the one setting changed from this window?"
+        : "Put back all " + root.changedSettings.length + " settings changed from this window?"
+      confirmText: "Put back"
+      cancelText: "Keep them"
+      background: root.background
+      foreground: root.foreground
+      fontFamily: root.fontFamily
+      onConfirmed: {
+        opened = false
+        root.run(["reset", "--all"])
+      }
+      onCanceled: opened = false
+    }
+
     FocusScope {
       id: keyScope
       anchors.fill: parent
@@ -930,13 +951,40 @@ Item {
       // except when a row has taken the keyboard for itself.
       Keys.priority: Keys.BeforeItem
       Keys.onPressed: function(event) {
-        // A row holding the keyboard gets every key, Escape included: closing
-        // an open dropdown is what Escape means while one is open.
-        if (root.navBlocked || root.searchFocused) return
-        if (event.key === Qt.Key_Escape) { root.close(); event.accepted = true; return }
-
         var alt = (event.modifiers & Qt.AltModifier) !== 0
         var ctrl = (event.modifiers & Qt.ControlModifier) !== 0
+
+        // A row holding the keyboard gets every key, Escape included: closing
+        // an open dropdown is what Escape means while one is open.
+        // The dialog has no keys of its own, so it borrows the window's while
+        // it is up, and nothing else gets a look in.
+        if (resetAllDialog.opened) {
+          if (event.key === Qt.Key_Escape) { resetAllDialog.opened = false; event.accepted = true }
+          else if (event.key === Qt.Key_Left || event.key === Qt.Key_Right
+                   || event.text === "h" || event.text === "l"
+                   || event.key === Qt.Key_Tab) {
+            resetAllDialog.selectedIndex = resetAllDialog.selectedIndex === 1 ? 0 : 1
+            event.accepted = true
+          } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+                     || event.key === Qt.Key_Space) {
+            if (resetAllDialog.selectedIndex === 1) resetAllDialog.confirmed()
+            else resetAllDialog.opened = false
+            event.accepted = true
+          }
+          return
+        }
+
+        if (root.navBlocked || root.searchFocused) return
+
+        // Undoing everything is a big enough thing to want a key of its own,
+        // and a modifier keeps it clear of the Backspace that resets one.
+        if (event.key === Qt.Key_Backspace && ctrl) {
+          if (root.changedSettings.length > 0) resetAllDialog.opened = true
+          event.accepted = true
+          return
+        }
+        if (event.key === Qt.Key_Escape) { root.close(); event.accepted = true; return }
+
 
         // The two things every search box answers to.
         if (event.text === "/" || (ctrl && event.key === Qt.Key_F)) {
@@ -1020,6 +1068,9 @@ Item {
               // Escape gives the keyboard back to the list rather than closing
               // the window out from under a search.
               Keys.onPressed: function(event) {
+        var alt = (event.modifiers & Qt.AltModifier) !== 0
+        var ctrl = (event.modifiers & Qt.ControlModifier) !== 0
+
                 if (event.key === Qt.Key_Escape) {
                   if (text !== "") text = ""
                   root.navTakeFocus()
@@ -1119,6 +1170,40 @@ Item {
             }
 
             Item { Layout.fillHeight: true }
+
+            // What this window has changed, and the way to undo the lot. Only
+            // when there is something to undo — a button that mostly does
+            // nothing teaches you to ignore it.
+            Column {
+              visible: root.changedSettings.length > 0
+              spacing: Style.space(2)
+
+              Text {
+                text: root.changedSettings.length === 1
+                  ? "1 setting changed" : root.changedSettings.length + " settings changed"
+                color: root.muted
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+
+              Text {
+                id: putBackLink
+                text: "Put them all back"
+                color: putBackMouse.containsMouse ? root.accent : root.muted
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.underline: putBackMouse.containsMouse
+
+                MouseArea {
+                  id: putBackMouse
+                  anchors.fill: parent
+                  anchors.margins: -Style.space(4)
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: resetAllDialog.opened = true
+                }
+              }
+            }
 
             // The corner says something only when there is something to say:
             // while a write is in flight, before the first state lands, or

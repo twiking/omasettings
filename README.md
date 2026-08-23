@@ -150,6 +150,10 @@ Omarchy, your theme or your own config says; theme, font, text size, the bar
 and the idle timeouts go back to the value they had when you first changed
 them, since those have no unset state of their own.
 
+The sidebar keeps a count of everything you have changed, with a way to put
+all of it back at once — `Ctrl+Backspace`, or the line under the menu. It asks
+first, since that is the one thing here a second click cannot undo.
+
 Changing a setting back to where it started clears the mark by itself — a
 switch flipped and flipped back is not a change.
 
@@ -184,6 +188,7 @@ Omarchy panel uses:
 | `Enter` while typing | Commit the field and hand the keyboard back |
 | `Enter` on a sidebar heading | Open or close its submenu |
 | `Backspace` | Hand the setting under the cursor back to the system, if you changed it |
+| `Ctrl+Backspace` | Put back everything changed from this window, after asking |
 | `Home` / `End` | First and last setting on the page |
 | `Tab` | Swap between the sidebar and the page |
 | `/` or `Ctrl+F` | Jump to the search box |

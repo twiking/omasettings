@@ -921,10 +921,10 @@ Item {
       anchors.fill: parent
       z: 100
       message: root.changedSettings.length === 1
-        ? "Put back the one setting changed from this window?"
-        : "Put back all " + root.changedSettings.length + " settings changed from this window?"
-      confirmText: "Put back"
-      cancelText: "Keep them"
+        ? "Reset the one setting changed from this window?"
+        : "Reset all " + root.changedSettings.length + " settings changed from this window?"
+      confirmText: "Reset all"
+      cancelText: "Cancel"
       background: root.background
       foreground: root.foreground
       fontFamily: root.fontFamily
@@ -1186,22 +1186,17 @@ Item {
                 font.pixelSize: Style.font.caption
               }
 
-              Text {
-                id: putBackLink
-                text: "Put them all back"
-                color: putBackMouse.containsMouse ? root.accent : root.muted
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.caption
-                font.underline: putBackMouse.containsMouse
-
-                MouseArea {
-                  id: putBackMouse
-                  anchors.fill: parent
-                  anchors.margins: -Style.space(4)
-                  hoverEnabled: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: resetAllDialog.opened = true
-                }
+              // A button, not a link: it is an action on the whole window
+              // rather than a place to go, and it should look like the other
+              // things that do something.
+              Button {
+                text: "Reset all settings"
+                bordered: true
+                foreground: root.foreground
+                accent: root.accent
+                fontFamily: root.fontFamily
+                fontSize: Style.font.caption
+                onClicked: resetAllDialog.opened = true
               }
             }
 

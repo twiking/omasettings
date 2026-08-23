@@ -177,8 +177,8 @@ Three kinds of change, three ways back:
   what a thing you created wants rather than a reset.
 
 The window shows one mark for all of them, because from the outside they are
-the same thing: you changed it, and it can go back. `Ctrl+Backspace` or the
-line under the menu puts back everything at once, after asking — the one
+the same thing: you changed it, and it can go back. `Ctrl+Backspace` or the **Reset all
+settings** button under the menu puts back everything at once, after asking — the one
 action here a second click cannot undo.
 
 The live pages are deliberately unmarked: audio, network, bluetooth and power

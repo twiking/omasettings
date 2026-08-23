@@ -152,6 +152,10 @@ device_set() {
   type=$(device_schema "$kind" | awk -F'\t' -v k="$key" '$1 == k { print $2 }')
   [[ -n $type ]] || die "a $kind cannot set '$key'"
 
+  # One device with a keymap that will not compile is the same problem as all
+  # of them having one.
+  kb_check "$key" "$raw"
+
   case $type in
     int) [[ $raw =~ ^-?[0-9]+$ ]] || die "'$raw' is not a whole number"; formatted=$raw ;;
     float) [[ $raw =~ ^-?[0-9]+(\.[0-9]+)?$ ]] || die "'$raw' is not a number"; formatted=$raw ;;

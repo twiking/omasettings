@@ -315,6 +315,36 @@ hypr_lua_table() {
   '
 }
 
+# ------------------------------------------------------ keyboard sanity
+#
+# A layout or a variant that xkb cannot compile leaves you with a keyboard you
+# cannot type on to fix it, and Hyprland accepts the value without complaint:
+# it keeps the last keymap that worked and says nothing, so the window would
+# show the new value while the keys did something else.
+#
+# Options are not checked, because they cannot be: xkb ignores one it does not
+# know rather than failing, so a typo there costs nothing.
+kb_compiles() {
+  local layout=$1 variant=$2
+  command -v xkbcli >/dev/null 2>&1 || return 0
+  xkbcli compile-keymap --layout "${layout:-us}" --variant "$variant" >/dev/null 2>&1
+}
+
+# The pair as it would be after this write, since either half can break it.
+kb_check() {
+  local key=$1 value=$2 layout variant
+  layout=$(hypr_read kb-layout | jq -r '. // ""')
+  variant=$(hypr_read kb-variant | jq -r '. // ""')
+  case $key in
+    kb-layout | kb_layout) layout=$value ;;
+    kb-variant | kb_variant) variant=$value ;;
+    *) return 0 ;;
+  esac
+
+  kb_compiles "$layout" "$variant" && return 0
+  die "xkb cannot build a keymap from layout ${layout:-us}${variant:+ variant $variant} — left as it was"
+}
+
 hypr_set() {
   local key=$1 value=$2 spec keyword type
   spec=$(hypr_keyword "$key") || return 1
@@ -326,6 +356,8 @@ hypr_set() {
     float) [[ $value =~ ^-?[0-9]+(\.[0-9]+)?$ ]] || die "'$value' is not a number" ;;
     bool) [[ $value == true || $value == false ]] || die "'$value' is not true or false" ;;
   esac
+
+  kb_check "$key" "$value"
 
   local json
   if [[ $type == bool ]]; then json=$value

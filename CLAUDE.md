@@ -145,6 +145,19 @@ Glow went on claiming a change after being turned off again. Writing that value 
 back exactly as a reset does. A key written before this existed has no
 original recorded, so it stays marked until reset once.
 
+## Keyboard values that will not compile
+
+Hyprland accepts a layout or variant xkb cannot build and says nothing: it
+keeps the last keymap that worked, so the window would show the new value
+while the keys went on doing the old thing — or, worse, leave you unable to
+type the fix. `kb_check` compiles the pair as it would be after the write
+(either half can break it) with `xkbcli compile-keymap`, and refuses before
+anything is written. It runs for the per-device settings too.
+
+Options are deliberately not checked: xkb ignores an option it does not know
+rather than failing, so a typo there costs nothing, and a check would only be
+a guess at a list that changes.
+
 ## What can be marked, and what cannot
 
 Three kinds of change, three ways back:

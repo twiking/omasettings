@@ -150,8 +150,11 @@ that remain carry the number of settings that matched. The open page shows
 those settings and nothing else, headings included, and moving through the
 menu visits only pages that have something.
 
-A heading counts as part of the settings under it, so "blur" finds all eleven
-settings under **Blur**, not just the one called Blur.
+Everything that names a setting counts, not just the setting: the heading
+above it, the page it is on, and the heading that page sits under. So "blur"
+finds all eleven settings under **Blur**, "bluetooth" finds the whole
+Bluetooth page though none of its rows carries the word, and "applications"
+finds everything under that heading.
 
 ### Keyboard
 

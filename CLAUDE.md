@@ -147,6 +147,15 @@ Two things follow from that:
 - **The heading is part of the match, in both places.** The index carries the
   group, and rows read their heading off the `SettingGroup` above them, or a
   search for "blur" would count eleven settings and show seven.
+- **So is the page name, and its parent's.** "bluetooth" has to find a page
+  whose rows are all device names, and "applications" has to find what sits
+  under it. A page whose name matches is listed whatever its settings are
+  called — including the pages that declare no labels at all, which is why
+  those show no number beside them.
+- **Every page needs its own `case` in `sectionSource`.** The index learns
+  which file holds which page by reading those cases; a page reachable only
+  through the `default` branch is one the search cannot see. That is exactly
+  what hid Herdr's 25 settings.
 
 ## The launcher entry
 

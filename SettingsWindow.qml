@@ -367,15 +367,44 @@ Item {
     }
   }
 
-  // Group, label and description all count: "blur" should find the settings
-  // under a Blur heading whether or not the word is in their own names.
+  // Everything that names a setting counts, not just the setting: the heading
+  // above it, the page it is on, and the heading that page sits under. So
+  // "bluetooth" finds every setting on the Bluetooth page, none of which has
+  // the word in its own name, and "blur" finds the eleven under Blur.
   function matchesTerm(label, description, group) {
     if (!searching) return true
     var hay = (String(label || "") + " " + String(description || "") + " " + String(group || "")).toLowerCase()
     return hay.indexOf(searchTerm) !== -1
   }
 
-  function rowMatches(label, description) { return matchesTerm(label, description, "") }
+  // The menu names for a page: its own, and its parent's if it has one.
+  function pageNames(pageId) {
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].id === pageId) return String(sections[i].title || "")
+      var children = sections[i].children || []
+      for (var c = 0; c < children.length; c++)
+        if (children[c].id === pageId)
+          return String(children[c].title || "") + " " + String(sections[i].title || "")
+    }
+    return ""
+  }
+
+  function matchesOnPage(pageId, label, description, group) {
+    return matchesTerm(label, description, String(group || "") + " " + pageNames(pageId))
+  }
+
+  // Rows ask about themselves, and are always on the open page.
+  function rowMatches(label, description, group) {
+    return matchesOnPage(pageId, label, description, group)
+  }
+
+  // A page whose own name matches is a match, whatever its settings are
+  // called — and some pages, the device lists especially, have no names in
+  // their source to match at all.
+  function pageTitleMatches(pageId) {
+    if (!searching) return false
+    return matchesTerm("", "", pageNames(pageId))
+  }
 
   function pageMatchCount(pageId) {
     if (!searching) return 0
@@ -383,7 +412,7 @@ Item {
     if (!entries) return 0
     var n = 0
     for (var i = 0; i < entries.length; i++)
-      if (matchesTerm(entries[i].label, entries[i].description, entries[i].group)) n++
+      if (matchesOnPage(pageId, entries[i].label, entries[i].description, entries[i].group)) n++
     return n
   }
 
@@ -396,13 +425,29 @@ Item {
     return n
   }
 
+  // Whether a page belongs in the menu at all: something on it matched, or it
+  // is itself what was searched for.
+  function sectionShows(section) {
+    if (!searching) return true
+    if (sectionMatchCount(section) > 0) return true
+    if (pageTitleMatches(section.id)) return true
+    var children = section.children || []
+    for (var i = 0; i < children.length; i++)
+      if (pageTitleMatches(children[i].id)) return true
+    return false
+  }
+
+  function pageShows(pageId) {
+    return !searching || pageMatchCount(pageId) > 0 || pageTitleMatches(pageId)
+  }
+
   // Searching onto a page with nothing on it would show an empty page; move to
   // the first page that has something instead.
   onSearchTermChanged: {
     if (!searching) return
-    if (pageMatchCount(pageId) > 0) return
+    if (pageShows(pageId)) return
     for (var i = 0; i < sidebarRows.length; i++) {
-      if (sidebarRows[i].selectable && sidebarRows[i].matches > 0) {
+      if (sidebarRows[i].selectable) {
         pageId = sidebarRows[i].id
         return
       }
@@ -695,7 +740,7 @@ Item {
       var sectionCount = sectionMatchCount(section)
       // A page with no matches is not dimmed or emptied, it is gone: that is
       // what says "there is nothing here for what you typed".
-      if (searching && sectionCount === 0) continue
+      if (!sectionShows(section)) continue
       rows.push({
         id: section.id,
         title: section.title,
@@ -711,7 +756,7 @@ Item {
       if (!(open || (searching && children.length > 0))) continue
       for (var c = 0; c < children.length; c++) {
         var childCount = pageMatchCount(children[c].id)
-        if (searching && childCount === 0) continue
+        if (!pageShows(children[c].id)) continue
         rows.push({
           id: children[c].id,
           title: children[c].title,
@@ -763,6 +808,10 @@ Item {
     case "apps.defaults": return "sections/DefaultsSection.qml"
     case "apps.tmux": return "sections/TmuxSection.qml"
     case "apps.nvim": return "sections/NvimSection.qml"
+    // Named rather than left to the default: the search index reads these
+    // cases to learn which file holds which page, and a page reachable only
+    // through the default is a page it cannot see.
+    case "apps.herdr": return "sections/HerdrSection.qml"
     default: return "sections/HerdrSection.qml"
     }
   }

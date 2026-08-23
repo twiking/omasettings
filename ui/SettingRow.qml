@@ -44,7 +44,7 @@ Item {
   // which is also how the index counts them.
   property string groupTitle: ""
   readonly property bool searchHidden: nav !== null && nav.searching === true
-    && !nav.matchesTerm(settingRow.label, settingRow.description, settingRow.groupTitle)
+    && !nav.rowMatches(settingRow.label, settingRow.description, settingRow.groupTitle)
   visible: !searchHidden
 
   // Rows are nested several layers inside a page, so the controller is found

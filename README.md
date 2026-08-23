@@ -84,22 +84,17 @@ works inside.
 
 ## What it needs
 
-Omarchy itself, and the tools its own commands already use. Nothing here needs
-root, and nothing is installed on your behalf — a page whose tool is missing
-says so rather than failing.
+**Omarchy, and `jq`.** That is the whole requirement — `jq` does every read and
+write, and `hyprctl` comes with Hyprland.
 
-| Tool | Used for |
-| --- | --- |
-| `jq` | every read and write; the whole helper is JSON |
-| `hyprctl` | reading and applying Hyprland settings |
-| `xkbcli` | checking a keyboard layout compiles before writing it (skipped if absent) |
-| `pactl` | audio devices, volume and mute |
-| `nmcli` | Wi-Fi networks and connection details |
-| `bluetoothctl` | paired and nearby devices |
-| `upower`, `powerprofilesctl` | battery reading and the power profile |
-| `timedatectl` | timezone and clock |
-| `lua`, `luac` | reading and checking the Hyprland Lua it writes |
-| `tmux`, `git` | the Tmux page; plugin update checks |
+Everything else is needed only by the page that uses it, and a page whose tool
+is missing says so instead of failing: `pactl` for Audio, `nmcli` for Network,
+`bluetoothctl` for Bluetooth, `upower` and `powerprofilesctl` for Power,
+`timedatectl` for Date & Time, and `tmux`, `nvim` or `herdr` for their own
+pages under Applications. `xkbcli` is used to check a keyboard layout compiles
+before writing it, and skipped if you do not have it.
+
+Nothing here needs root, and nothing is installed on your behalf.
 
 ## Install
 

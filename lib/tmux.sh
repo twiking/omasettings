@@ -56,19 +56,24 @@ tmux_read() {
 }
 
 tmux_state() {
-  local present running
+  local present running installed
+  # Asked, not assumed: Neovim and Herdr both report whether they are there,
+  # and a page that claims tmux is installed when it is not offers settings
+  # whose writes have nowhere to go.
+  installed=$(command -v tmux >/dev/null 2>&1 && echo true || echo false)
   present=$(tmux_read | jq -R -s -c 'split("\n")
     | map(select(length > 0) | split("\t") | { key: .[0], value: (.[1] // "") })
     | from_entries')
   running=$(tmux has-session 2>/dev/null && echo true || echo false)
 
   tmux_schema | jq -R -s -c --argjson present "${present:-{\}}" --argjson running "$running" \
+    --argjson installed "$installed" \
     --arg path "$TMUX_CONFIG" '
     def cast(v; t):
       if t == "bool" then (v == "on")
       elif t == "int" then (v | tonumber? // 0)
       else v end;
-    { installed: true,
+    { installed: $installed,
       running: $running,
       path: $path,
       values: (split("\n")

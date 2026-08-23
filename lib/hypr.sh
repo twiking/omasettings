@@ -327,14 +327,40 @@ hypr_set() {
     bool) [[ $value == true || $value == false ]] || die "'$value' is not true or false" ;;
   esac
 
-  hypr_apply_live "$keyword" "$value" "$type"
-
   local json
   if [[ $type == bool ]]; then json=$value
   elif [[ $type == str ]]; then json=$(jq -Rn --arg v "$value" '$v')
   else json=$value
   fi
-  edit_store '.hypr = ((.hypr // {}) | .[$key] = $value)' --arg key "$key" --argjson value "$json"
+
+  # What the setting was before this window first wrote it. Kept so that
+  # setting it back to that value can drop the key rather than writing the old
+  # value as a new one: a switch flipped and flipped back is not a change, and
+  # should not go on saying it is.
+  local store original
+  store=$(read_store)
+  if jq -e --arg k "$key" '(.hypr // {}) | has($k)' <<<"$store" >/dev/null; then
+    original=$(jq -c --arg k "$key" '(.hyprOriginal // {})[$k] // null' <<<"$store")
+  else
+    original=$(hypr_read "$key")
+    original=${original:-null}
+  fi
+
+  if [[ $json == "$original" ]]; then
+    edit_store 'if .hypr then .hypr |= del(.[$key]) else . end
+      | if .hyprOriginal then .hyprOriginal |= del(.[$key]) else . end' --arg key "$key"
+    # Hyprland has no way to unset a keyword, so the value comes back the same
+    # way a reset brings it back: the generated file no longer sets it, and
+    # the reload is what makes that take effect.
+    hyprctl reload >/dev/null 2>&1 || true
+    return
+  fi
+
+  hypr_apply_live "$keyword" "$value" "$type"
+
+  edit_store '.hypr = ((.hypr // {}) | .[$key] = $value)
+    | .hyprOriginal = ((.hyprOriginal // {}) | (if has($key) then . else .[$key] = $original end))' \
+    --arg key "$key" --argjson value "$json" --argjson original "$original"
 }
 
 # ------------------------------------------------------------------- reset
@@ -357,12 +383,13 @@ hypr_reset() {
   [[ -n $key ]] || die "no setting given"
 
   if [[ $key == --all ]]; then
-    edit_store '.hypr = {}'
+    edit_store '.hypr = {} | .hyprOriginal = {}'
   else
     hypr_keyword "$key" >/dev/null || die "unknown setting '$key'"
     jq -e --arg k "$key" '(.hypr // {}) | has($k)' <<<"$(read_store)" >/dev/null \
       || return 0
-    edit_store 'if .hypr then .hypr |= del(.[$key]) else . end' --arg key "$key"
+    edit_store 'if .hypr then .hypr |= del(.[$key]) else . end
+      | if .hyprOriginal then .hyprOriginal |= del(.[$key]) else . end' --arg key "$key"
   fi
 
   # edit_store has already re-rendered the managed file; the reload is what

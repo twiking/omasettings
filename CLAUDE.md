@@ -129,6 +129,19 @@ Two things worth knowing before changing this:
   same stale number, so the second would be swallowed. `effective` is what the
   slider and the next press read.
 
+## Changed, and changed back
+
+"Changed" means the value differs from what the setting was before this window
+first wrote it — not that the window wrote it. The two are not the same: a
+switch flipped and flipped back was writing the key a second time and went on
+claiming a change, offering to reset a setting already sitting at its original
+value.
+
+The value found before the first write is kept in `.hyprOriginal` beside the
+value itself. Writing that value again deletes both, which hands the setting
+back exactly as a reset does. A key written before this existed has no
+original recorded, so it stays marked until reset once.
+
 ## The legend bar
 
 Fourteen keys listed at once would be a wall nobody reads, so the bar says

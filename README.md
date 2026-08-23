@@ -1,6 +1,6 @@
 # OmaSettings
 
-A settings window for Omarchy, in the bar and in the launcher.
+One window for every Omarchy setting, from Hyprland to your keybindings to tmux.
 
 <p align="center"><img src="preview.png" alt="The OmaSettings window" width="800"></p>
 

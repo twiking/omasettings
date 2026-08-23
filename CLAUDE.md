@@ -40,8 +40,11 @@ eats someone's setup. Every file falls into one of three patterns:
 
 1. **Generated wholly by us** — `~/.config/hypr/omasettings.lua`, rendered
    from our store (`~/.config/omarchy/omasettings.json`). Hyprland settings are
-   applied live with `hyprctl keyword` and recorded there; the generated file is
-   loaded last so the user's own files still say what they wrote.
+   applied live with `hyprctl eval` — not `keyword`, which does nothing on a Lua
+   config — and recorded there; the generated file is loaded last so the user's
+   own files still say what they wrote. It is created on the first write, not at
+   install, and the `require` line is appended to `hyprland.lua` at the same
+   moment.
 2. **A marked block inside their file** — keybindings, appended to
    `bindings.lua` between `-- >>> omasettings bindings` markers. Everything
    outside the markers is copied through untouched, and removing the last
@@ -60,6 +63,29 @@ Two invariants on top:
   Herdr with `herdr config check`, Neovim by compiling the Lua, tmux by applying
   the option to the running server. On failure, restore the previous content and
   `die` with the tool's own message.
+
+## Where each page writes
+
+This app stores almost nothing. Each page writes into whatever owns the
+setting, which is why the sidebar shows the file in the page header:
+
+| Page | Lands in |
+| --- | --- |
+| Windows, Layout, Effects, Groups, Keyboard, Mouse | `~/.config/hypr/omasettings.lua`, loaded last |
+| Appearance | Omarchy's own config, via `omarchy-theme-set`, `omarchy font set`, `omarchy display text size` |
+| Bar, Idle & Lock, Plugins | `~/.config/omarchy/shell.json` |
+| Keybindings | a marked block in `~/.config/hypr/bindings.lua` |
+| Compose Keys | `~/.XCompose` |
+| Herdr, Tmux, Neovim | their own configs, edited in place |
+| Displays | our store, applied with `hyprctl keyword monitor` |
+| Audio, Network, Bluetooth, Power | nowhere — live system state, owned by PipeWire, NetworkManager, BlueZ and power-profiles-daemon |
+
+**Our store holds no settings of its own**, only what is needed to say what
+changed and put it back: `hypr` and `hyprOriginal` (Hyprland keys we override
+and what they were), `written` (pre-change values for settings living in other
+people's configs), `devices`, `monitors`, `bindings`, and `extras` (animation
+speed, full opacity). Delete the store and nothing you configured is lost —
+only the memory of which parts came from here.
 
 ## Prefer Omarchy's commands to reimplementing them
 
@@ -391,9 +417,14 @@ be aimed at a sandbox: `OMASETTINGS_STORE`, `OMASETTINGS_HYPR_DIR`,
 `OMASETTINGS_XCOMPOSE`, `OMASETTINGS_HERDR_CONFIG`, `OMASETTINGS_TMUX_CONFIG`,
 `OMASETTINGS_NVIM_OPTIONS`, `OMASETTINGS_BINDINGS_LUA`, `OMARCHY_SHELL_JSON`.
 
-**Redirecting the file does not redirect the system.** A sandboxed tmux write
-still applies to the running server, and a sandboxed keybinding write still
-reloads Hyprland. Check what else a write touches before running it.
+**Redirecting the file does not redirect the system.** `OMASETTINGS_HYPR_DIR`
+moves the *files*; it does not move Hyprland. A sandboxed Hyprland write still
+goes to the running compositor through `hyprctl eval`, so a "safe" demo changes
+the gaps on the screen in front of you. A sandboxed tmux write still applies to
+the running server, and a sandboxed keybinding write still reloads Hyprland.
+
+Check what else a write touches before running it, and if you only want to see
+what a write *produces*, read `render_managed_lua` rather than performing one.
 
 Before refactoring, capture `bin/omasettings state | jq -S .` and diff against
 it afterwards; volatile fields (`.datetime.now`, Wi-Fi signal) need deleting

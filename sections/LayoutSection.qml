@@ -29,7 +29,7 @@ Ui.SectionBody {
       ]
       onPicked: function(next) { app.setHypr("layout", next) }
       changed: app.isChanged("layout")
-      onResetRequested: app.resetHypr("layout")
+      onResetRequested: app.resetSetting("layout")
     }
   }
 
@@ -43,7 +43,7 @@ Ui.SectionBody {
       checked: app.hyprValue("dwindle-preserve-split", true) === true
       onRequested: function(next) { app.setHypr("dwindle-preserve-split", next ? "true" : "false") }
       changed: app.isChanged("dwindle-preserve-split")
-      onResetRequested: app.resetHypr("dwindle-preserve-split")
+      onResetRequested: app.resetSetting("dwindle-preserve-split")
     }
 
     Ui.SwitchRow {
@@ -52,7 +52,7 @@ Ui.SectionBody {
       checked: app.hyprValue("dwindle-smart-split", false) === true
       onRequested: function(next) { app.setHypr("dwindle-smart-split", next ? "true" : "false") }
       changed: app.isChanged("dwindle-smart-split")
-      onResetRequested: app.resetHypr("dwindle-smart-split")
+      onResetRequested: app.resetSetting("dwindle-smart-split")
     }
 
     Ui.ChoiceRow {
@@ -66,7 +66,7 @@ Ui.SectionBody {
       ]
       onPicked: function(next) { app.setHypr("dwindle-force-split", next) }
       changed: app.isChanged("dwindle-force-split")
-      onResetRequested: app.resetHypr("dwindle-force-split")
+      onResetRequested: app.resetSetting("dwindle-force-split")
     }
 
     Ui.FactorRow {
@@ -77,7 +77,7 @@ Ui.SectionBody {
       value: app.hyprValue("dwindle-split-width-multiplier", 1)
       onCommitted: function(next) { app.setHypr("dwindle-split-width-multiplier", next) }
       changed: app.isChanged("dwindle-split-width-multiplier")
-      onResetRequested: app.resetHypr("dwindle-split-width-multiplier")
+      onResetRequested: app.resetSetting("dwindle-split-width-multiplier")
     }
 
     Ui.FactorRow {
@@ -88,7 +88,7 @@ Ui.SectionBody {
       value: app.hyprValue("dwindle-default-split-ratio", 1)
       onCommitted: function(next) { app.setHypr("dwindle-default-split-ratio", next) }
       changed: app.isChanged("dwindle-default-split-ratio")
-      onResetRequested: app.resetHypr("dwindle-default-split-ratio")
+      onResetRequested: app.resetSetting("dwindle-default-split-ratio")
     }
   }
 
@@ -102,7 +102,7 @@ Ui.SectionBody {
       value: app.hyprValue("master-mfact", 0.55)
       onCommitted: function(next) { app.setHypr("master-mfact", next) }
       changed: app.isChanged("master-mfact")
-      onResetRequested: app.resetHypr("master-mfact")
+      onResetRequested: app.resetSetting("master-mfact")
     }
 
     Ui.ChoiceRow {
@@ -118,7 +118,7 @@ Ui.SectionBody {
       ]
       onPicked: function(next) { app.setHypr("master-orientation", next) }
       changed: app.isChanged("master-orientation")
-      onResetRequested: app.resetHypr("master-orientation")
+      onResetRequested: app.resetSetting("master-orientation")
     }
 
     Ui.ChoiceRow {
@@ -132,7 +132,7 @@ Ui.SectionBody {
       ]
       onPicked: function(next) { app.setHypr("master-new-status", next) }
       changed: app.isChanged("master-new-status")
-      onResetRequested: app.resetHypr("master-new-status")
+      onResetRequested: app.resetSetting("master-new-status")
     }
   }
 
@@ -146,7 +146,7 @@ Ui.SectionBody {
       value: app.hyprValue("scrolling-column-width", 0.5)
       onCommitted: function(next) { app.setHypr("scrolling-column-width", next) }
       changed: app.isChanged("scrolling-column-width")
-      onResetRequested: app.resetHypr("scrolling-column-width")
+      onResetRequested: app.resetSetting("scrolling-column-width")
     }
 
     Ui.SwitchRow {
@@ -155,7 +155,7 @@ Ui.SectionBody {
       checked: app.hyprValue("scrolling-fullscreen-on-one-column", false) === true
       onRequested: function(next) { app.setHypr("scrolling-fullscreen-on-one-column", next ? "true" : "false") }
       changed: app.isChanged("scrolling-fullscreen-on-one-column")
-      onResetRequested: app.resetHypr("scrolling-fullscreen-on-one-column")
+      onResetRequested: app.resetSetting("scrolling-fullscreen-on-one-column")
     }
   }
 }

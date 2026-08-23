@@ -21,7 +21,9 @@ state() {
   font=$(omarchy font current 2>/dev/null | head -n1)
   nightlight=$(nightlight_enabled)
   hypr=$(hypr_state)
-  hyprchanged=$(hypr_changed)
+  # One list for the window: a setting is changed whether it is a Hyprland key
+  # we override or a value we wrote into Omarchy's own config.
+  hyprchanged=$(jq -c -s 'add' <(hypr_changed) <(written_changed))
   monitors=$(hyprctl -j monitors 2>/dev/null | jq -c '[.[] | {name, scale, width, height, refreshRate: (.refreshRate | floor), transform}]' 2>/dev/null || echo '[]')
   compose=$(compose_entries)
   plugins=$(plugins_state)

@@ -22,7 +22,7 @@ Ui.SectionBody {
       checked: barOn
       onRequested: function(next) { app.setHypr("groupbar", next ? "true" : "false") }
       changed: app.isChanged("groupbar")
-      onResetRequested: app.resetHypr("groupbar")
+      onResetRequested: app.resetSetting("groupbar")
     }
 
     Ui.NumberRow {
@@ -34,7 +34,7 @@ Ui.SectionBody {
       to: 40
       onCommitted: function(next) { app.setHypr("groupbar-height", next) }
       changed: app.isChanged("groupbar-height")
-      onResetRequested: app.resetHypr("groupbar-height")
+      onResetRequested: app.resetSetting("groupbar-height")
     }
 
     Ui.NumberRow {
@@ -46,7 +46,7 @@ Ui.SectionBody {
       to: 24
       onCommitted: function(next) { app.setHypr("groupbar-font-size", next) }
       changed: app.isChanged("groupbar-font-size")
-      onResetRequested: app.resetHypr("groupbar-font-size")
+      onResetRequested: app.resetSetting("groupbar-font-size")
     }
 
     Ui.SwitchRow {
@@ -56,7 +56,7 @@ Ui.SectionBody {
       checked: app.hyprValue("groupbar-render-titles", true) === true
       onRequested: function(next) { app.setHypr("groupbar-render-titles", next ? "true" : "false") }
       changed: app.isChanged("groupbar-render-titles")
-      onResetRequested: app.resetHypr("groupbar-render-titles")
+      onResetRequested: app.resetSetting("groupbar-render-titles")
     }
 
     Ui.NumberRow {
@@ -69,7 +69,7 @@ Ui.SectionBody {
       to: 12
       onCommitted: function(next) { app.setHypr("groupbar-indicator-height", next) }
       changed: app.isChanged("groupbar-indicator-height")
-      onResetRequested: app.resetHypr("groupbar-indicator-height")
+      onResetRequested: app.resetSetting("groupbar-indicator-height")
     }
 
     Ui.NumberRow {
@@ -82,7 +82,7 @@ Ui.SectionBody {
       to: 20
       onCommitted: function(next) { app.setHypr("groupbar-rounding", next) }
       changed: app.isChanged("groupbar-rounding")
-      onResetRequested: app.resetHypr("groupbar-rounding")
+      onResetRequested: app.resetSetting("groupbar-rounding")
     }
 
     Ui.SwitchRow {
@@ -92,7 +92,7 @@ Ui.SectionBody {
       checked: app.hyprValue("groupbar-gradients", false) === true
       onRequested: function(next) { app.setHypr("groupbar-gradients", next ? "true" : "false") }
       changed: app.isChanged("groupbar-gradients")
-      onResetRequested: app.resetHypr("groupbar-gradients")
+      onResetRequested: app.resetSetting("groupbar-gradients")
     }
 
     Ui.SwitchRow {
@@ -102,7 +102,7 @@ Ui.SectionBody {
       checked: app.hyprValue("groupbar-stacked", false) === true
       onRequested: function(next) { app.setHypr("groupbar-stacked", next ? "true" : "false") }
       changed: app.isChanged("groupbar-stacked")
-      onResetRequested: app.resetHypr("groupbar-stacked")
+      onResetRequested: app.resetSetting("groupbar-stacked")
     }
 
     Ui.SwitchRow {
@@ -112,7 +112,7 @@ Ui.SectionBody {
       checked: app.hyprValue("groupbar-disable-when-only", false) === true
       onRequested: function(next) { app.setHypr("groupbar-disable-when-only", next ? "true" : "false") }
       changed: app.isChanged("groupbar-disable-when-only")
-      onResetRequested: app.resetHypr("groupbar-disable-when-only")
+      onResetRequested: app.resetSetting("groupbar-disable-when-only")
     }
   }
 }

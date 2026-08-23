@@ -17,6 +17,8 @@ Ui.SectionBody {
       options: app.state.themes
       searchable: true
       onPicked: function(next) { app.set("theme", next) }
+      changed: app.isChanged("theme")
+      onResetRequested: app.resetSetting("theme")
     }
 
     Ui.PickerRow {
@@ -25,6 +27,8 @@ Ui.SectionBody {
       options: app.state.fonts
       searchable: true
       onPicked: function(next) { app.set("font", next) }
+      changed: app.isChanged("font")
+      onResetRequested: app.resetSetting("font")
     }
 
     Ui.NumberRow {
@@ -35,6 +39,8 @@ Ui.SectionBody {
       from: 9
       to: 20
       onCommitted: function(next) { app.set("text-scale", next) }
+      changed: app.isChanged("text-scale")
+      onResetRequested: app.resetSetting("text-scale")
     }
   }
 
@@ -46,6 +52,8 @@ Ui.SectionBody {
       description: "Warms the screen to 4000K."
       checked: app.state.nightlight === true
       onRequested: function(next) { app.set("nightlight", next ? "true" : "false") }
+      changed: app.isChanged("nightlight")
+      onResetRequested: app.resetSetting("nightlight")
     }
   }
 

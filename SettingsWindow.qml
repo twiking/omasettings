@@ -324,7 +324,9 @@ Item {
   // that name, and the two would collide.
   readonly property var changedSettings: state.hyprChanged !== undefined ? state.hyprChanged : []
   function isChanged(key) { return changedSettings.indexOf(key) !== -1 }
-  function resetHypr(key) { run(["reset", key]) }
+  // Both families: a Hyprland key is dropped, anything else is written back
+  // the way it was found. The helper knows which is which.
+  function resetSetting(key) { run(["reset", key]) }
 
   // Whether this window is itself behind its remote. The cached answer draws
   // the corner at once; the check behind it corrects the cache a moment later.

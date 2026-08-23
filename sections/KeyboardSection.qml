@@ -18,7 +18,7 @@ Ui.SectionBody {
       value: String(app.hyprValue("kb-layout", ""))
       onCommitted: function(next) { app.setHypr("kb-layout", next) }
       changed: app.isChanged("kb-layout")
-      onResetRequested: app.resetHypr("kb-layout")
+      onResetRequested: app.resetSetting("kb-layout")
     }
 
     Ui.TextRow {
@@ -27,7 +27,7 @@ Ui.SectionBody {
       value: String(app.hyprValue("kb-variant", ""))
       onCommitted: function(next) { app.setHypr("kb-variant", next) }
       changed: app.isChanged("kb-variant")
-      onResetRequested: app.resetHypr("kb-variant")
+      onResetRequested: app.resetSetting("kb-variant")
     }
 
     Ui.TextRow {
@@ -36,7 +36,7 @@ Ui.SectionBody {
       value: String(app.hyprValue("kb-options", ""))
       onCommitted: function(next) { app.setHypr("kb-options", next) }
       changed: app.isChanged("kb-options")
-      onResetRequested: app.resetHypr("kb-options")
+      onResetRequested: app.resetSetting("kb-options")
     }
   }
 
@@ -51,7 +51,7 @@ Ui.SectionBody {
       to: 100
       onCommitted: function(next) { app.setHypr("repeat-rate", next) }
       changed: app.isChanged("repeat-rate")
-      onResetRequested: app.resetHypr("repeat-rate")
+      onResetRequested: app.resetSetting("repeat-rate")
     }
 
     Ui.NumberRow {
@@ -63,7 +63,7 @@ Ui.SectionBody {
       step: 50
       onCommitted: function(next) { app.setHypr("repeat-delay", next) }
       changed: app.isChanged("repeat-delay")
-      onResetRequested: app.resetHypr("repeat-delay")
+      onResetRequested: app.resetSetting("repeat-delay")
     }
 
     Ui.SwitchRow {
@@ -71,7 +71,7 @@ Ui.SectionBody {
       checked: app.hyprValue("numlock", false) === true
       onRequested: function(next) { app.setHypr("numlock", next ? "true" : "false") }
       changed: app.isChanged("numlock")
-      onResetRequested: app.resetHypr("numlock")
+      onResetRequested: app.resetSetting("numlock")
     }
   }
 
@@ -139,7 +139,7 @@ Ui.SectionBody {
         value: String(inForce("kb_layout", app.hyprValue("kb-layout", "")))
         onCommitted: function(next) { app.setDevice(name, "kb_layout", next, "keyboard") }
         changed: app.isChanged("kb-layout")
-        onResetRequested: app.resetHypr("kb-layout")
+        onResetRequested: app.resetSetting("kb-layout")
       }
 
       Ui.TextRow {
@@ -147,7 +147,7 @@ Ui.SectionBody {
         value: String(inForce("kb_variant", app.hyprValue("kb-variant", "")))
         onCommitted: function(next) { app.setDevice(name, "kb_variant", next, "keyboard") }
         changed: app.isChanged("kb-variant")
-        onResetRequested: app.resetHypr("kb-variant")
+        onResetRequested: app.resetSetting("kb-variant")
       }
 
       Ui.TextRow {
@@ -155,7 +155,7 @@ Ui.SectionBody {
         value: String(inForce("kb_options", app.hyprValue("kb-options", "")))
         onCommitted: function(next) { app.setDevice(name, "kb_options", next, "keyboard") }
         changed: app.isChanged("kb-options")
-        onResetRequested: app.resetHypr("kb-options")
+        onResetRequested: app.resetSetting("kb-options")
       }
 
       Ui.NumberRow {
@@ -166,7 +166,7 @@ Ui.SectionBody {
         value: Number(inForce("repeat_rate", app.hyprValue("repeat-rate", 25)))
         onCommitted: function(next) { app.setDevice(name, "repeat_rate", next, "keyboard") }
         changed: app.isChanged("repeat-rate")
-        onResetRequested: app.resetHypr("repeat-rate")
+        onResetRequested: app.resetSetting("repeat-rate")
       }
 
       Ui.NumberRow {
@@ -178,7 +178,7 @@ Ui.SectionBody {
         value: Number(inForce("repeat_delay", app.hyprValue("repeat-delay", 600)))
         onCommitted: function(next) { app.setDevice(name, "repeat_delay", next, "keyboard") }
         changed: app.isChanged("repeat-delay")
-        onResetRequested: app.resetHypr("repeat-delay")
+        onResetRequested: app.resetSetting("repeat-delay")
       }
 
       // No label: what the button removes is the group it sits in, and how

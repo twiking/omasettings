@@ -142,6 +142,17 @@ Remove it with `omarchy plugin remove io.github.twiking.omasettings`.
   reachable as an application and not only from the bar.
 - **Escape** closes the window.
 
+### Changed settings
+
+A setting you have changed is marked, and can be put back with the `(reset)`
+beside its name or with `Backspace`. Hyprland settings go back to whatever
+Omarchy, your theme or your own config says; theme, font, text size, the bar
+and the idle timeouts go back to the value they had when you first changed
+them, since those have no unset state of their own.
+
+Changing a setting back to where it started clears the mark by itself — a
+switch flipped and flipped back is not a change.
+
 ### Search
 
 The box above the menu filters every page at once. A page with nothing

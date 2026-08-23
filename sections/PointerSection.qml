@@ -16,7 +16,7 @@ Ui.SectionBody {
       value: (Number(app.hyprValue("sensitivity", 0)) + 1) / 2
       onCommitted: function(next) { app.setHypr("sensitivity", (next * 2 - 1).toFixed(2)) }
       changed: app.isChanged("sensitivity")
-      onResetRequested: app.resetHypr("sensitivity")
+      onResetRequested: app.resetSetting("sensitivity")
     }
 
     Ui.PickerRow {
@@ -29,7 +29,7 @@ Ui.SectionBody {
       ]
       onPicked: function(next) { app.setHypr("accel-profile", next) }
       changed: app.isChanged("accel-profile")
-      onResetRequested: app.resetHypr("accel-profile")
+      onResetRequested: app.resetSetting("accel-profile")
     }
 
     Ui.PickerRow {
@@ -43,7 +43,7 @@ Ui.SectionBody {
       ]
       onPicked: function(next) { app.setHypr("follow-mouse", next) }
       changed: app.isChanged("follow-mouse")
-      onResetRequested: app.resetHypr("follow-mouse")
+      onResetRequested: app.resetSetting("follow-mouse")
     }
   }
 
@@ -55,7 +55,7 @@ Ui.SectionBody {
       checked: app.hyprValue("natural-scroll", false) === true
       onRequested: function(next) { app.setHypr("natural-scroll", next ? "true" : "false") }
       changed: app.isChanged("natural-scroll")
-      onResetRequested: app.resetHypr("natural-scroll")
+      onResetRequested: app.resetSetting("natural-scroll")
     }
 
     Ui.SwitchRow {
@@ -63,7 +63,7 @@ Ui.SectionBody {
       checked: app.hyprValue("tap-to-click", true) === true
       onRequested: function(next) { app.setHypr("tap-to-click", next ? "true" : "false") }
       changed: app.isChanged("tap-to-click")
-      onResetRequested: app.resetHypr("tap-to-click")
+      onResetRequested: app.resetSetting("tap-to-click")
     }
 
     Ui.SwitchRow {
@@ -72,7 +72,7 @@ Ui.SectionBody {
       checked: app.hyprValue("clickfinger", false) === true
       onRequested: function(next) { app.setHypr("clickfinger", next ? "true" : "false") }
       changed: app.isChanged("clickfinger")
-      onResetRequested: app.resetHypr("clickfinger")
+      onResetRequested: app.resetSetting("clickfinger")
     }
 
     Ui.SwitchRow {
@@ -80,7 +80,7 @@ Ui.SectionBody {
       checked: app.hyprValue("disable-while-typing", true) === true
       onRequested: function(next) { app.setHypr("disable-while-typing", next ? "true" : "false") }
       changed: app.isChanged("disable-while-typing")
-      onResetRequested: app.resetHypr("disable-while-typing")
+      onResetRequested: app.resetSetting("disable-while-typing")
     }
 
     Ui.FactorRow {
@@ -88,7 +88,7 @@ Ui.SectionBody {
       value: Number(app.hyprValue("scroll-factor", 1))
       onCommitted: function(next) { app.setHypr("scroll-factor", next) }
       changed: app.isChanged("scroll-factor")
-      onResetRequested: app.resetHypr("scroll-factor")
+      onResetRequested: app.resetSetting("scroll-factor")
     }
   }
 
@@ -159,7 +159,7 @@ Ui.SectionBody {
         value: (Number(inForce("sensitivity", app.hyprValue("sensitivity", 0))) + 1) / 2
         onCommitted: function(next) { app.setDevice(name, "sensitivity", (next * 2 - 1).toFixed(2), "pointer") }
         changed: app.isChanged("sensitivity")
-        onResetRequested: app.resetHypr("sensitivity")
+        onResetRequested: app.resetSetting("sensitivity")
       }
 
       Ui.PickerRow {
@@ -172,7 +172,7 @@ Ui.SectionBody {
         ]
         onPicked: function(next) { app.setDevice(name, "accel_profile", next, "pointer") }
         changed: app.isChanged("accel-profile")
-        onResetRequested: app.resetHypr("accel-profile")
+        onResetRequested: app.resetSetting("accel-profile")
       }
 
       Ui.SwitchRow {
@@ -180,7 +180,7 @@ Ui.SectionBody {
         checked: inForce("natural_scroll", app.hyprValue("natural-scroll", false)) === true
         onRequested: function(next) { app.setDevice(name, "natural_scroll", next ? "true" : "false", "pointer") }
         changed: app.isChanged("natural-scroll")
-        onResetRequested: app.resetHypr("natural-scroll")
+        onResetRequested: app.resetSetting("natural-scroll")
       }
 
       Ui.SwitchRow {
@@ -196,7 +196,7 @@ Ui.SectionBody {
         value: Number(inForce("scroll_factor", app.hyprValue("scroll-factor", 1)))
         onCommitted: function(next) { app.setDevice(name, "scroll_factor", next, "pointer") }
         changed: app.isChanged("scroll-factor")
-        onResetRequested: app.resetHypr("scroll-factor")
+        onResetRequested: app.resetSetting("scroll-factor")
       }
 
       // No label: what the button removes is the group it sits in, and how

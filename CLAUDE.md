@@ -145,6 +145,25 @@ Glow went on claiming a change after being turned off again. Writing that value 
 back exactly as a reset does. A key written before this existed has no
 original recorded, so it stays marked until reset once.
 
+## Two kinds of putting back
+
+A Hyprland setting has an unset state: dropping our key hands it back to
+whatever Omarchy, the theme or the user's own config supplies, which is why
+`hypr_reset` deletes rather than writes.
+
+Theme, font, text size, the bar and the idle timeouts have no such state —
+they are written into Omarchy's own config by Omarchy's own commands. The only
+way back is to remember what was there before the first write and write that,
+which is what `.written` holds and `setting_reset` does. `setting_current`
+is the list of which keys work this way; the live pages are deliberately
+absent, since audio, network, bluetooth and power move on their own and
+"changed" would mean nothing there.
+
+The window shows one mark for both, because from the outside they are the same
+thing: you changed it, and it can go back. Worth knowing: restoring writes the
+value found at the first change, so if a theme has moved text size since, the
+reset puts back the older number rather than the theme's.
+
 ## The legend bar
 
 Fourteen keys listed at once would be a wall nobody reads, so the bar says

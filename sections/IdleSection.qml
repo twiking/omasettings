@@ -15,12 +15,16 @@ Ui.SectionBody {
       label: "Screensaver after"
       seconds: app.idleState.screensaver !== undefined ? Number(app.idleState.screensaver) : 150
       onCommitted: function(mins) { app.set("idle-screensaver", mins * 60) }
+      changed: app.isChanged("idle-screensaver")
+      onResetRequested: app.resetSetting("idle-screensaver")
     }
 
     Ui.MinutesRow {
       label: "Lock after"
       seconds: app.idleState.lock !== undefined ? Number(app.idleState.lock) : 300
       onCommitted: function(mins) { app.set("idle-lock", mins * 60) }
+      changed: app.isChanged("idle-lock")
+      onResetRequested: app.resetSetting("idle-lock")
     }
   }
 

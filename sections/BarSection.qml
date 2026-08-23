@@ -33,6 +33,8 @@ Ui.SectionBody {
       value: app.barState.position !== undefined ? String(app.barState.position) : "top"
       options: ["top", "bottom", "left", "right"]
       onPicked: function(next) { app.set("bar-position", next) }
+      changed: app.isChanged("bar-position")
+      onResetRequested: app.resetSetting("bar-position")
     }
 
     Ui.SwitchRow {
@@ -40,6 +42,8 @@ Ui.SectionBody {
       description: "Drops the bar's own background so the wallpaper shows through."
       checked: app.barState.transparent === true
       onRequested: function(next) { app.set("bar-transparent", next ? "true" : "false") }
+      changed: app.isChanged("bar-transparent")
+      onResetRequested: app.resetSetting("bar-transparent")
     }
 
     Ui.PickerRow {
@@ -49,6 +53,8 @@ Ui.SectionBody {
       options: app.barWidgetIds()
       searchable: true
       onPicked: function(next) { app.set("bar-center-anchor", next) }
+      changed: app.isChanged("bar-center-anchor")
+      onResetRequested: app.resetSetting("bar-center-anchor")
     }
   }
 

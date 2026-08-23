@@ -13,10 +13,17 @@ BarWidget {
   id: root
   moduleName: "io.github.twiking.omasettings"
 
+  // The lifecycle a bar widget is expected to carry, in the names the rest of
+  // Omarchy uses. open/close and show/hide are the same pair twice, because
+  // both names are in circulation and neither is worth surprising anyone over.
+  readonly property bool opened: windowLoader.item ? windowLoader.item.shown : false
+
   function show() { windowLoader.active = true; if (windowLoader.item) windowLoader.item.show() }
   function hide() { if (windowLoader.item) windowLoader.item.hide() }
+  function open() { show() }
+  function close() { hide() }
   function toggle() {
-    if (windowLoader.item && windowLoader.item.shown) hide()
+    if (opened) hide()
     else show()
   }
 
@@ -27,6 +34,8 @@ BarWidget {
     target: "omasettings"
     function show(): void { root.show() }
     function hide(): void { root.hide() }
+    function open(): void { root.open() }
+    function close(): void { root.close() }
     function toggle(): void { root.toggle() }
   }
 

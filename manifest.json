@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "Tobias Wiking",
   "license": "MIT",
-  "description": "One window for the settings scattered across shell.json, the Hyprland config, and .XCompose: appearance, bar, windows, input, displays, idle, plugins, and compose keys. Opens from the bar, from the launcher, or with: omarchy-shell omasettings toggle",
+  "description": "Every Omarchy setting in one searchable window \u2014 appearance, bar, windows, layout, effects, input, displays, audio, network, bluetooth, power, plugins and your applications \u2014 so you can see what there is to change without hunting through config files. One bar widget in place of the half-dozen it replaces.",
   "homepage": "https://github.com/twiking/omasettings",
   "kinds": [
     "bar-widget",

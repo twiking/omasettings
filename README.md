@@ -1,10 +1,25 @@
 # OmaSettings
 
-An Omarchy shell plugin: one window for the settings that otherwise live
-scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
-`~/.config/hypr`, and `~/.XCompose`.
+**One window for every Omarchy setting, and one bar widget instead of six.**
 
-<p align="center"><img src="preview.png" alt="The OmaSettings window" width="640"></p>
+<p align="center"><img src="preview.png" alt="The OmaSettings window" width="800"></p>
+
+## Why I built it
+
+Two reasons.
+
+**I wanted to see what I could change.** Omarchy is configurable to a fault, but
+finding a setting meant knowing which file it lived in — `shell.json`, one of
+the Lua files under `~/.config/hypr`, `~/.XCompose`, an application's own
+config — and then reading enough documentation to know what the value should
+be. Nothing showed you the whole surface. This does: every setting on a page,
+named, described, searchable, with its current value in front of you. Type
+"blur" and the eleven settings under it appear, whatever file they belong to.
+
+**I wanted my bar back.** Audio, network, bluetooth, power, displays — each had
+a widget, and between them they ate the space I would rather give to something
+that does work. All of them are pages here, so one gear replaces the lot and
+the bar has room for widgets that earn it.
 
 ## Sections
 
@@ -12,14 +27,17 @@ scattered across `~/.config/omarchy/shell.json`, the Hyprland config in
 |---|---|---|
 | Appearance | Theme, font, text size, night light, background, boot screen, screensaver and about branding | `omarchy theme set` / `omarchy font set` / `omarchy display text size` / Omarchy menu Style |
 | Bar | Position, transparency, centred widget | `~/.config/omarchy/shell.json` |
-| Windows | Gaps, border, rounding, window opacity, dim, animations, blur | Hyprland |
+| Windows | Gaps, borders, snapping, corner rounding, window and fullscreen opacity, dimming, animations and their speed | Hyprland |
+| Layout | The tiling engine, and the knobs belonging to whichever one is running: dwindle, master or scrolling | Hyprland |
+| Effects | Blur in full, drop shadow, and the focus glow | Hyprland |
+| Groups | The tab strip on grouped windows: height, titles, indicator, rounding, gradients | Hyprland |
 | Keyboard | Layouts, variant, XKB options, repeat rate and delay, num lock | Hyprland |
 | Keybindings | Every binding, searchable; add your own, turn Omarchy's off, put them back | `~/.config/hypr/bindings.lua` |
 | Keyboard, Mouse & Touchpad | Also per device: one keyboard or pointer can depart from the global settings, via Hyprland's `hl.device` |  |
 | Mouse & Touchpad | Sensitivity, acceleration, focus-follows-mouse, natural scroll, tap to click, two-finger right click, disable-while-typing, scroll speed | Hyprland |
 | Displays | Per-monitor scale | Hyprland |
 | Idle & Lock | Screensaver and lock timeouts, unlock animation | `~/.config/omarchy/shell.json` / Omarchy menu Style → Unlock |
-| Plugins | Enable and disable installed shell plugins | `omarchy plugin enable/disable` |
+| Plugins | Enable, disable, add, remove and update installed shell plugins, with a count of what is behind | `omarchy plugin ...` |
 | Compose Keys | Your `<Multi_key>` sequences: list, add, remove | `~/.XCompose` |
 | Date & Time | Timezone and system time resync | Omarchy menu Update → Timezone / Time |
 | Network | Wi-Fi networks, address and gateway, band, DNS resolver, Wi-Fi QR code | NetworkManager / `omarchy-network-band` / Omarchy menu Setup → Network |
@@ -117,6 +135,25 @@ fc-list ':family=omarchy:charset=e905' file
 and the window loads that file with a `FontLoader`, so the icons render even
 when another copy shadows it. If they are blank in the Omarchy menu but fine
 here, that is the difference — `fc-cache -f` usually settles the menu too.
+
+## What it needs
+
+Omarchy itself, and the tools its own commands already use. Nothing here needs
+root, and nothing is installed on your behalf — a page whose tool is missing
+says so rather than failing.
+
+| Tool | Used for |
+| --- | --- |
+| `jq` | every read and write; the whole helper is JSON |
+| `hyprctl` | reading and applying Hyprland settings |
+| `xkbcli` | checking a keyboard layout compiles before writing it (skipped if absent) |
+| `pactl` | audio devices, volume and mute |
+| `nmcli` | Wi-Fi networks and connection details |
+| `bluetoothctl` | paired and nearby devices |
+| `upower`, `powerprofilesctl` | battery reading and the power profile |
+| `timedatectl` | timezone and clock |
+| `lua`, `luac` | reading and checking the Hyprland Lua it writes |
+| `tmux`, `git` | the Tmux page; plugin update checks |
 
 ## Install
 

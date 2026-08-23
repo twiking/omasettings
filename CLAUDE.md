@@ -145,6 +145,23 @@ Glow went on claiming a change after being turned off again. Writing that value 
 back exactly as a reset does. A key written before this existed has no
 original recorded, so it stays marked until reset once.
 
+## The two that are not keywords
+
+Speed and full opacity cannot be set or read like the rest, because Hyprland
+has neither. Each is a piece of Lua written into the managed file, with a
+value of our own in `.extras` saying what to write, and both ride into the
+window inside `state.hypr` so a page asks for them like anything else.
+
+- **Speed** multiplies the animation set Omarchy ships, read from
+  `default/hypr/looknfeel.lua` rather than from the running config: reading
+  live speeds would multiply what has already been multiplied and the setting
+  would run away from itself. The cost is that an animation you wrote yourself
+  is replaced by the scaled default while this is anything but 1.
+- **Full opacity** writes `o.window(".*", { opacity = "1.0 1.0" })`. Omarchy
+  tags every window and fades it to 0.985, which multiplies with the opacity
+  sliders, so without this 100% renders at 98.5%. The managed file loads last,
+  so the rule lands after the one it is undoing.
+
 ## Keyboard values that will not compile
 
 Hyprland accepts a layout or variant xkb cannot build and says nothing: it

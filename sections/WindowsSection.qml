@@ -142,6 +142,15 @@ Ui.SectionBody {
   Ui.SettingGroup {
     title: "Focus and depth"
 
+    Ui.SwitchRow {
+      label: "Full opacity"
+      description: "Omarchy fades every window to 98.5%, which multiplies with the settings below. This clears it, so 100% is 100%."
+      checked: app.hyprValue("opaque-windows", false) === true
+      onRequested: function(next) { app.setHypr("opaque-windows", next ? "true" : "false") }
+      changed: app.isChanged("opaque-windows")
+      onResetRequested: app.resetSetting("opaque-windows")
+    }
+
     Ui.PercentRow {
       label: "Active window opacity"
       value: app.hyprValue("active-opacity", 1)
@@ -221,6 +230,18 @@ Ui.SectionBody {
       onRequested: function(next) { app.setHypr("animations", next ? "true" : "false") }
       changed: app.isChanged("animations")
       onResetRequested: app.resetSetting("animations")
+    }
+
+    Ui.FactorRow {
+      label: "Speed"
+      description: "A multiplier over the animation set Omarchy ships. Higher is faster."
+      enabled: app.hyprValue("animations", true) === true
+      minimum: 0.25
+      maximum: 3
+      value: app.hyprValue("animation-speed", 1)
+      onCommitted: function(next) { app.setHypr("animation-speed", next) }
+      changed: app.isChanged("animation-speed")
+      onResetRequested: app.resetSetting("animation-speed")
     }
 
     Ui.SwitchRow {

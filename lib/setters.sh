@@ -116,6 +116,12 @@ set_key() {
 set_key_apply() {
   local key=${1:-} value=${2:-}
   case $key in
+    animation-speed)
+      [[ $value =~ ^[0-9]+(\.[0-9]+)?$ ]] || die "'$value' is not a speed"
+      extras_set animation-speed "$value" 1 ;;
+    opaque-windows)
+      [[ $value == true || $value == false ]] || die "'$value' is not true or false"
+      extras_set opaque-windows "$value" false ;;
     theme) [[ -n $value ]] || die "no theme given"; omarchy-theme-set "$value" ;;
     font) [[ -n $value ]] || die "no font given"; omarchy font set "$value" ;;
     text-scale) [[ -n $value ]] || die "no text size given"; omarchy display text size "$value" ;;
@@ -222,6 +228,9 @@ setting_reset() {
 
   # A per-device setting is an override like a Hyprland key: clearing it hands
   # the device back to the global setting, so there is nothing to write back.
+  if [[ $key == animation-speed ]]; then extras_set animation-speed 1 1; return; fi
+  if [[ $key == opaque-windows ]]; then extras_set opaque-windows false false; return; fi
+
   if [[ $key == device:* ]]; then
     local rest=${key#device:} name option
     name=${rest%:*}

@@ -241,6 +241,8 @@ render_managed_lua() {
       | "hl.config({\n  " + .key + " = {\n" + render(.value; "    ") + "  },\n})\n"
     ' <<<"$store"
 
+    render_extras_lua
+
     # Per-device overrides, one hl.device call each.
     jq -r '(.devices // {}) | to_entries[]
       | "hl.device({\n  name = \"" + .key + "\","
@@ -430,4 +432,71 @@ hypr_reset() {
   # edit_store has already re-rendered the managed file; the reload is what
   # makes Hyprland forget the value it is still holding.
   hyprctl reload >/dev/null 2>&1 || true
+}
+
+# ------------------------------------------------- the two that are not keys
+#
+# Speed and full opacity are not Hyprland keywords, so they cannot be set or
+# read like the rest. Each is a small piece of Lua written into the managed
+# file, and a value of our own kept beside it saying what to write.
+#
+# Speed multiplies the animation set Omarchy ships, read from its own source
+# rather than from the running config: reading the live speeds would multiply
+# what has already been multiplied, and the setting would run away from
+# itself. The cost is that a hand-written animation of your own is replaced by
+# the scaled default while this is set to anything but 1.
+extras_get() {
+  local key=$1 fallback=$2 value
+  value=$(jq -r --arg k "$key" '(.extras // {}) | if has($k) then .[$k] | tostring else empty end' <<<"$(read_store)")
+  [[ -n $value ]] && printf '%s\n' "$value" || printf '%s\n' "$fallback"
+}
+
+extras_changed() {
+  jq -c '(.extras // {}) | keys' <<<"$(read_store)"
+}
+
+extras_set() {
+  local key=$1 value=$2 default=$3
+  if [[ $value == "$default" ]]; then
+    edit_store 'if .extras then .extras |= del(.[$k]) else . end' --arg k "$key"
+  else
+    edit_store '.extras = ((.extras // {}) | .[$k] = $v)' --arg k "$key" --arg v "$value"
+  fi
+  hyprctl reload >/dev/null 2>&1 || true
+}
+
+# The animation set as Omarchy ships it: leaf, speed, and the rest of the line
+# to hand back unchanged.
+omarchy_animations() {
+  local source="${OMARCHY_PATH:-/usr/share/omarchy}/default/hypr/looknfeel.lua"
+  [[ -f $source ]] || return 0
+  grep -oE 'hl\.animation\(\{[^}]*\}\)' "$source"
+}
+
+render_extras_lua() {
+  local speed opaque
+  speed=$(extras_get animation-speed 1)
+  opaque=$(extras_get opaque-windows false)
+
+  if [[ $opaque == true ]]; then
+    echo ""
+    echo "-- Full opacity: Omarchy tags every window and fades it to 0.985, which"
+    echo "-- multiplies with the opacity settings, so 100% renders at 98.5%."
+    echo 'o.window(".*", { opacity = "1.0 1.0" })'
+  fi
+
+  [[ $speed == 1 || -z $speed ]] && return 0
+  echo ""
+  echo "-- Animation speed: Omarchy's own set, every speed multiplied by $speed."
+  omarchy_animations | while read -r line; do
+    awk -v factor="$speed" '
+      {
+        line = $0
+        if (match(line, /speed = [0-9.]+/)) {
+          value = substr(line, RSTART + 8, RLENGTH - 8) * factor
+          line = substr(line, 1, RSTART - 1) "speed = " value substr(line, RSTART + RLENGTH)
+        }
+        print line
+      }' <<<"$line"
+  done
 }

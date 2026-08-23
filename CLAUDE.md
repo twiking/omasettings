@@ -175,6 +175,19 @@ nothing to the bar rather than lying about what it does.
 `\u232b Reset` appears only on a row this window has changed, which makes the
 bar the discovery path for the reset as well.
 
+## Which screen it opens on
+
+A layer surface goes to the screen it is given, and given none it goes to the
+first one — so on two monitors the settings could open on the one you are not
+looking at. Hyprland knows which monitor has the focus and Quickshell knows
+the screens by name; `focusedScreen()` matches the two, and `show()` pins the
+result for that opening.
+
+Pinned, not bound: a window that hops to another screen because the focus
+moved is worse than one that stays where it was opened. This machine has one
+monitor, so the choice is verified by what it resolves rather than by where
+it lands.
+
 ## Rows that are not settings
 
 A device, a network and a binding are lists of things rather than one setting

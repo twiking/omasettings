@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
@@ -25,7 +26,22 @@ Item {
   // way an open dropdown or a field being edited does.
   readonly property bool searchFocused: searchField.activeFocus
 
+  // Which screen the window was opened on. Hyprland knows which one has the
+  // focus; Quickshell knows the screens by name, and the two are matched here.
+  property var openedOn: null
+
+  function focusedScreen() {
+    var monitor = Hyprland.focusedMonitor
+    var name = monitor ? String(monitor.name || "") : ""
+    if (name === "") return null
+    var screens = Quickshell.screens
+    for (var i = 0; i < screens.length; i++)
+      if (String(screens[i].name) === name) return screens[i]
+    return null
+  }
+
   function show() {
+    openedOn = focusedScreen()
     window.visible = true
     refresh()
     if (!selfCheckProcess.running) selfCheckProcess.running = true
@@ -852,6 +868,12 @@ Item {
   PanelWindow {
     id: window
     visible: false
+    // A layer surface goes to whichever screen it is given, and given none it
+    // goes to the first one — so on two monitors the settings could open on
+    // the one you are not looking at. Chosen when it opens rather than bound:
+    // a window that hops to another screen while you are reading it is worse
+    // than one that stays where it was opened.
+    screen: root.openedOn !== null ? root.openedOn : null
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
     WlrLayershell.namespace: "omasettings"

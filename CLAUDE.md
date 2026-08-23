@@ -138,7 +138,10 @@ claiming a change, offering to reset a setting already sitting at its original
 value.
 
 The value found before the first write is kept in `.hyprOriginal` beside the
-value itself. Writing that value again deletes both, which hands the setting
+value itself. Read it with `has()`, never `//`: jq's alternative operator
+treats **false** as empty, so every switch that starts off would read its
+original back as null and never match — which is exactly how Shadow, Blur and
+Glow went on claiming a change after being turned off again. Writing that value again deletes both, which hands the setting
 back exactly as a reset does. A key written before this existed has no
 original recorded, so it stays marked until reset once.
 

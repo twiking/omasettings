@@ -340,7 +340,10 @@ hypr_set() {
   local store original
   store=$(read_store)
   if jq -e --arg k "$key" '(.hypr // {}) | has($k)' <<<"$store" >/dev/null; then
-    original=$(jq -c --arg k "$key" '(.hyprOriginal // {})[$k] // null' <<<"$store")
+    # has() rather than //: jq's alternative operator treats false as empty,
+    # so a setting whose original value is false would read back as null and
+    # never match — which is every switch that starts off.
+    original=$(jq -c --arg k "$key" '(.hyprOriginal // {}) | if has($k) then .[$k] else null end' <<<"$store")
   else
     original=$(hypr_read "$key")
     original=${original:-null}

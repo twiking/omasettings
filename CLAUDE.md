@@ -129,6 +129,17 @@ Two things worth knowing before changing this:
   same stale number, so the second would be swallowed. `effective` is what the
   slider and the next press read.
 
+## The legend bar
+
+Fourteen keys listed at once would be a wall nobody reads, so the bar says
+what the keys do *here*: the four that always apply, plus whatever the cursor
+is on. A row type declares its own keys in `navKeys` — the same place it
+answers `navActivate` and `navStep` — so a new row type that forgets adds
+nothing to the bar rather than lying about what it does.
+
+`\u232b Reset` appears only on a row this window has changed, which makes the
+bar the discovery path for the reset as well.
+
 ## Search
 
 Only the open page is instantiated, which is what keeps the window cheap and

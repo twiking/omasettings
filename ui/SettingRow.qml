@@ -25,6 +25,11 @@ Item {
   signal navActivate()
   signal navStep(int delta)
 
+  // What the keys do on this row, for the legend at the foot of the window.
+  // A row that says nothing contributes nothing, which is the honest answer
+  // for a row with no control of its own.
+  property var navKeys: []
+
   // Told, not asked: a window that has to work out for itself which row is
   // holding the keyboard gets it wrong the moment the row list is rebuilt
   // underneath it.

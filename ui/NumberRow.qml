@@ -23,6 +23,8 @@ SettingRow {
 
   onValueChanged: if (stepping && value === pending) stepping = false
 
+  navKeys: [{ key: "\u2190\u2192", label: "Adjust" }]
+
   onNavStep: function(delta) {
     var base = numberRow.effective
     var next = Math.max(numberRow.from, Math.min(numberRow.to, base + delta * numberRow.step))

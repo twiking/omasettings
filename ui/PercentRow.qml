@@ -18,6 +18,8 @@ SettingRow {
 
   onValueChanged: if (stepping && Math.abs(value - pending) < 0.001) stepping = false
 
+  navKeys: [{ key: "\u2190\u2192", label: "Adjust" }]
+
   onNavStep: function(delta) {
     var base = percentRow.effective
     var next = Math.max(0, Math.min(1, Math.round((base + delta * 0.05) * 100) / 100))

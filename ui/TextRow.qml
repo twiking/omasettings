@@ -20,6 +20,10 @@ SettingRow {
   // decides who gets them.
   property bool editing: false
 
+  navKeys: editing
+    ? [{ key: "\u21b5", label: "Save" }, { key: "Esc", label: "Cancel" }]
+    : [{ key: "\u21b5", label: "Edit" }]
+
   onNavActivate: {
     editing = true
     field.forceActiveFocus()

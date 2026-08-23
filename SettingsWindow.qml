@@ -569,6 +569,34 @@ Item {
   // somewhere and this is where the navigation keys live.
   function navTakeFocus() { keySink.forceActiveFocus() }
 
+  // The legend at the foot of the window. Everything the keyboard can do here
+  // would be fourteen keys and unreadable, so it says what the keys do *here*:
+  // the ones that always apply, plus whatever the cursor is resting on.
+  readonly property var navLegend: {
+    var keys = []
+
+    if (searchFocused) {
+      keys.push({ key: "\u21b5", label: "To settings" })
+      keys.push({ key: "Esc", label: "Clear" })
+      return keys
+    }
+
+    var row = navBlocker !== null ? navBlocker : navCurrent()
+    var own = row && row.navKeys ? row.navKeys : []
+    for (var i = 0; i < own.length; i++) keys.push(own[i])
+
+    // Only offered when there is something to hand back.
+    if (row && row.changed === true) keys.push({ key: "\u232b", label: "Reset" })
+
+    if (navBlocked) return keys
+
+    keys.push({ key: "\u2191\u2193", label: "Move" })
+    keys.push({ key: "Alt \u2191\u2193", label: "Page" })
+    keys.push({ key: "/", label: "Search" })
+    keys.push({ key: "Esc", label: "Close" })
+    return keys
+  }
+
   function navStep(delta) {
     if (navInSidebar) return
     var row = navCurrent()
@@ -921,8 +949,13 @@ Item {
         }
       }
 
-      RowLayout {
+      ColumnLayout {
         anchors.fill: parent
+        spacing: 0
+
+      RowLayout {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
         spacing: 0
 
         // ---------------- sidebar ------------------------------------------
@@ -1193,6 +1226,67 @@ Item {
             font.pixelSize: Style.font.caption
           }
         }
+      }
+
+      // ---------------- legend ---------------------------------------------
+      // Across the foot of the window, under both columns. It follows the
+      // cursor rather than listing everything: the keys that always apply,
+      // and whatever the row under the cursor answers to.
+      Rectangle {
+        Layout.fillWidth: true
+        implicitHeight: Style.spacing.controlHeight
+        color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.04)
+
+        Rectangle {
+          anchors.top: parent.top
+          width: parent.width
+          height: Style.spacing.hairline
+          color: root.hairline
+        }
+
+        Row {
+          anchors.left: parent.left
+          anchors.leftMargin: Style.spacing.panelPadding
+          anchors.verticalCenter: parent.verticalCenter
+          spacing: Style.space(16)
+
+          Repeater {
+            model: root.navLegend
+
+            delegate: Row {
+              required property var modelData
+              spacing: Style.space(6)
+
+              Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                implicitWidth: keyLabel.implicitWidth + Style.space(10)
+                implicitHeight: keyLabel.implicitHeight + Style.space(4)
+                radius: Style.cornerRadius > 0 ? Style.space(4) : 0
+                color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.10)
+                border.width: Style.spacing.hairline
+                border.color: root.hairline
+
+                Text {
+                  id: keyLabel
+                  anchors.centerIn: parent
+                  text: modelData.key
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                }
+              }
+
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: modelData.label
+                color: root.muted
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+            }
+          }
+        }
+      }
       }
     }
     }

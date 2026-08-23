@@ -20,6 +20,8 @@ SettingRow {
 
   onCurrentMinutesChanged: if (stepping && currentMinutes === pending) stepping = false
 
+  navKeys: [{ key: "\u2190\u2192", label: "Adjust" }]
+
   onNavStep: function(delta) {
     var next = Math.max(1, Math.min(60, minutesRow.effective + delta))
     if (next === minutesRow.effective) return

@@ -176,6 +176,10 @@ Omarchy panel uses:
 | `Escape` in the search box | Clear the search and hand the keyboard back |
 | `Escape` | Close an open list, or the window |
 
+The bar along the foot of the window says what the keys do where you are: the
+ones that always apply, plus whatever the cursor is resting on — `Space` on a
+switch, `\u2194` on a slider, `\u232b` on a setting you have changed.
+
 The cursor is a band across the row it is on, and the page scrolls to keep it
 in view. While a list is open it owns the keyboard, so its own `Up`/`Down`
 walk the options and `Escape` closes the list rather than the window.

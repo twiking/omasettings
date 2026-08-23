@@ -18,6 +18,8 @@ SettingRow {
 
   onValueChanged: if (stepping && Math.abs(value - pending) < 0.001) stepping = false
 
+  navKeys: [{ key: "\u2190\u2192", label: "Adjust" }]
+
   onNavStep: function(delta) {
     var base = factorRow.effective
     var next = Math.max(factorRow.minimum, Math.min(factorRow.maximum, base + delta * 0.05))

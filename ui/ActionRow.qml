@@ -11,6 +11,8 @@ SettingRow {
   signal triggered()
 
   // The row has one button, so activating the row presses it.
+  navKeys: [{ key: "\u21b5", label: "Open" }]
+
   onNavActivate: actionRow.triggered()
 
   Button {

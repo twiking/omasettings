@@ -35,7 +35,7 @@ setting_current() {
 setting_current_prefixed() {
   local key=${1:-} name=${key#*:}
   case $key in
-    monitor:*) hyprctl -j monitors 2>/dev/null | jq -r --arg o "$name" '.[] | select(.name == $o) | .scale | tostring' ;;
+    monitor:*) capture hyprctl -j monitors | jq -r --arg o "$name" '.[] | select(.name == $o) | .scale | tostring' ;;
     tmux:*) jq -r --arg k "$name" '.values | if has($k) then .[$k] | tostring else empty end' <<<"$(tmux_state)" ;;
     nvim:*) jq -r --arg k "$name" '.values | if has($k) then .[$k] | tostring else empty end' <<<"$(nvim_state)" ;;
     herdr:*) jq -r --arg k "$name" '.values | if has($k) then .[$k] | tostring else empty end' <<<"$(herdr_state)" ;;
@@ -153,7 +153,7 @@ set_key_apply() {
       local output=${value%%=*} scale=${value#*=}
       [[ -n $output && $scale =~ ^[0-9]+(\.[0-9]+)?$ ]] || die "expected <output>=<scale>"
       local mode
-      mode=$(hyprctl -j monitors 2>/dev/null | jq -r --arg o "$output" '.[] | select(.name == $o) | "\(.width)x\(.height)@\(.refreshRate | floor)"')
+      mode=$(capture hyprctl -j monitors | jq -r --arg o "$output" '.[] | select(.name == $o) | "\(.width)x\(.height)@\(.refreshRate | floor)"')
       [[ -n $mode ]] || die "no monitor named '$output'"
       hyprctl keyword monitor "$output,$mode,auto,$scale" >/dev/null 2>&1
       edit_store '.monitors = ((.monitors // {}) | .[$o] = { scale: ($s | tonumber), mode: $m })' \

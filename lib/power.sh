@@ -8,7 +8,7 @@
 POWERPROFILES_STATE="${OMARCHY_POWERPROFILES_STATE_DIR:-${XDG_STATE_HOME:-$HOME_DIR/.local/state}/omarchy/powerprofiles}"
 
 power_battery_device() {
-  upower -e 2>/dev/null | grep -m1 'BAT'
+  capture upower -e | grep -m1 'BAT'
 }
 
 # upower's own report, reduced to the handful of facts worth showing.
@@ -16,7 +16,7 @@ power_battery_reading() {
   local device=$1
   [[ -n $device ]] || { echo '{}'; return; }
 
-  upower -i "$device" 2>/dev/null | awk -F': +' '
+  capture upower -i "$device" | awk -F': +' '
     function trim(v) { gsub(/^[ \t]+|[ \t]+$/, "", v); return v }
     /state:/ { state = trim($2) }
     /percentage:/ { percentage = trim($2); sub(/%$/, "", percentage) }
@@ -43,7 +43,7 @@ power_state() {
   device=$(power_battery_device)
   reading=$(power_battery_reading "$device")
   profiles=$(omarchy-powerprofiles-list 2>/dev/null | jq -R -s -c 'split("\n") | map(select(length > 0))')
-  current=$(powerprofilesctl get 2>/dev/null)
+  current=$(capture powerprofilesctl get)
   onbattery=$(busctl get-property org.freedesktop.UPower /org/freedesktop/UPower org.freedesktop.UPower OnBattery 2>/dev/null)
   saved_ac=$(cat "$POWERPROFILES_STATE/ac" 2>/dev/null)
   saved_battery=$(cat "$POWERPROFILES_STATE/battery" 2>/dev/null)

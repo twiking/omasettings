@@ -7,7 +7,7 @@
 
 # `bluetoothctl devices [Paired|Connected]` prints "Device <mac> <name>".
 bt_addresses() {
-  timeout 5 bluetoothctl devices ${1:+"$1"} 2>/dev/null \
+  capture bluetoothctl devices ${1:+"$1"} \
     | awk '$1 == "Device" { address = $2; $1 = ""; $2 = ""; sub(/^  /, ""); print address "\t" $0 }'
 }
 
@@ -16,7 +16,7 @@ bt_addresses() {
 # of them has either.
 bt_details() {
   local address=$1
-  timeout 5 bluetoothctl info "$address" 2>/dev/null | awk -F': ' '
+  capture bluetoothctl info "$address" | awk -F': ' '
     /^\tIcon:/ { icon = $2 }
     /Battery Percentage:/ { match($0, /\(([0-9]+)\)/, m); battery = m[1] }
     END { printf "%s\t%s\n", icon, battery }
@@ -89,7 +89,7 @@ bluetooth_cmd() {
       # what is known right now. The timeout means that when the page stops
       # polling, discovery stops by itself shortly after.
       if [[ $(omarchy-bluetooth-power is-on >/dev/null 2>&1 && echo on) == on ]] \
-        && ! timeout 3 bluetoothctl show 2>/dev/null | grep -q "Discovering: yes"; then
+        && ! capture bluetoothctl show | grep -q "Discovering: yes"; then
         setsid bluetoothctl --timeout 30 scan on >/dev/null 2>&1 &
         disown 2>/dev/null || true
       fi

@@ -33,7 +33,7 @@ state() {
   # which are their own kind of override again.
   hyprchanged=$(jq -c -s 'add' <(hypr_changed) <(written_changed) <(devices_changed) <(extras_changed))
 
-  monitors=$(hyprctl -j monitors 2>/dev/null | jq -c '[.[] | {name, scale, width, height, refreshRate: (.refreshRate | floor), transform}]' 2>/dev/null || echo '[]')
+  monitors=$(capture hyprctl -j monitors | jq -c '[.[] | {name, scale, width, height, refreshRate: (.refreshRate | floor), transform}]' 2>/dev/null || echo '[]')
   compose=$(compose_entries)
   plugins=$(plugins_state)
   pluginupdates=$(plugin_updates_cache)

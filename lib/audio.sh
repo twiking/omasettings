@@ -20,7 +20,7 @@ audio_availability() {
 # under Input would offer to record the speakers.
 audio_devices() {
   local kind=$1
-  pactl -f json list "$kind" 2>/dev/null | jq -c --arg kind "$kind" '
+  capture pactl -f json list "$kind" | jq -c --arg kind "$kind" '
     # The same label the widget shows: the short nickname a device gives
     # itself, not the sentence-long description PulseAudio assembles.
     def short_name(device):
@@ -53,7 +53,7 @@ audio_output_sink() {
   local sink
   sink=$(omarchy-audio-output-sink 2>/dev/null)
   [[ -n $sink ]] && printf '%s\n' "$sink" && return
-  pactl get-default-sink 2>/dev/null
+  capture pactl get-default-sink
 }
 
 audio_state() {
@@ -63,8 +63,8 @@ audio_state() {
     --argjson outputs "$(audio_devices sinks)" \
     --argjson inputs "$(audio_devices sources)" \
     --argjson availability "$(audio_availability)" \
-    --arg defaultOutput "$(pactl get-default-sink 2>/dev/null)" \
-    --arg defaultInput "$(pactl get-default-source 2>/dev/null)" \
+    --arg defaultOutput "$(capture pactl get-default-sink)" \
+    --arg defaultInput "$(capture pactl get-default-source)" \
     '# What the selected output really sounds like, taken from the sink the
      # keys move rather than from the DSP sink fronting it.
      ($outputs | map(select(.name == $resolved)) | first) as $real
@@ -110,7 +110,7 @@ audio_move_streams() {
   while read -r stream _; do
     [[ -n $stream ]] || continue
     pactl "$move" "$stream" "$target" >/dev/null 2>&1 || true
-  done < <(pactl list short "$list_kind" 2>/dev/null)
+  done < <(capture pactl list short "$list_kind")
 }
 
 audio_cmd() {

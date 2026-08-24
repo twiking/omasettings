@@ -21,16 +21,23 @@ QtObject {
   // $1 template, $2 destination, $3 marker, $4 icon. Every failure is a quiet
   // exit: a launcher entry is a convenience, and nothing here is worth
   // interrupting the shell over.
+  // The destination is a predictable path in a directory anyone on the machine
+  // could have written to first, so nothing here writes through a name it did
+  // not create: a symlink at either path is left alone rather than followed,
+  // and the rendered entry is built in a fresh random sibling.
   readonly property string installScript:
       '[ -f "$1" ] || exit 0\n'
+    + '[ -L "$2" ] && exit 0\n'
     + 'if [ -e "$2" ] && ! grep -q "$3" "$2"; then exit 0; fi\n'
     + 'mkdir -p "${2%/*}" || exit 0\n'
-    + 'tmp=$2.omasettings.new\n'
-    + 'sed "s|@ICON@|$4|" "$1" > "$tmp" || exit 0\n'
+    + 'tmp=$(mktemp "$2.omasettings.XXXXXX") || exit 0\n'
+    + 'sed "s|@ICON@|$4|" "$1" >"$tmp" || { rm -f "$tmp"; exit 0; }\n'
+    + 'chmod 644 "$tmp"\n'
     + 'if cmp -s "$tmp" "$2"; then rm -f "$tmp"; else mv -f "$tmp" "$2"; fi\n'
 
   readonly property string removeScript:
-    'grep -q "$2" "$1" 2>/dev/null && rm -f "$1"\n'
+      '[ -L "$1" ] && exit 0\n'
+    + 'grep -q "$2" "$1" 2>/dev/null && rm -f "$1"\n'
 
   property bool installed: false
 

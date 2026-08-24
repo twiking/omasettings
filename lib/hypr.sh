@@ -161,7 +161,7 @@ hypr_state() {
   done
   [[ -n $batch ]] || { echo '{}'; return; }
 
-  hyprctl -j --batch "${batch% ; }" 2>/dev/null | jq -s -c --arg pairs "$pairs" '
+  capture hyprctl -j --batch "${batch% ; }" | jq -s -c --arg pairs "$pairs" '
     def value(o; t):
       if t == "int" then (o.int // 0)
       # Gaps come back as a CSS-style "2 2 2 2" box rather than an int; the

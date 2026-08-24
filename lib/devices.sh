@@ -90,14 +90,14 @@ device_config_settings() {
 # devices. A device with no real settings to give is only noise in a list.
 devices_state() {
   local raw monitors
-  raw=$(hyprctl -j devices 2>/dev/null) || { echo '{}'; return; }
+  raw=$(capture hyprctl -j devices) || { echo '{}'; return; }
 
   # A display shows up as an input device: a monitor's HID control endpoint
   # advertises keyboard and pointer capability, so DP-3 arrives as both a
   # keyboard "dp-3" and a mouse "dp-3-1". Neither is something you configure
   # as a mouse, so every output name is excluded along with its numbered
   # siblings.
-  monitors=$(hyprctl -j monitors all 2>/dev/null \
+  monitors=$(capture hyprctl -j monitors all \
     | jq -c '[.[].name | ascii_downcase]' 2>/dev/null || echo '[]')
 
   jq -c --argjson store "$(read_store)" --argjson configured "$(device_config_settings)" \

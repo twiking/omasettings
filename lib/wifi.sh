@@ -132,6 +132,12 @@ wifi_cmd() {
     connect)
       [[ -n $ssid ]] || die "no network given"
       local output
+      # A passphrase on our own command line is readable by every process on
+      # the machine, so the window hands it over on stdin instead and says so
+      # with this flag rather than passing the secret itself.
+      if [[ $password == --password-stdin ]]; then
+        IFS= read -r password || password=""
+      fi
       if [[ -n $password ]]; then
         # --ask reads the passphrase from stdin, so it never appears in the
         # process list the way `nmcli ... password <secret>` would.

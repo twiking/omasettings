@@ -232,8 +232,36 @@ Item {
 
   function connectWifi(ssid, password) {
     wifiPrompting = ""
-    if (password !== undefined && password !== "") run(["wifi", "connect", ssid, password])
-    else run(["wifi", "connect", ssid])
+    if (password !== undefined && password !== "") {
+      // The passphrase goes over stdin, never argv: anything on the command
+      // line is readable by every process on the machine for as long as the
+      // connection takes.
+      root.busy = true
+      wifiConnectProc.secret = password
+      wifiConnectProc.command = ["bash", root.helperPath, "wifi", "connect", ssid, "--password-stdin"]
+      wifiConnectProc.running = true
+    } else {
+      run(["wifi", "connect", ssid])
+    }
+  }
+
+  Process {
+    id: wifiConnectProc
+    property string secret: ""
+    stdinEnabled: true
+    onStarted: {
+      write(secret + "\n")
+      secret = ""
+      stdinEnabled = false
+    }
+    stderr: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.lastError = text.trim()
+    }
+    onRunningChanged: if (!running) {
+      root.busy = false
+      settleTimer.restart()
+    }
   }
 
   readonly property var bindings: state.bindings !== undefined ? state.bindings : ({})

@@ -7,15 +7,31 @@
 # blank list waiting to be re-checked. It is derived data, re-earnable at any
 # time by checking again, so it lives in the cache rather than next to the
 # settings the user actually chose.
+OMASETTINGS_FETCH_TIMEOUT="${OMASETTINGS_FETCH_TIMEOUT:-30}"
 UPDATE_CACHE="${OMASETTINGS_UPDATE_CACHE:-${XDG_CACHE_HOME:-$HOME_DIR/.cache}/omarchy/omasettings/plugin-updates.json}"
 
+# The cache path is as predictable as any other, and it is read straight into
+# the window, so it is read the same bounded, descriptor-checked way as
+# anything else we did not write this second.
 plugin_updates_cache() {
-  [[ -f $UPDATE_CACHE ]] && jq -c '{ checkedAt: (.checkedAt // 0), results: (.results // {}) }' "$UPDATE_CACHE" 2>/dev/null && return
+  read_file "$UPDATE_CACHE" \
+    | jq -c '{ checkedAt: (.checkedAt // 0), results: (.results // {}) }' 2>/dev/null && return
   echo '{"checkedAt":0,"results":{}}'
 }
 
+# Same for putting it back: a fresh random sibling, renamed into place, so a
+# name planted at the cache path is replaced rather than written through.
+write_update_cache() {
+  local tmp
+  mkdir -p "$(dirname "$UPDATE_CACHE")" || return 1
+  tmp=$(mktemp "$UPDATE_CACHE.XXXXXX") || return 1
+  cat >"$tmp" || { rm -f "$tmp"; return 1; }
+  [[ -s $tmp ]] || { rm -f "$tmp"; return 1; }
+  mv "$tmp" "$UPDATE_CACHE"
+}
+
 plugins_state() {
-  omarchy plugin list --json 2>/dev/null | jq -c '[.[] | {
+  capture omarchy plugin list --json | jq -c '[.[] | {
     id: .id,
     name: (.name // .id),
     kinds: (.kinds // []),
@@ -49,25 +65,27 @@ plugin_updates() {
   # The verdicts stream out as they land and are kept at the same time; the
   # window wants them one by one, the next window wants them all at once.
   { find -L "$dir" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort |
-    PLUGINS_DIR="$dir" xargs -r -P 6 -I{} bash -c '
+    PLUGINS_DIR="$dir" FETCH_TIMEOUT="$OMASETTINGS_FETCH_TIMEOUT" xargs -r -P 6 -I{} bash -c '
       id=$1
       repo="$PLUGINS_DIR/$id"
       if [[ ! -d $repo/.git ]]; then
         printf "%s\t-1\n" "$id"
       elif GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -oBatchMode=yes}" \
-           git -C "$repo" fetch -q origin HEAD 2>/dev/null; then
-        printf "%s\t%s\n" "$id" "$(capture git -C "$repo" rev-list --count HEAD..FETCH_HEAD || echo 0)"
+           timeout "${FETCH_TIMEOUT:-30}" git -C "$repo" fetch -q origin HEAD 2>/dev/null; then
+        # The bounds are spelled out rather than shared: this runs in a bash
+        # xargs started, which never sourced anything of ours.
+        printf "%s\t%s\n" "$id" \
+          "$(timeout 10 git -C "$repo" rev-list --count HEAD..FETCH_HEAD 2>/dev/null | head -c 32 || echo 0)"
       else
         printf "%s\t-2\n" "$id"
       fi' _ {}
   } | tee "$out"
 
-  mkdir -p "$(dirname "$UPDATE_CACHE")"
   jq -Rn --argjson at "$(date +%s)" '
     { checkedAt: $at,
       results: ([inputs | split("\t") | select(length == 2) | { key: .[0], value: (.[1] | tonumber) }] | from_entries) }' \
-    <"$out" >"$UPDATE_CACHE.tmp" 2>/dev/null && mv "$UPDATE_CACHE.tmp" "$UPDATE_CACHE"
-  rm -f "$out" "$UPDATE_CACHE.tmp"
+    <"$out" 2>/dev/null | write_update_cache
+  rm -f "$out"
 }
 
 # ------------------------------------------------------- our own update
@@ -111,12 +129,9 @@ self_check() {
     behind=-2
   fi
 
-  mkdir -p "$(dirname "$UPDATE_CACHE")"
   jq -c --arg id "$id" --argjson behind "${behind:-0}" --argjson at "$(date +%s)" \
     '.checkedAt = $at | .results = ((.results // {}) | .[$id] = $behind)' \
-    <<<"$(plugin_updates_cache)" >"$UPDATE_CACHE.tmp" 2>/dev/null \
-    && mv "$UPDATE_CACHE.tmp" "$UPDATE_CACHE"
-  rm -f "$UPDATE_CACHE.tmp"
+    <<<"$(plugin_updates_cache)" 2>/dev/null | write_update_cache
 
   self_update_state
 }

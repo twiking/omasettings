@@ -34,6 +34,10 @@ for module in core store hypr devices shell_config compose plugins menu herdr tm
 done
 unset module
 
+# Whatever a subcommand prints is retained and parsed by a shell that lives as
+# long as the bar does, so the last word on how much of it can arrive belongs
+# here rather than to any one producer.
+main() {
 case ${1:-state} in
   state) state ;;
   set) shift; set_key "$@" ;;
@@ -80,3 +84,6 @@ usage:
 USAGE
     exit 1 ;;
 esac
+}
+
+main "$@" | head -c "$OMASETTINGS_READ_MAX"

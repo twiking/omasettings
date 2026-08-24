@@ -5,7 +5,7 @@
 # One JSON object per sequence: the keys as written, and the string produced.
 compose_entries() {
   [[ -f $XCOMPOSE ]] || { echo '[]'; return; }
-  grep -E '^[[:space:]]*<[^#]*:' "$XCOMPOSE" 2>/dev/null \
+  read_file "$XCOMPOSE" | grep -E '^[[:space:]]*<[^#]*:' \
     | jq -Rn '[inputs
         | capture("^\\s*(?<keys>(<[^>]+>\\s*)+)\\s*:\\s*\"(?<text>([^\"\\\\]|\\\\.)*)\"(\\s*(?<name>\\S+))?\\s*$")
         | { keys: (.keys | gsub("\\s+$"; "")), text: .text, name: (.name // "") }]' 2>/dev/null \
@@ -21,13 +21,14 @@ compose_add() {
   # first, or adding one sequence silently drops every default one.
   if [[ ! -f $XCOMPOSE ]]; then
     write_file "$XCOMPOSE" <<<'include "%L"'
-  elif ! grep -q '^include ' "$XCOMPOSE"; then
+  elif ! read_file "$XCOMPOSE" | grep -q '^include '; then
     backup_once "$XCOMPOSE"
-    printf 'include "%%L"\n%s' "$(cat "$XCOMPOSE")" | write_file "$XCOMPOSE"
+    printf 'include "%%L"\n%s' "$(read_file "$XCOMPOSE")" | write_file "$XCOMPOSE"
   fi
 
   compose_remove "$keys" quiet
-  backup_once "$XCOMPOSE"
+  ensure_regular_file "$XCOMPOSE" || die "$XCOMPOSE is not a file this can write"
+  backup_once "$XCOMPOSE" || die "could not back up $XCOMPOSE"
   printf '%s : "%s"\n' "$keys" "$text" >>"$XCOMPOSE"
 }
 
@@ -36,7 +37,7 @@ compose_remove() {
   [[ -f $XCOMPOSE ]] || return 0
   local escaped
   escaped=$(sed 's/[][\.*^$/]/\\&/g' <<<"$keys")
-  grep -qE "^[[:space:]]*$escaped[[:space:]]*:" "$XCOMPOSE" || { [[ -n $quiet ]] && return 0; return 0; }
+  read_file "$XCOMPOSE" | grep -qE "^[[:space:]]*$escaped[[:space:]]*:" || { [[ -n $quiet ]] && return 0; return 0; }
   backup_once "$XCOMPOSE"
-  grep -vE "^[[:space:]]*$escaped[[:space:]]*:" "$XCOMPOSE" | write_file "$XCOMPOSE"
+  read_file "$XCOMPOSE" | grep -vE "^[[:space:]]*$escaped[[:space:]]*:" | write_file "$XCOMPOSE"
 }

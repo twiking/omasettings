@@ -3,7 +3,7 @@
 # ------------------------------------------------------------- shell.json
 
 read_shell_json() {
-  [[ -f $SHELL_JSON ]] && jq -c . "$SHELL_JSON" 2>/dev/null && return
+  [[ -f $SHELL_JSON ]] && read_file "$SHELL_JSON" | jq -c . 2>/dev/null && return
   echo '{}'
 }
 

@@ -51,7 +51,7 @@ tmux_read() {
         gsub(/^"|"$/, "", value)
         printf "%s\t%s\n", key, trim(value)
       }
-    ' "$TMUX_CONFIG"
+    ' <(read_file "$TMUX_CONFIG")
   fi
 }
 
@@ -64,7 +64,7 @@ tmux_state() {
   present=$(tmux_read | jq -R -s -c 'split("\n")
     | map(select(length > 0) | split("\t") | { key: .[0], value: (.[1] // "") })
     | from_entries')
-  running=$(tmux has-session 2>/dev/null && echo true || echo false)
+  running=$(capture tmux has-session >/dev/null 2>&1 && echo true || echo false)
 
   tmux_schema | jq -R -s -c --argjson present "${present:-{\}}" --argjson running "$running" \
     --argjson installed "$installed" \
@@ -97,7 +97,7 @@ tmux_write() {
       formatted=$raw ;;
   esac
 
-  [[ -f $TMUX_CONFIG ]] || { mkdir -p "$(dirname "$TMUX_CONFIG")"; : >"$TMUX_CONFIG"; }
+  ensure_regular_file "$TMUX_CONFIG" || die "$TMUX_CONFIG is not a file this can write"
   backup_once "$TMUX_CONFIG"
 
   local setter="set -g"
@@ -123,7 +123,7 @@ tmux_write() {
         print line
       }
     }
-  ' "$TMUX_CONFIG" | write_file "$TMUX_CONFIG" managed
+  ' <(read_file "$TMUX_CONFIG") | write_file "$TMUX_CONFIG" managed
 
   # A running server takes the change immediately; without one the file is
   # enough, since tmux reads it at start.

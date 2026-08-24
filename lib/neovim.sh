@@ -39,7 +39,7 @@ nvim_read() {
       gsub(/^"|"$/, "", value)
       printf "%s\t%s\n", trim(key), value
     }
-  ' "$NVIM_OPTIONS"
+  ' <(read_file "$NVIM_OPTIONS")
 }
 
 nvim_state() {
@@ -77,11 +77,11 @@ nvim_write() {
       formatted=$(jq -Rn --arg v "$raw" '$v') ;;
   esac
 
-  [[ -f $NVIM_OPTIONS ]] || { mkdir -p "$(dirname "$NVIM_OPTIONS")"; : >"$NVIM_OPTIONS"; }
+  ensure_regular_file "$NVIM_OPTIONS" || die "$NVIM_OPTIONS is not a file this can write"
   backup_once "$NVIM_OPTIONS"
 
   local previous
-  previous=$(cat "$NVIM_OPTIONS")
+  previous=$(read_file "$NVIM_OPTIONS")
 
   awk -v key="$key" -v line="vim.opt.$key = $formatted" '
     {
@@ -96,15 +96,15 @@ nvim_write() {
         print line
       }
     }
-  ' "$NVIM_OPTIONS" | write_file "$NVIM_OPTIONS" managed
+  ' <(read_file "$NVIM_OPTIONS") | write_file "$NVIM_OPTIONS" managed
 
   # Lua that does not parse would break every future nvim start, so the file
   # is compiled before it is left in place.
   if command -v nvim >/dev/null 2>&1; then
     local report
-    if ! report=$(nvim --headless --clean \
+    if ! report=$(capture_err nvim --headless --clean \
       -c "lua local fn, err = loadfile('$NVIM_OPTIONS'); if not fn then io.stderr:write(err) ; vim.cmd('cq') end" \
-      -c "qa" 2>&1); then
+      -c "qa"); then
       printf '%s' "$previous" | write_file "$NVIM_OPTIONS" managed
       die "that would not parse, so it was rolled back: $report"
     fi

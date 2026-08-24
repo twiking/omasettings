@@ -4,7 +4,7 @@
 
 nightlight_enabled() {
   local status
-  status=$(omarchy-toggle-nightlight --status 2>/dev/null)
+  status=$(capture omarchy-toggle-nightlight --status)
   [[ -n $status ]] && jq -r '.enabled' <<<"$status" 2>/dev/null && return
   echo false
 }
@@ -15,10 +15,10 @@ state() {
   # omarchy-theme-list finds every directory under the theme folders, dotted
   # ones included, so anything a stray tool left behind there shows up as a
   # theme. A theme is never hidden; drop those.
-  themes=$(omarchy-theme-list 2>/dev/null | grep -v '^\.' | lines_to_array)
-  fonts=$(omarchy font list 2>/dev/null | lines_to_array)
-  theme=$(omarchy-theme-current 2>/dev/null | head -n1)
-  font=$(omarchy font current 2>/dev/null | head -n1)
+  themes=$(capture omarchy-theme-list | grep -v '^\.' | lines_to_array)
+  fonts=$(capture omarchy font list | lines_to_array)
+  theme=$(capture omarchy-theme-current | head -n1)
+  font=$(capture omarchy font current | head -n1)
   nightlight=$(nightlight_enabled)
   hypr=$(hypr_state)
   # Not keywords, so they ride along with the ones that are: the window asks
@@ -56,7 +56,7 @@ state() {
   bluetooth=$(bluetooth_state)
   power=$(power_state)
   audio=$(audio_state)
-  textscale=$(omarchy display text size 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)?' | head -n1)
+  textscale=$(capture omarchy display text size | grep -oE '[0-9]+(\.[0-9]+)?' | head -n1)
   # What a search can find. The section sources give the settings each page
   # declares; the rest of the state gives the things a page is a list of —
   # this keyboard, that network, your bindings — which no source can know.

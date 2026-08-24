@@ -56,7 +56,7 @@ plugin_updates() {
         printf "%s\t-1\n" "$id"
       elif GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -oBatchMode=yes}" \
            git -C "$repo" fetch -q origin HEAD 2>/dev/null; then
-        printf "%s\t%s\n" "$id" "$(git -C "$repo" rev-list --count HEAD..FETCH_HEAD 2>/dev/null || echo 0)"
+        printf "%s\t%s\n" "$id" "$(capture git -C "$repo" rev-list --count HEAD..FETCH_HEAD || echo 0)"
       else
         printf "%s\t-2\n" "$id"
       fi' _ {}
@@ -106,7 +106,7 @@ self_check() {
 
   if GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -oBatchMode=yes}" \
      git -C "$repo" fetch -q origin HEAD 2>/dev/null; then
-    behind=$(git -C "$repo" rev-list --count HEAD..FETCH_HEAD 2>/dev/null || echo 0)
+    behind=$(capture git -C "$repo" rev-list --count HEAD..FETCH_HEAD || echo 0)
   else
     behind=-2
   fi

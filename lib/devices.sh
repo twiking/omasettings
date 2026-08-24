@@ -69,7 +69,7 @@ device_config_settings() {
         if (key == "name") name = value
         else if (key != "") pairs[++count] = key "=" value
       }
-    ' "$file" | jq -R -s -c --argjson blocks "$blocks" 'split("\n")
+    ' <(read_file "$file") | jq -R -s -c --argjson blocks "$blocks" 'split("\n")
       | map(select(length > 0) | split("\t")
         | { key: .[0],
             value: (.[1:] | map(split("=") | { key: .[0], value: (.[1] // "") })
@@ -203,10 +203,10 @@ device_remove() {
   for file in "$HYPR_DIR"/*.lua; do
     [[ -f $file ]] || continue
     [[ $file == "$MANAGED_LUA" ]] && continue
-    grep -q "hl\.device" "$file" || continue
-    grep -qF "\"$name\"" "$file" || continue
+    read_file "$file" | grep -q "hl\.device" || continue
+    read_file "$file" | grep -qF "\"$name\"" || continue
 
-    previous=$(cat "$file")
+    previous=$(read_file "$file")
     backup_once "$file"
 
     awk -v name="$name" '
@@ -225,9 +225,9 @@ device_remove() {
       }
       { print }
       END { if (count) flush(0) }
-    ' "$file" | write_file "$file" managed
+    ' <(read_file "$file") | write_file "$file" managed
 
-    if ! luac -p "$file" 2>/dev/null; then
+    if ! capture luac -p "$file" >/dev/null; then
       printf '%s' "$previous" | write_file "$file" managed
       die "removing that device would have broken $(basename "$file"), so nothing changed"
     fi

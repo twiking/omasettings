@@ -27,6 +27,30 @@ capture() {
   timeout "$OMASETTINGS_READ_TIMEOUT" "$@" 2>/dev/null | head -c "$OMASETTINGS_READ_MAX"
 }
 
+# Same bounds, but the tool's own complaint is what the caller is after: a
+# validator that rejects a write has to be able to say why.
+capture_err() {
+  timeout "$OMASETTINGS_READ_TIMEOUT" "$@" 2>&1 | head -c "$OMASETTINGS_READ_MAX"
+}
+
+# Reading someone else's file means reading a name, and a name is not a
+# promise: between the test and the open it can become a symlink somewhere
+# else, a FIFO that never answers, or something far larger than a config. So
+# the open happens first and every check is made against the descriptor, not
+# the path. A config that is legitimately a symlink into a dotfiles repo still
+# reads, because what is verified is that the descriptor is the regular file
+# the path resolves to, and the read is bounded either way.
+read_file() {
+  timeout "$OMASETTINGS_READ_TIMEOUT" sh -c '
+    exec 3<"$1" || exit 1
+    [ -f /dev/fd/3 ] || exit 1
+    opened=$(stat -Lc "%d:%i" /dev/fd/3 2>/dev/null) || exit 1
+    named=$(stat -Lc "%d:%i" -- "$1" 2>/dev/null) || exit 1
+    [ "$opened" = "$named" ] || exit 1
+    head -c "$2" <&3
+  ' sh "$1" "$OMASETTINGS_READ_MAX" 2>/dev/null
+}
+
 # The first time OmaSettings writes to a file the user could have edited by
 # hand, keep a copy of what was there. Only the first time: later writes must
 # not overwrite the pristine backup with our own output.
@@ -36,24 +60,47 @@ capture() {
 backup_once() {
   local file=$1 bak tmp
   bak="$file.omasettings.bak"
-  [[ -f $file ]] || return 0
+  [[ -e $file || -L $file ]] || return 0
   [[ -e $bak || -L $bak ]] && return 0
   tmp=$(mktemp "$file.omasettings.bak.XXXXXX") || return 1
-  cat -- "$file" >"$tmp" || { rm -f "$tmp"; return 1; }
+  # A file we cannot read as a bounded regular file is one we will not write
+  # either: the caller aborts rather than changing something it could not copy.
+  read_file "$file" >"$tmp" || { rm -f "$tmp"; return 1; }
   chmod --reference="$file" "$tmp" 2>/dev/null
   ln "$tmp" "$bak" 2>/dev/null
   rm -f "$tmp"
 }
 
+# Creating a config that is not there yet means creating a *file*: opening a
+# FIFO for writing waits for a reader that never comes, and a device node at
+# that path is not something a setting belongs in. Anything already there has
+# to be a regular file, symlinked or not, or nothing is written at all.
+ensure_regular_file() {
+  local file=$1
+  if [[ -e $file || -L $file ]]; then
+    [[ -f $file ]] || return 1
+    return 0
+  fi
+  mkdir -p "$(dirname "$file")" || return 1
+  : >"$file"
+}
+
 # `managed` marks a file OmaSettings generates in full: there is no
 # hand-written version of it worth keeping a backup of.
 write_file() {
-  local file=$1 managed=${2:-} tmp
-  [[ -n $managed ]] || backup_once "$file"
-  mkdir -p "$(dirname "$file")"
-  tmp=$(mktemp "$file.omasettings.XXXXXX") || return 1
+  local file=$1 managed=${2:-} tmp target
+  ensure_regular_file "$file" || return 1
+  [[ -n $managed ]] || backup_once "$file" || return 1
+  # A config symlinked into a dotfiles repo is a config, not a redirect to
+  # refuse: the rename lands on what the link points at, so the link survives
+  # and the repo sees the change. The resolved path has to be a regular file
+  # for that to be true, which ensure_regular_file has already said.
+  target=$(readlink -f -- "$file") && [[ -f $target ]] || target=$file
+  mkdir -p "$(dirname "$target")"
+  tmp=$(mktemp "$target.omasettings.XXXXXX") || return 1
   cat >"$tmp" || { rm -f "$tmp"; return 1; }
-  mv "$tmp" "$file"
+  chmod --reference="$target" "$tmp" 2>/dev/null
+  mv "$tmp" "$target"
 }
 
 lines_to_array() { jq -Rn '[inputs | select(length > 0)]'; }

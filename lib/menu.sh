@@ -55,7 +55,7 @@ AWK
 
 jsonc_to_json() {
   [[ -f $1 ]] || { echo '{}'; return; }
-  awk "$JSONC_TO_JSON" "$1" 2>/dev/null | jq -c . 2>/dev/null || echo '{}'
+  read_file "$1" | awk "$JSONC_TO_JSON" 2>/dev/null | jq -c . 2>/dev/null || echo '{}'
 }
 
 # User extensions override defaults under the same id, the way the menu itself
@@ -109,7 +109,7 @@ agents_state() {
   # The agent group's own checked tests already say which is current; the
   # command is asked only as a fallback for a menu without them.
   current=$(jq -r '.current' <<<"$state")
-  [[ -n $current && $current != "" ]] || current=$(omarchy-default-agent 2>/dev/null | head -n1)
+  [[ -n $current && $current != "" ]] || current=$(capture omarchy-default-agent | head -n1)
   jq -c --arg current "$current" '.current = $current' <<<"$state"
 }
 
@@ -128,9 +128,9 @@ menu_run() {
 # What the Date & Time section shows next to those two actions.
 datetime_state() {
   local zone ntp synced now
-  zone=$(timedatectl show -p Timezone --value 2>/dev/null)
-  ntp=$(timedatectl show -p NTP --value 2>/dev/null)
-  synced=$(timedatectl show -p NTPSynchronized --value 2>/dev/null)
+  zone=$(capture timedatectl show -p Timezone --value)
+  ntp=$(capture timedatectl show -p NTP --value)
+  synced=$(capture timedatectl show -p NTPSynchronized --value)
   now=$(date '+%Y-%m-%d %H:%M %Z' 2>/dev/null)
 
   jq -cn --arg zone "$zone" --arg now "$now" \
@@ -165,7 +165,7 @@ icon_font_file() {
 
     while read -r file; do
       [[ -n $file ]] || continue
-      charset=$(fc-query -f '%{charset}' "$file" 2>/dev/null)
+      charset=$(capture fc-query -f '%{charset}' "$file")
       score=$(COVER_CHARSET="$charset" awk -v want="${needed[*]}" '
         BEGIN {
           n = split(ENVIRON["COVER_CHARSET"], tokens, /[ \t\n]+/)
@@ -187,7 +187,7 @@ icon_font_file() {
         best_score=$score
         best=$file
       fi
-    done < <(fc-list ":family=$family" file 2>/dev/null | sed 's/: *$//')
+    done < <(capture fc-list ":family=$family" file | sed 's/: *$//')
 
     [[ $best_score -gt 0 ]] && echo "$best"
 }

@@ -42,11 +42,11 @@ power_state() {
 
   device=$(power_battery_device)
   reading=$(power_battery_reading "$device")
-  profiles=$(omarchy-powerprofiles-list 2>/dev/null | jq -R -s -c 'split("\n") | map(select(length > 0))')
+  profiles=$(capture omarchy-powerprofiles-list | jq -R -s -c 'split("\n") | map(select(length > 0))')
   current=$(capture powerprofilesctl get)
   onbattery=$(busctl get-property org.freedesktop.UPower /org/freedesktop/UPower org.freedesktop.UPower OnBattery 2>/dev/null)
-  saved_ac=$(cat "$POWERPROFILES_STATE/ac" 2>/dev/null)
-  saved_battery=$(cat "$POWERPROFILES_STATE/battery" 2>/dev/null)
+  saved_ac=$(read_file "$POWERPROFILES_STATE/ac")
+  saved_battery=$(read_file "$POWERPROFILES_STATE/battery")
 
   # A machine with no battery still has power profiles worth setting; the
   # battery half of the page simply has nothing to say.

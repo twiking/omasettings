@@ -27,7 +27,7 @@ bluetooth_state() {
   local powered devices paired connected
 
   command -v bluetoothctl >/dev/null 2>&1 || { echo '{"available": false, "powered": false, "devices": []}'; return; }
-  powered=$(omarchy-bluetooth-power is-on >/dev/null 2>&1 && echo true || echo false)
+  powered=$(capture omarchy-bluetooth-power is-on >/dev/null 2>&1 && echo true || echo false)
 
   # Three list calls rather than one info call per device: a scan can leave
   # dozens of addresses behind, and the flags are all that most rows need.
@@ -88,7 +88,7 @@ bluetooth_cmd() {
       # to be left in, not a one-shot, so this keeps one running and returns
       # what is known right now. The timeout means that when the page stops
       # polling, discovery stops by itself shortly after.
-      if [[ $(omarchy-bluetooth-power is-on >/dev/null 2>&1 && echo on) == on ]] \
+      if [[ $(capture omarchy-bluetooth-power is-on >/dev/null 2>&1 && echo on) == on ]] \
         && ! capture bluetoothctl show | grep -q "Discovering: yes"; then
         setsid bluetoothctl --timeout 30 scan on >/dev/null 2>&1 &
         disown 2>/dev/null || true

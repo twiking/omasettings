@@ -76,7 +76,7 @@ wifi_connection() {
 # or leave it automatic and let the radio choose.
 wifi_band() {
   local report
-  report=$(omarchy-network-band 2>/dev/null) || { echo '{}'; return; }
+  report=$(capture omarchy-network-band) || { echo '{}'; return; }
   jq -R -s -c 'split("\n")
     | map(select(length > 0) | split("\t"))
     | map({ key: .[0], value: (.[1] // "") })

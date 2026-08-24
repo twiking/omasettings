@@ -62,7 +62,7 @@ herdr_read() {
       if (value ~ /^".*"$/) value = substr(value, 2, length(value) - 2)
       printf "%s\t%s\n", full, value
     }
-  ' "$HERDR_CONFIG" | jq -R -s -c 'split("\n")
+  ' <(read_file "$HERDR_CONFIG") | jq -R -s -c 'split("\n")
     | map(select(length > 0) | split("\t") | { key: .[0], value: .[1] })
     | from_entries'
 }
@@ -107,11 +107,11 @@ herdr_write() {
       formatted=$(jq -Rn --arg v "$raw" '$v') ;;
   esac
 
-  [[ -f $HERDR_CONFIG ]] || { mkdir -p "$(dirname "$HERDR_CONFIG")"; : >"$HERDR_CONFIG"; }
+  ensure_regular_file "$HERDR_CONFIG" || die "$HERDR_CONFIG is not a file this can write"
   backup_once "$HERDR_CONFIG"
 
   local previous
-  previous=$(cat "$HERDR_CONFIG")
+  previous=$(read_file "$HERDR_CONFIG")
 
   awk -v table="$table" -v name="$name" -v line="$name = $formatted" '
     function trim(v) { gsub(/^[ \t]+|[ \t]+$/, "", v); return v }
@@ -152,13 +152,13 @@ herdr_write() {
         if (i == anchor) print line
       }
     }
-  ' "$HERDR_CONFIG" | write_file "$HERDR_CONFIG" managed
+  ' <(read_file "$HERDR_CONFIG") | write_file "$HERDR_CONFIG" managed
 
   # herdr validates its own config; a rejected write is rolled back rather
   # than left for the next herdr start to trip over.
   if command -v herdr >/dev/null 2>&1; then
     local report
-    if ! report=$(herdr config check 2>&1); then
+    if ! report=$(capture_err herdr config check); then
       printf '%s' "$previous" | write_file "$HERDR_CONFIG" managed
       die "herdr rejected that change, so it was rolled back: $report"
     fi

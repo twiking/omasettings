@@ -100,7 +100,7 @@ hypr_read() {
   spec=$(hypr_keyword "$key") || return 1
   keyword=${spec%% *}
   type=${spec##* }
-  raw=$(hyprctl -j getoption "$keyword" 2>/dev/null) || return 1
+  raw=$(capture hyprctl -j getoption "$keyword") || return 1
   [[ -n $raw ]] || return 1
   case $type in
     int) jq -c '(.int // 0)' <<<"$raw" ;;
@@ -274,8 +274,9 @@ render_managed_conf() {
 ensure_loaded() {
   local file=$1 line=$2
   [[ -f $file ]] || return 0
-  grep -qF "$line" "$file" && return 0
-  backup_once "$file"
+  read_file "$file" | grep -qF "$line" && return 0
+  ensure_regular_file "$file" || die "$file is not a file this can write"
+  backup_once "$file" || die "could not back up $file"
   {
     echo ""
     echo "-- Load settings written by OmaSettings ($MANAGED_MARKER)."

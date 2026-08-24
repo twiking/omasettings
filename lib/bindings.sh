@@ -88,7 +88,7 @@ edit_bindings() {
 # where it came from so the window can offer the right action.
 bindings_state() {
   local listed store
-  listed=$(omarchy-menu-keybindings --print 2>/dev/null \
+  listed=$(capture omarchy-menu-keybindings --print \
     | sed -E 's/[[:space:]]+→[[:space:]]+/\t/' \
     | jq -R -s -c 'split("\n")
       | map(select(length > 0) | split("\t")

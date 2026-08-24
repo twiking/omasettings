@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------- our store
 
 read_store() {
-  [[ -f $STORE ]] && jq -c . "$STORE" 2>/dev/null && return
+  [[ -f $STORE ]] && read_file "$STORE" | jq -c . 2>/dev/null && return
   echo '{}'
 }
 

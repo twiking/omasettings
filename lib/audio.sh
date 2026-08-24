@@ -51,7 +51,7 @@ audio_devices() {
 # keyboard moves another and neither agrees with the OSD.
 audio_output_sink() {
   local sink
-  sink=$(omarchy-audio-output-sink 2>/dev/null)
+  sink=$(capture omarchy-audio-output-sink)
   [[ -n $sink ]] && printf '%s\n' "$sink" && return
   capture pactl get-default-sink
 }

@@ -97,7 +97,9 @@ Ui.SectionBody {
       description: "Its connector name, like DP-3 or HDMI-A-1. What you set is kept for when it arrives."
       placeholder: "DP-3"
       value: ""
-      onCommitted: function(next) { if (next !== "") app.set("monitor-remember", next) }
+      buttonText: "Add Display"
+      clearOnCommit: true
+      onCommitted: function(next) { app.set("monitor-remember", next) }
     }
   }
 }

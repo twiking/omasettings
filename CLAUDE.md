@@ -380,6 +380,23 @@ widget's **whole object**, never rebuild it from its id: a widget keeps its own
 settings in that same object, and half the bar would lose its configuration the
 first time it was reordered.
 
+**Disabling a widget is ours to do, not Omarchy's.** A widget is in
+`.bar.layout` or it is not — that is the whole of its enabled state — and
+`omarchy plugin disable` says so by removing the entry. It removes only the
+entry, though, so the widget's own settings go with it: Omatop came back from a
+round trip without its `showValues`, and Spotify would come back without its
+account and its session. `plugin enable` then appends, so a widget switched off
+and on again walks to the end of its section. So `bar_disable` keeps the whole
+object, and where it was, in `.barHidden`, and `bar_enable` puts that object
+back in its place. A widget this window never disabled has no place to go back
+to, and that placement is Omarchy's to decide — so for that one case its own
+command is what runs.
+
+Each widget appears once on the page: under the section it sits in, or in
+**Disabled** at the foot. A list of switches beside the three section lists
+would have named every widget twice and left the reader deciding which list to
+believe.
+
 ## The Plugins page
 
 Add and remove hand off to the Omarchy flows in a terminal, because both ask

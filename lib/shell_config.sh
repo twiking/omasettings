@@ -79,12 +79,90 @@ bar_shift() {
       end'
 }
 
+# --------------------------------------------------------- turning one off
+#
+# A widget is in the bar or it is not: the layout is the whole of its enabled
+# state, and Omarchy's own `plugin disable` says so by removing the entry.
+#
+# It is not used here, though, and this is the reason: it removes the entry and
+# nothing else, so the widget's own settings go with it. Omatop came back from
+# a disable/enable round trip without its `showValues`, and Spotify would come
+# back without its account, its playlists and its session. `plugin enable` also
+# appends, so a widget switched off and on again walks to the end of its
+# section.
+#
+# So the object is kept — whole, the way every other edit here moves it —
+# along with where it was, and putting the widget back is putting that object
+# back in its place.
+bar_hidden() {
+  jq -c '.barHidden // {}' <<<"$(read_store)"
+}
+
+bar_disable() {
+  local id=$1 section index widget
+  [[ -n $id ]] || die "no widget id given"
+
+  section=$(bar_widget_section "$id")
+  [[ -n $section ]] || return 0
+
+  index=$(read_shell_json | jq -r --arg id "$id" --arg s "$section" \
+    '(.bar.layout[$s] // []) | map(.id) | index($id)')
+  widget=$(read_shell_json | jq -c --arg id "$id" --arg s "$section" \
+    '(.bar.layout[$s] // []) | map(select(.id == $id)) | first')
+
+  edit_store '.barHidden = ((.barHidden // {}) | .[$id] = { section: $s, index: ($i | tonumber), widget: $w })' \
+    --arg id "$id" --arg s "$section" --arg i "$index" --argjson w "$widget"
+
+  edit_shell_json --arg id "$id" '
+    .bar //= {}
+    | .bar.layout //= {}
+    | .bar.layout |= with_entries(
+        if (.value | type) == "array" then .value |= map(select(.id != $id)) else . end)'
+}
+
+bar_enable() {
+  local id=$1 stash
+  [[ -n $id ]] || die "no widget id given"
+
+  # Already there — put back by hand, or by Omarchy — so what this remembered
+  # about where it used to sit is no longer about anything.
+  if [[ -n $(bar_widget_section "$id") ]]; then
+    jq -e --arg id "$id" '(.barHidden // {}) | has($id)' <<<"$(read_store)" >/dev/null \
+      && edit_store 'if .barHidden then .barHidden |= del(.[$id]) else . end' --arg id "$id"
+    return 0
+  fi
+
+  stash=$(bar_hidden | jq -c --arg id "$id" 'if has($id) then .[$id] else empty end')
+
+  # A widget this window never switched off has no place to go back to, so the
+  # question of where it belongs is Omarchy's to answer, not ours to invent.
+  if [[ -z $stash ]]; then
+    capture omarchy plugin enable "$id" >/dev/null 2>&1 \
+      || die "could not enable '$id'"
+    return 0
+  fi
+
+  edit_shell_json --argjson stash "$stash" '
+    .bar //= {}
+    | .bar.layout //= {}
+    | ($stash.section) as $s
+    | (.bar.layout[$s] // []) as $list
+    # Its old place, unless the section has since grown shorter than it.
+    | ([$stash.index, ($list | length)] | min) as $at
+    | .bar.layout[$s] = ($list[0:$at] + [$stash.widget] + $list[$at:])'
+
+  edit_store 'if .barHidden then .barHidden |= del(.[$id]) else . end' --arg id "$id"
+}
+
 bar_cmd() {
   local action=${1:-}
   shift || true
   case $action in
     move) bar_move "${1:-}" "${2:-}" ;;
     shift) bar_shift "${1:-}" "${2:-}" ;;
+    enable) bar_enable "${1:-}" ;;
+    disable) bar_disable "${1:-}" ;;
+    hidden) bar_hidden ;;
     *) die "unknown bar action '$action'" ;;
   esac
 }

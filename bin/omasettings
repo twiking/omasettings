@@ -69,6 +69,7 @@ usage:
   omasettings plugin self | plugin self-check     (is this window itself behind?)
   omasettings search                      (every setting the pages declare, for the search box)
   omasettings bar move <widget-id> left|center|right | bar shift <widget-id> up|down
+                 | bar enable|disable <widget-id>   (in or out of the bar, settings and place kept)
   omasettings menu run <entry-id>            (runs an Omarchy menu entry's action)
   omasettings herdr state | set <key> <value>
   omasettings tmux state | tmux set <option> <value>

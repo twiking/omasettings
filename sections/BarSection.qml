@@ -58,6 +58,32 @@ Ui.SectionBody {
     }
   }
 
+  // Every bar widget appears once on this page: under the section it sits in,
+  // or — if it is disabled — in the group at the foot. A list of switches
+  // beside the three section lists would have named each widget twice and left
+  // the reader to work out which of the two lists to believe.
+  readonly property var barWidgets: {
+    var all = app.plugins !== undefined ? app.plugins : []
+    var out = []
+    for (var i = 0; i < all.length; i++)
+      if ((all[i].kinds || []).indexOf("bar-widget") !== -1) out.push(all[i])
+    return out
+  }
+
+  function inBar(id) {
+    var sections = ["left", "center", "right"]
+    for (var s = 0; s < sections.length; s++) {
+      var list = widgets(sections[s])
+      for (var i = 0; i < list.length; i++)
+        if (String(list[i]) === String(id)) return true
+    }
+    return false
+  }
+
+  readonly property var offWidgets: barWidgets.filter(function(widget) {
+    return !page.inBar(widget.id)
+  }).sort(function(a, b) { return String(a.name).localeCompare(String(b.name)) })
+
   // ---------------- layout -------------------------------------------------
   // One group per section, in the order the bar draws them. A widget moves
   // sideways between sections and up or down within one, which is the whole
@@ -149,6 +175,20 @@ Ui.SectionBody {
               onClicked: widgetRow.choosing = false
             }
 
+            // Disabling is about the widget rather than where it goes, so it
+            // sits last, after the buttons that place it.
+            Button {
+              anchors.verticalCenter: parent.verticalCenter
+              visible: !widgetRow.choosing
+              text: "Disable"
+              bordered: true
+              foreground: Ui.Palette.foreground
+              accent: Ui.Palette.accent
+              fontFamily: Ui.Palette.fontFamily
+              fontSize: Style.font.caption
+              onClicked: page.app.run(["bar", "disable", String(widgetRow.modelData)])
+            }
+
             // Its place within the section stays a straight nudge.
             Button {
               anchors.verticalCenter: parent.verticalCenter
@@ -178,6 +218,37 @@ Ui.SectionBody {
               onClicked: page.app.run(["bar", "shift", widgetRow.modelData, "down"])
             }
           }
+        }
+      }
+    }
+  }
+
+  // Not settings, but the other half of the layout: what the bar could show
+  // and does not.
+  Ui.SettingGroup {
+    title: "Disabled"
+    note: page.offWidgets.length === 0
+      ? "Every widget you have is in the bar."
+      : "These keep their settings and their old place until they are enabled again."
+
+    Repeater {
+      model: page.offWidgets
+
+      delegate: Ui.SettingRow {
+        required property var modelData
+        width: parent.width
+        label: String(modelData.name)
+        description: String(modelData.id)
+
+        Button {
+          anchors.right: parent.right
+          text: "Enable"
+          bordered: true
+          foreground: Ui.Palette.foreground
+          accent: Ui.Palette.accent
+          fontFamily: Ui.Palette.fontFamily
+          fontSize: Style.font.caption
+          onClicked: page.app.run(["bar", "enable", String(modelData.id)])
         }
       }
     }

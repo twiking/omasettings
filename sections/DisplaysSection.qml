@@ -35,7 +35,13 @@ Ui.SectionBody {
         ? "Kept for the next time this display is plugged in."
         : Object.keys(configured).length > 0 && Object.keys(settings).length === 0
           ? "Set in your own Hyprland config."
-          : String(modelData.description || "")
+          : ""
+
+      Ui.ReadingRow {
+        label: "Model"
+        visible: String(modelData.description || "") !== ""
+        value: String(modelData.description || "")
+      }
 
       Ui.PickerRow {
         label: "Resolution"
@@ -57,7 +63,6 @@ Ui.SectionBody {
 
       Ui.FactorRow {
         label: "Scale"
-        description: "How large everything on this display is drawn."
         minimum: 0.5
         maximum: 3
         value: Number(modelData.scale)

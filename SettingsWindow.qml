@@ -802,7 +802,7 @@ Item {
     { id: "pointer", title: "Mouse & Touchpad", icon: "\uf245", source: "~/.config/hypr/input.lua" },
 
     // Devices
-    { id: "displays", title: "Displays", icon: "\uf108", source: "~/.config/hypr/monitors.lua" },
+    { id: "displays", title: "Displays", icon: "\uf108", source: "~/.config/hypr/omasettings.lua" },
     { id: "audio", title: "Audio", icon: "\uf028", source: "pactl" },
     { id: "network", title: "Network", icon: "\uf1eb", source: "/etc/systemd/resolved.conf.d" },
     { id: "bluetooth", title: "Bluetooth", icon: "\uf294", source: "bluetoothctl" },

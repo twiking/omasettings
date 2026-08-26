@@ -251,6 +251,19 @@ render_managed_lua() {
               + (if (.value | type) == "string" then "\"" + .value + "\"" else (.value | tostring) end) + ","]
            | join(""))
         + "\n})\n"' <<<"$store"
+
+    # One hl.monitor call per display. Written down rather than only applied,
+    # because a display is unplugged and plugged back in: Hyprland matches its
+    # monitor rules again on connect, so this is what makes a resolution or a
+    # scale outlast the cable.
+    jq -r '(.monitors // {}) | to_entries[]
+      | select(.value != {})
+      | "hl.monitor({\n  output = \"" + .key + "\","
+        + ([.value | to_entries[]
+            | "\n  " + .key + " = "
+              + (if (.value | type) == "string" then "\"" + .value + "\"" else (.value | tostring) end) + ","]
+           | join(""))
+        + "\n})\n"' <<<"$store"
   } | write_file "$MANAGED_LUA" managed
 }
 

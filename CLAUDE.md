@@ -89,8 +89,17 @@ setting, which is why the sidebar shows the file in the page header:
 | Keybindings | a marked block in `~/.config/hypr/bindings.lua` |
 | Compose Keys | `~/.XCompose` |
 | Herdr, Tmux, Neovim | their own configs, edited in place |
-| Displays | our store, applied with `hyprctl keyword monitor` |
+| Displays | `~/.config/hypr/omasettings.lua`, applied with `hyprctl eval` |
 | Audio, Network, Bluetooth, Power | nowhere — live system state, owned by PipeWire, NetworkManager, BlueZ and power-profiles-daemon |
+
+A display is the one thing here worth writing down as well as applying: it is
+unplugged and plugged back in, and Hyprland matches its monitor rules again on
+every connect. So a resolution or a scale set on the Displays page becomes an
+`hl.monitor` call in the managed file, and a display that is **not** connected
+can be set up by name for the next time it arrives. `hyprctl keyword monitor`
+was the original bug there — it answers "keyword can't work with non-legacy
+parsers" on stderr while exiting 0, so both settings looked applied and never
+were.
 
 **Our store holds no settings of its own**, only what is needed to say what
 changed and put it back: `hypr` and `hyprOriginal` (Hyprland keys we override

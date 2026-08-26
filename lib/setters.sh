@@ -35,7 +35,11 @@ setting_current() {
 setting_current_prefixed() {
   local key=${1:-} name=${key#*:}
   case $key in
-    monitor:*) capture hyprctl -j monitors | jq -r --arg o "$name" '.[] | select(.name == $o) | .scale | tostring' ;;
+    # A display carries which of its settings the key means, since it has
+    # more than one that can be put back. The bare form is what earlier
+    # versions wrote, when scale was the only one.
+    monitor:*:*) monitor_value_now "${name%:*}" "${name##*:}" ;;
+    monitor:*) monitor_value_now "$name" scale ;;
     tmux:*) jq -r --arg k "$name" '.values | if has($k) then .[$k] | tostring else empty end' <<<"$(tmux_state)" ;;
     nvim:*) jq -r --arg k "$name" '.values | if has($k) then .[$k] | tostring else empty end' <<<"$(nvim_state)" ;;
     herdr:*) jq -r --arg k "$name" '.values | if has($k) then .[$k] | tostring else empty end' <<<"$(herdr_state)" ;;
@@ -45,7 +49,10 @@ setting_current_prefixed() {
 
 setting_tracked() {
   setting_current "$1" >/dev/null 2>&1 && return 0
-  case ${1:-} in tmux:*|nvim:*|herdr:*|monitor:*) return 0 ;; esac
+  case ${1:-} in
+    monitor:*) [[ -n $(setting_current_prefixed "$1" 2>/dev/null) ]] && return 0 || return 1 ;;
+    tmux:*|nvim:*|herdr:*) return 0 ;;
+  esac
   return 1
 }
 
@@ -61,7 +68,8 @@ setting_write() {
   # a change of its own.
   local OMASETTINGS_TRACKING=0
   case $key in
-    monitor:*) set_key_apply monitor-scale "$name=$value" ;;
+    monitor:*:*) monitor_set "${name%:*}" "${name##*:}" "$value" ;;
+    monitor:*) monitor_set "$name" scale "$value" ;;
     tmux:*) app_cmd tmux set "$name" "$value" ;;
     nvim:*) app_cmd nvim set "$name" "$value" ;;
     herdr:*) herdr_cmd set "$name" "$value" ;;
@@ -103,10 +111,14 @@ set_key() {
   if setting_tracked "$key"; then
     # Unlike a Hyprland key there is nothing to delete — the value has to be
     # written either way. What goes is only the record that it differs.
-    local before
+    local before after
     before=$(setting_value_now "$key")
     setting_write "$key" "$value"
-    track_write "$key" "$value" "$before"
+    # What took, not what was asked for: Hyprland snaps a scale it cannot do
+    # exactly, and a mark saying "changed" beside the value it already had is
+    # a mark that cannot be cleared.
+    after=$(setting_value_now "$key")
+    track_write "$key" "${after:-$value}" "$before"
     return
   fi
 
@@ -116,6 +128,7 @@ set_key() {
 set_key_apply() {
   local key=${1:-} value=${2:-}
   case $key in
+    monitor:*:*) local rest=${key#monitor:}; monitor_set "${rest%:*}" "${rest##*:}" "$value" ;;
     animation-speed)
       [[ $value =~ ^[0-9]+(\.[0-9]+)?$ ]] || die "'$value' is not a speed"
       extras_set animation-speed "$value" 1 ;;
@@ -147,17 +160,14 @@ set_key_apply() {
       [[ $value =~ ^[0-9]+$ ]] || die "'$value' is not a number of seconds"
       edit_shell_json '.idle = ((.idle // {}) | .[$field] = ($seconds | tonumber))' \
         --arg field "$field" --arg seconds "$value" ;;
-    monitor-scale)
-      # "<output>=<scale>": scaling is per output, and the window sends the one
-      # the user picked rather than assuming a single screen.
-      local output=${value%%=*} scale=${value#*=}
-      [[ -n $output && $scale =~ ^[0-9]+(\.[0-9]+)?$ ]] || die "expected <output>=<scale>"
-      local mode
-      mode=$(capture hyprctl -j monitors | jq -r --arg o "$output" '.[] | select(.name == $o) | "\(.width)x\(.height)@\(.refreshRate | floor)"')
-      [[ -n $mode ]] || die "no monitor named '$output'"
-      hyprctl keyword monitor "$output,$mode,auto,$scale" >/dev/null 2>&1
-      edit_store '.monitors = ((.monitors // {}) | .[$o] = { scale: ($s | tonumber), mode: $m })' \
-        --arg o "$output" --arg s "$scale" --arg m "$mode" ;;
+    # "<output>=<value>": both are per display, and the window sends the one
+    # the user picked rather than assuming a single screen.
+    monitor-scale|monitor-mode)
+      local output=${value%%=*} setting=${value#*=}
+      [[ -n $output && $output != "$value" ]] || die "expected <output>=<value>"
+      monitor_set "$output" "${key#monitor-}" "$setting" ;;
+    monitor-remember) monitor_remember "$value" ;;
+    monitor-forget) monitor_forget "$value" ;;
     *)
       hypr_set "$key" "$value" || die "unknown key '$key'" ;;
   esac
@@ -245,6 +255,20 @@ setting_reset() {
     [[ -n $original ]] || return 0
     setting_write "$key" "$original"
     edit_store 'if .written then .written |= del(.[$k]) else . end' --arg k "$key"
+    # A display keeps no record of its own once it is back to what it was. The
+    # rule goes with the last setting on it, and not before: what is left in
+    # there is the mode or scale filled in to keep the rule complete, which
+    # nobody asked for and which would go on overriding their config.
+    if [[ $key == monitor:*:* ]]; then
+      local rest=${key#monitor:} display
+      display=${rest%:*}
+      if jq -e --arg n "$display" '(.written // {}) | keys | any(startswith("monitor:" + $n + ":"))' \
+           <<<"$(read_store)" >/dev/null; then
+        monitor_unset "$display" "${rest##*:}"
+      else
+        monitor_forget "$display"
+      fi
+    fi
     return
   fi
 

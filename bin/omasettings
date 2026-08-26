@@ -9,6 +9,7 @@
 #   store.sh         OmaSettings' own store of what it has set
 #   hypr.sh          Hyprland options, live and in a generated config
 #   devices.sh       per-device input settings (Hyprland's hl.device)
+#   monitors.sh      displays: resolution and scale, per output
 #   shell_config.sh  ~/.config/omarchy/shell.json
 #   compose.sh       ~/.XCompose
 #   plugins.sh       installed shell plugins
@@ -28,7 +29,7 @@ set -uo pipefail
 
 OMASETTINGS_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
 
-for module in core store hypr devices shell_config compose plugins menu herdr tmux neovim bindings wifi bluetooth power audio setters state; do
+for module in core store hypr devices monitors shell_config compose plugins menu herdr tmux neovim bindings wifi bluetooth power audio setters state; do
   # shellcheck source=/dev/null
   source "$OMASETTINGS_LIB/$module.sh"
 done

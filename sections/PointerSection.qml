@@ -60,7 +60,7 @@ Ui.SectionBody {
 
     Ui.SwitchRow {
       label: "Tap to click"
-      checked: app.hyprValue("tap-to-click", true) === true
+      checked: app.hyprValue("tap_to_click", true) === true
       onRequested: function(next) { app.setHypr("tap-to-click", next ? "true" : "false") }
       changed: app.isChanged("tap-to-click")
       onResetRequested: app.resetSetting("tap-to-click")

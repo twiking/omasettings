@@ -87,7 +87,12 @@ hypr_keyword() {
     natural-scroll) echo "input:touchpad:natural_scroll bool" ;;
     disable-while-typing) echo "input:touchpad:disable_while_typing bool" ;;
     clickfinger) echo "input:touchpad:clickfinger_behavior bool" ;;
-    tap-to-click) echo "input:touchpad:tap-to-click bool" ;;
+    # Underscored, unlike its siblings' hyprctl spelling, and for a reason: a
+    # Lua config key is a Lua identifier, so `tap-to-click = false` in the
+    # generated file is a syntax error and the whole file stops loading — and
+    # `hl.config` refuses the bracketed form as an unknown key. `getoption`
+    # takes either spelling, so this one is what both halves can use.
+    tap-to-click) echo "input:touchpad:tap_to_click bool" ;;
     scroll-factor) echo "input:touchpad:scroll_factor float" ;;
     *) return 1 ;;
   esac
@@ -205,6 +210,19 @@ render_managed() {
     render_managed_conf "$store"
     ensure_loaded "$HYPR_DIR/hyprland.conf" 'source = ~/.config/hypr/omasettings.conf'
   fi
+}
+
+# A generated file that does not compile is one Hyprland stops reading, and
+# until 1.1.1 one setting wrote exactly that — a Lua key with dashes in it. The
+# store is the whole truth about that file, so a file that will not parse is
+# simply rendered again. Every write already re-renders; this is for the one
+# that is already on disk when the fix arrives.
+heal_managed_lua() {
+  [[ -f $MANAGED_LUA ]] || return 0
+  command -v luac >/dev/null 2>&1 || return 0
+  luac -p "$MANAGED_LUA" >/dev/null 2>&1 && return 0
+  render_managed
+  hyprctl reload >/dev/null 2>&1 || true
 }
 
 render_managed_lua() {

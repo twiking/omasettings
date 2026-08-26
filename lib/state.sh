@@ -33,6 +33,7 @@ state() {
   # which are their own kind of override again.
   hyprchanged=$(jq -c -s 'add' <(hypr_changed) <(written_changed) <(devices_changed) <(extras_changed))
 
+  heal_managed_lua
   monitors=$(monitor_state 2>/dev/null || echo '[]')
   compose=$(compose_entries)
   plugins=$(plugins_state)

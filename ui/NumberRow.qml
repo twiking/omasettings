@@ -13,25 +13,37 @@ SettingRow {
   property string suffix: ""
   signal committed(int next)
 
-  // Keys step from where the last key left off. A write takes a refresh to
-  // come back, and two presses inside that window would otherwise compute the
-  // same number twice and the second would be swallowed.
+  // Keys step from where the last key left off, and so does the slider: a
+  // write takes a refresh to come back, so what was asked for is what the row
+  // shows until it does. Reading `value` in that window reads the number from
+  // before the write, which springs the handle back for a moment.
   property int pending: value
   property bool stepping: false
+  // What the state held when the write went out: an answer that is neither
+  // that nor what was asked for is the system disagreeing, and the row stops
+  // guessing rather than showing something that was refused.
+  property int basis: value
   readonly property int effective: stepping ? pending : value
   readonly property int shown: numberSlider.dragging ? Math.round(numberSlider.liveValue) : effective
 
-  onValueChanged: if (stepping && value === pending) stepping = false
+  onValueChanged: {
+    if (!stepping) return
+    if (value === pending || value !== basis) stepping = false
+  }
 
   navKeys: [{ key: "\u2190\u2192", label: "Adjust" }]
 
-  onNavStep: function(delta) {
-    var base = numberRow.effective
-    var next = Math.max(numberRow.from, Math.min(numberRow.to, base + delta * numberRow.step))
-    if (next === base) return
-    numberRow.pending = next
+  function commit(next) {
+    var wanted = Math.max(numberRow.from, Math.min(numberRow.to, Math.round(next)))
+    if (wanted === numberRow.effective) return
+    numberRow.pending = wanted
+    numberRow.basis = numberRow.value
     numberRow.stepping = true
-    numberRow.committed(next)
+    numberRow.committed(wanted)
+  }
+
+  onNavStep: function(delta) {
+    numberRow.commit(numberRow.effective + delta * numberRow.step)
   }
 
   Row {
@@ -48,10 +60,7 @@ SettingRow {
       maximum: numberRow.to
       value: numberRow.effective
       enabled: numberRow.enabled
-      onReleased: function(v) {
-        var next = Math.round(v)
-        if (next !== numberRow.value) numberRow.committed(next)
-      }
+      onReleased: function(v) { numberRow.commit(v) }
     }
 
     Text {

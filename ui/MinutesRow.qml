@@ -10,24 +10,38 @@ SettingRow {
   signal committed(int mins)
 
   readonly property int currentMinutes: Math.max(1, Math.round(seconds / 60))
-  readonly property int shownMinutes: minutesSlider.dragging ? Math.round(minutesSlider.liveValue) : currentMinutes
+  readonly property int shownMinutes: minutesSlider.dragging ? Math.round(minutesSlider.liveValue) : effective
 
   // The slider runs 1..60 whole minutes, so a key press is a minute, and each
-  // press builds on the last rather than on the value last read back.
+  // press builds on the last rather than on the value last read back — as does
+  // a drag, which is what keeps the handle where it was put while the write
+  // makes its way back through the state.
   property int pending: currentMinutes
   property bool stepping: false
+  // What the state held when the write went out: an answer that is neither
+  // that nor what was asked for is the system disagreeing, and the row stops
+  // guessing.
+  property int basis: currentMinutes
   readonly property int effective: stepping ? pending : currentMinutes
 
-  onCurrentMinutesChanged: if (stepping && currentMinutes === pending) stepping = false
+  onCurrentMinutesChanged: {
+    if (!stepping) return
+    if (currentMinutes === pending || currentMinutes !== basis) stepping = false
+  }
 
   navKeys: [{ key: "\u2190\u2192", label: "Adjust" }]
 
-  onNavStep: function(delta) {
-    var next = Math.max(1, Math.min(60, minutesRow.effective + delta))
-    if (next === minutesRow.effective) return
-    minutesRow.pending = next
+  function commit(next) {
+    var wanted = Math.max(1, Math.min(60, Math.round(next)))
+    if (wanted === minutesRow.effective) return
+    minutesRow.pending = wanted
+    minutesRow.basis = minutesRow.currentMinutes
     minutesRow.stepping = true
-    minutesRow.committed(next)
+    minutesRow.committed(wanted)
+  }
+
+  onNavStep: function(delta) {
+    minutesRow.commit(minutesRow.effective + delta)
   }
 
   Row {
@@ -43,10 +57,7 @@ SettingRow {
       minimum: 1
       maximum: 60
       value: minutesRow.effective
-      onReleased: function(v) {
-        var next = Math.max(1, Math.round(v))
-        if (next !== minutesRow.currentMinutes) minutesRow.committed(next)
-      }
+      onReleased: function(v) { minutesRow.commit(v) }
     }
 
     Text {

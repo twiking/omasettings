@@ -9,24 +9,37 @@ SettingRow {
   property real value: 1
   signal committed(real next)
 
-  // One step of the slider per key press, the same step dragging snaps to,
-  // and each press builds on the last rather than on the value last read back.
+  // One step of the slider per key press, the same step dragging snaps to, and
+  // each press builds on the last rather than on the value last read back —
+  // which is also what the row shows until the state answers, so a dragged
+  // slider stays where it was put instead of springing back for a moment.
   property real pending: value
   property bool stepping: false
+  // What the state held when the write went out: an answer that is neither
+  // that nor what was asked for is the system disagreeing, and the row stops
+  // guessing.
+  property real basis: value
   readonly property real effective: stepping ? pending : value
   readonly property real shown: percentSlider.dragging ? percentSlider.liveValue : effective
 
-  onValueChanged: if (stepping && Math.abs(value - pending) < 0.001) stepping = false
+  onValueChanged: {
+    if (!stepping) return
+    if (Math.abs(value - pending) < 0.001 || Math.abs(value - basis) > 0.001) stepping = false
+  }
 
   navKeys: [{ key: "\u2190\u2192", label: "Adjust" }]
 
-  onNavStep: function(delta) {
-    var base = percentRow.effective
-    var next = Math.max(0, Math.min(1, Math.round((base + delta * 0.05) * 100) / 100))
-    if (Math.abs(next - base) < 0.001) return
-    percentRow.pending = next
+  function commit(next) {
+    var wanted = Math.max(0, Math.min(1, Math.round(next * 100) / 100))
+    if (Math.abs(wanted - percentRow.effective) < 0.001) return
+    percentRow.pending = wanted
+    percentRow.basis = percentRow.value
     percentRow.stepping = true
-    percentRow.committed(next)
+    percentRow.committed(wanted)
+  }
+
+  onNavStep: function(delta) {
+    percentRow.commit(percentRow.effective + delta * 0.05)
   }
 
   Row {
@@ -42,10 +55,7 @@ SettingRow {
       step: 0.05
       value: Math.max(0, Math.min(1, percentRow.effective))
       enabled: percentRow.enabled
-      onReleased: function(v) {
-        var next = Math.round(v * 100) / 100
-        if (next !== percentRow.value) percentRow.committed(next)
-      }
+      onReleased: function(v) { percentRow.commit(v) }
     }
 
     Text {

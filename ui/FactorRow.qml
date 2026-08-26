@@ -11,23 +11,40 @@ SettingRow {
   property real maximum: 3
   signal committed(string next)
 
+  // What was asked for is what the row shows until the state answers. A write
+  // takes a refresh to come back, and reading `value` in the meantime is
+  // reading the number from before the write — which is why a dragged slider
+  // sprang back to where it started and then jumped to where it was put.
   property real pending: value
   property bool stepping: false
+  // The value the state held when the write went out. An answer that is
+  // neither that nor what was asked for is the system disagreeing — Hyprland
+  // snaps a scale it cannot do exactly — and the row stops guessing rather
+  // than showing a number the screen is not using.
+  property real basis: value
   readonly property real effective: stepping ? pending : value
   readonly property real shown: factorSlider.dragging ? factorSlider.liveValue : effective
 
-  onValueChanged: if (stepping && Math.abs(value - pending) < 0.001) stepping = false
+  onValueChanged: {
+    if (!stepping) return
+    if (Math.abs(value - pending) < 0.001 || Math.abs(value - basis) > 0.001) stepping = false
+  }
 
   navKeys: [{ key: "\u2190\u2192", label: "Adjust" }]
 
-  onNavStep: function(delta) {
-    var base = factorRow.effective
-    var next = Math.max(factorRow.minimum, Math.min(factorRow.maximum, base + delta * 0.05))
-    next = Math.round(next * 20) / 20
-    if (Math.abs(next - base) < 0.001) return
-    factorRow.pending = next
+  // One door for the keys and the slider: an optimistic value the drag did not
+  // take part in is the bug this exists to fix.
+  function commit(next) {
+    var wanted = Math.max(factorRow.minimum, Math.min(factorRow.maximum, Math.round(next * 20) / 20))
+    if (Math.abs(wanted - factorRow.effective) < 0.001) return
+    factorRow.pending = wanted
+    factorRow.basis = factorRow.value
     factorRow.stepping = true
-    factorRow.committed(next.toFixed(2))
+    factorRow.committed(wanted.toFixed(2))
+  }
+
+  onNavStep: function(delta) {
+    factorRow.commit(factorRow.effective + delta * 0.05)
   }
 
   Row {
@@ -43,10 +60,7 @@ SettingRow {
       step: 0.05
       value: Math.max(factorRow.minimum, Math.min(factorRow.maximum, factorRow.effective))
       enabled: factorRow.enabled
-      onReleased: function(v) {
-        var next = (Math.round(v * 20) / 20).toFixed(2)
-        if (Number(next) !== factorRow.value) factorRow.committed(next)
-      }
+      onReleased: function(v) { factorRow.commit(v) }
     }
 
     Text {

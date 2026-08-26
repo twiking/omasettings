@@ -600,6 +600,20 @@ Item {
                                      bottom - bodyScroll.height)
   }
 
+  // The sidebar scrolls too, so Alt can walk the cursor off the bottom of a
+  // menu taller than the window.
+  function sidebarReveal() {
+    // Computed from the index rather than read off the delegate: a Repeater
+    // sits among the rows it made, so children[i] is not row i.
+    var rowHeight = Style.spacing.controlHeight + Style.space(4)
+    var top = sidebarIndex * (rowHeight + Style.space(4))
+    var bottom = top + rowHeight
+    if (top < sidebarScroll.contentY) sidebarScroll.contentY = Math.max(0, top)
+    else if (bottom > sidebarScroll.contentY + sidebarScroll.height)
+      sidebarScroll.contentY = Math.min(Math.max(0, sidebarScroll.contentHeight - sidebarScroll.height),
+                                        bottom - sidebarScroll.height)
+  }
+
   function navActivate() {
     if (navInSidebar) {
       var entry = sidebarRows[sidebarIndex]
@@ -672,6 +686,7 @@ Item {
         if (rows[i].id === pageId) { sidebarIndex = i; break }
     }
     sidebarIndex = Math.max(0, Math.min(rows.length - 1, sidebarIndex + delta))
+    sidebarReveal()
     navSync()
     if (rows[sidebarIndex].selectable) pageId = rows[sidebarIndex].id
   }
@@ -1129,92 +1144,111 @@ Item {
               }
             }
 
-            Repeater {
-              model: root.sidebarRows
-              delegate: Rectangle {
-                required property var modelData
-                required property int index
+            // The menu is as long as the settings are; on a tall list it ran
+            // past the foot of the window, taking the reset button and the
+            // update notice with it. Only the menu scrolls — the title, the
+            // search box and the corner stay put.
+            Flickable {
+              id: sidebarScroll
+              Layout.fillWidth: true
+              Layout.fillHeight: true
+              clip: true
+              contentWidth: width
+              contentHeight: sidebarMenu.implicitHeight
+              boundsBehavior: Flickable.StopAtBounds
+              flickableDirection: Flickable.VerticalFlick
 
-                readonly property bool current: modelData.selectable && modelData.id === root.pageId
-                // Where the keyboard is, which is not always the open page:
-                // Alt can walk onto a parent without opening anything.
-                readonly property bool cursored: root.navInSidebar && index === root.sidebarIndex
+              ColumnLayout {
+                id: sidebarMenu
+                width: sidebarScroll.width
+                spacing: Style.space(4)
 
-                Layout.fillWidth: true
-                implicitHeight: Style.spacing.controlHeight + Style.space(4)
-                radius: Style.cornerRadius
-                border.width: cursored ? Style.normalBorderWidth : 0
-                border.color: root.accent
-                color: current
-                  ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.18)
-                  : (cursored
-                     ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.10)
-                     : (navMouse.containsMouse
-                        ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
-                        : "transparent"))
+                Repeater {
+                model: root.sidebarRows
+                delegate: Rectangle {
+                  required property var modelData
+                  required property int index
 
-                Row {
-                  anchors.fill: parent
-                  anchors.leftMargin: Style.space(10) + (modelData.indented ? Style.space(18) : 0)
-                  spacing: Style.space(10)
+                  readonly property bool current: modelData.selectable && modelData.id === root.pageId
+                  // Where the keyboard is, which is not always the open page:
+                  // Alt can walk onto a parent without opening anything.
+                  readonly property bool cursored: root.navInSidebar && index === root.sidebarIndex
 
-                  Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: !modelData.indented
-                    text: modelData.icon
-                    color: current ? root.accent : root.muted
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
-                    width: Style.space(18)
+                  Layout.fillWidth: true
+                  implicitHeight: Style.spacing.controlHeight + Style.space(4)
+                  radius: Style.cornerRadius
+                  border.width: cursored ? Style.normalBorderWidth : 0
+                  border.color: root.accent
+                  color: current
+                    ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.18)
+                    : (cursored
+                       ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.10)
+                       : (navMouse.containsMouse
+                          ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+                          : "transparent"))
+
+                  Row {
+                    anchors.fill: parent
+                    anchors.leftMargin: Style.space(10) + (modelData.indented ? Style.space(18) : 0)
+                    spacing: Style.space(10)
+
+                    Text {
+                      anchors.verticalCenter: parent.verticalCenter
+                      visible: !modelData.indented
+                      text: modelData.icon
+                      color: current ? root.accent : root.muted
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.body
+                      width: Style.space(18)
+                    }
+
+                    Text {
+                      anchors.verticalCenter: parent.verticalCenter
+                      text: modelData.title
+                      color: root.foreground
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.body
+                      font.bold: current
+                    }
+
+                    // How much of what you typed is in there.
+                    Text {
+                      anchors.verticalCenter: parent.verticalCenter
+                      visible: root.searching && modelData.matches > 0
+                      text: modelData.matches
+                      color: root.accent
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                    }
                   }
 
+                  // Chevron only on parents, pointing the way the branch will
+                  // move when clicked.
                   Text {
+                    anchors.right: parent.right
+                    anchors.rightMargin: Style.space(10)
                     anchors.verticalCenter: parent.verticalCenter
-                    text: modelData.title
-                    color: root.foreground
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
-                    font.bold: current
-                  }
-
-                  // How much of what you typed is in there.
-                  Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: root.searching && modelData.matches > 0
-                    text: modelData.matches
-                    color: root.accent
+                    visible: modelData.expandable
+                    text: modelData.expanded ? "\uf077" : "\uf078"
+                    color: root.muted
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
                   }
-                }
 
-                // Chevron only on parents, pointing the way the branch will
-                // move when clicked.
-                Text {
-                  anchors.right: parent.right
-                  anchors.rightMargin: Style.space(10)
-                  anchors.verticalCenter: parent.verticalCenter
-                  visible: modelData.expandable
-                  text: modelData.expanded ? "\uf077" : "\uf078"
-                  color: root.muted
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.caption
-                }
-
-                MouseArea {
-                  id: navMouse
-                  anchors.fill: parent
-                  hoverEnabled: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: {
-                    if (modelData.expandable) root.toggleSection(modelData.id)
-                    else root.pageId = modelData.id
+                  MouseArea {
+                    id: navMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                      if (modelData.expandable) root.toggleSection(modelData.id)
+                      else root.pageId = modelData.id
+                    }
                   }
                 }
               }
+              }
             }
-
-            Item { Layout.fillHeight: true }
 
             // What this window has changed, and the way to undo the lot. Only
             // when there is something to undo — a button that mostly does

@@ -203,6 +203,10 @@ monitor_set() {
     edit_store '.monitors = ((.monitors // {}) | .[$n] = (.[$n] + { scale: $s }))' \
       --arg n "$name" --argjson s "$applied"
   fi
+
+  [[ $field == scale ]] && monitor_is_internal "$name" \
+    && monitor_lua_scale "$name" "$(monitor_settings "$name" | jq -r '.scale')"
+  return 0
 }
 
 # What a display is running, in the shape a rule takes. No position: Omarchy's
@@ -231,6 +235,103 @@ monitor_unset() {
     | with_entries(select(.value != {})))' \
     --arg n "$name" --arg f "$field" --argjson now "$now"
   monitor_apply_live "$name"
+  [[ $field == scale ]] && monitor_is_internal "$name" && monitor_lua_scale "$name" --
+  return 0
+}
+
+# ------------------------------------------------- the laptop panel is theirs
+#
+# Omarchy watches the internal panel and puts its scale back. While a laptop is
+# docked, `omarchy-hyprland-monitor-clamshell` runs every couple of seconds,
+# reads the scale out of ~/.config/hypr/monitors.lua, and re-applies it if the
+# panel is running anything else — so a scale set from here survived about a
+# second. It won every time, and no error said so.
+#
+# The way to set the internal panel's scale is therefore to make that file say
+# it too: the rule for the panel, in the file Omarchy reads, edited in place the
+# way every other hand-written config here is. Then the watcher enforces the
+# number this page chose instead of fighting it.
+#
+# Only the scale, and only the internal panel: an external display is nobody
+# else's business, and stays in the managed file alone.
+monitor_internal() {
+  command -v omarchy-hyprland-monitor-laptop >/dev/null 2>&1 || return 0
+  omarchy-hyprland-monitor-laptop 2>/dev/null
+}
+
+monitor_is_internal() {
+  local internal
+  internal=$(monitor_internal)
+  [[ -n $internal && $1 == "$internal" ]]
+}
+
+MONITOR_LUA_MARKER="-- omasettings"
+
+# `--` removes what this window added; a number writes it. A rule the user wrote
+# themselves only ever has its scale replaced — the rest of their line, comment
+# included, is copied through.
+#
+# Every line this adds carries the marker, the comments as well as the rule, so
+# removing it takes the whole block rather than leaving three lines of
+# explanation for a rule that is no longer there.
+monitor_lua_scale() {
+  local name=$1 value=$2 file="$HYPR_DIR/monitors.lua" previous next
+  [[ -f $file ]] || return 0
+
+  previous=$(read_file "$file")
+  # The pattern is built here rather than inside awk: a quoted output name in
+  # an awk string literal inside a shell single-quoted program is three levels
+  # of quoting, and it collapsed silently — every rule read as no rule.
+  local pattern="output[ \t]*=[ \t]*\"$name\""
+  next=$(awk -v value="$value" -v name="$name" -v marker="$MONITOR_LUA_MARKER" -v pattern="$pattern" '
+    function flush() {
+      for (i = 1; i <= held; i++) print holding[i]
+      held = 0
+    }
+    # Lines this window wrote are held back until it is clear whether the rule
+    # they explain is staying.
+    index($0, marker ":") == 1 { holding[++held] = $0; next }
+    /^[ \t]*--/ { flush(); print; next }
+    $0 ~ /hl\.monitor/ && $0 ~ pattern {
+      if (value == "--") {
+        # Ours goes, comments and all; theirs stays, since the scale in it is
+        # the one this reset has just written back.
+        if (index($0, marker)) { held = 0; next }
+        flush()
+        print
+        found = 1
+        next
+      }
+      flush()
+      if ($0 ~ /scale[ \t]*=/) sub(/scale[ \t]*=[ \t]*[^,;} \t]+/, "scale = " value)
+      else sub(/\}[ \t]*\)/, ", scale = " value " })")
+      print
+      found = 1
+      next
+    }
+    { flush(); print }
+    END {
+      flush()
+      if (!found && value != "--") {
+        print marker ": the internal panel'"'"'s scale is kept here as well, because"
+        print marker ": omarchy-hyprland-monitor-clamshell reads this file and puts"
+        print marker ": the panel back to it every couple of seconds while docked."
+        printf "hl.monitor({ output = \"%s\", mode = \"preferred\", position = \"auto\", scale = %s })  %s\n", name, value, marker
+      }
+    }' <<<"$previous")
+
+  [[ -n $next ]] || return 0
+  [[ $next == "$previous" ]] && return 0
+
+  backup_once "$file" || return 1
+  write_file "$file" <<<"$next" || return 1
+
+  # Their config, so the edit is checked in their terms and put back if it
+  # broke: an unparseable monitors.lua is a session that does not come up.
+  if ! luac -p "$file" >/dev/null 2>&1; then
+    write_file "$file" <<<"$previous"
+    die "the edit to monitors.lua would not compile; nothing was changed"
+  fi
 }
 
 # Configuring a display before it is plugged in: the name is all that is
@@ -251,6 +352,7 @@ monitor_forget() {
   edit_store '.monitors = ((.monitors // {}) | del(.[$n]))
     | if .written then .written |= with_entries(select(.key | startswith("monitor:" + $n + ":") | not)) else . end' \
     --arg n "$name"
+  monitor_is_internal "$name" && monitor_lua_scale "$name" --
   hyprctl reload >/dev/null 2>&1 || true
 }
 

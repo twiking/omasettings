@@ -89,7 +89,7 @@ setting, which is why the sidebar shows the file in the page header:
 | Keybindings | a marked block in `~/.config/hypr/bindings.lua` |
 | Compose Keys | `~/.XCompose` |
 | Herdr, Tmux, Neovim | their own configs, edited in place |
-| Displays | `~/.config/hypr/omasettings.lua`, applied with `hyprctl eval` |
+| Displays | `~/.config/hypr/omasettings.lua`, applied with `hyprctl eval` — plus `monitors.lua` for the laptop panel's scale |
 | Audio, Network, Bluetooth, Power | nowhere — live system state, owned by PipeWire, NetworkManager, BlueZ and power-profiles-daemon |
 
 A display is the one thing here worth writing down as well as applying: it is
@@ -100,6 +100,17 @@ can be set up by name for the next time it arrives. `hyprctl keyword monitor`
 was the original bug there — it answers "keyword can't work with non-legacy
 parsers" on stderr while exiting 0, so both settings looked applied and never
 were.
+
+**The laptop panel's scale is not ours to keep.** Omarchy watches the internal
+display: while a laptop is docked, `omarchy-hyprland-monitor-clamshell` runs
+every couple of seconds, reads the scale out of `monitors.lua`, and puts the
+panel back to it. A scale set from this page survived about a second, silently.
+So for the internal panel — and only for its scale — the number is written into
+`monitors.lua` as well, in place, the way every other hand-written config here
+is edited: the rule for the panel gets its `scale` replaced, or a marked rule is
+appended if there is none. Then the watcher enforces what this page chose. Every
+line added carries the `-- omasettings` marker, comments included, so removing
+the setting takes the whole block. An external display needs none of this.
 
 **Our store holds no settings of its own**, only what is needed to say what
 changed and put it back: `hypr` and `hyprOriginal` (Hyprland keys we override

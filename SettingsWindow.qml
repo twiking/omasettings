@@ -788,37 +788,37 @@ Item {
   // getting online, and this window is opened to change how the desktop looks.
   readonly property var sections: [
     // Look and feel
-    { id: "appearance", title: "Appearance", icon: "\uf1fc", source: "~/.config/omarchy/shell.toml" },
-    { id: "bar", title: "Bar", icon: "\uf0ca", source: "~/.config/omarchy/shell.json" },
-    { id: "windows", title: "Windows", icon: "\uf2d0", source: "~/.config/hypr/looknfeel.lua" },
-    { id: "layout", title: "Layout", icon: "\uf009", source: "~/.config/hypr/looknfeel.lua" },
-    { id: "effects", title: "Effects", icon: "\uf0eb", source: "~/.config/hypr/looknfeel.lua" },
-    { id: "groups", title: "Groups", icon: "\uf009", source: "~/.config/hypr/looknfeel.lua" },
+    { id: "appearance", title: "Appearance", icon: "\uf1fc" },
+    { id: "bar", title: "Bar", icon: "\uf0ca" },
+    { id: "windows", title: "Windows", icon: "\uf2d0" },
+    { id: "layout", title: "Layout", icon: "\uf009" },
+    { id: "effects", title: "Effects", icon: "\uf0eb" },
+    { id: "groups", title: "Groups", icon: "\uf009" },
 
     // Input
-    { id: "keyboard", title: "Keyboard", icon: "\uf11c", source: "~/.config/hypr/input.lua" },
-    { id: "bindings", title: "Keybindings", icon: "\uf11c", source: "~/.config/hypr/bindings.lua" },
-    { id: "compose", title: "Compose Keys", icon: "\uf031", source: "~/.XCompose" },
-    { id: "pointer", title: "Mouse & Touchpad", icon: "\uf245", source: "~/.config/hypr/input.lua" },
+    { id: "keyboard", title: "Keyboard", icon: "\uf11c" },
+    { id: "bindings", title: "Keybindings", icon: "\uf11c" },
+    { id: "compose", title: "Compose Keys", icon: "\uf031" },
+    { id: "pointer", title: "Mouse & Touchpad", icon: "\uf245" },
 
     // Devices
-    { id: "displays", title: "Displays", icon: "\uf108", source: "~/.config/hypr/omasettings.lua" },
-    { id: "audio", title: "Audio", icon: "\uf028", source: "pactl" },
-    { id: "network", title: "Network", icon: "\uf1eb", source: "/etc/systemd/resolved.conf.d" },
-    { id: "bluetooth", title: "Bluetooth", icon: "\uf294", source: "bluetoothctl" },
-    { id: "power", title: "Power", icon: "\uf0e7", source: "powerprofilesctl" },
+    { id: "displays", title: "Displays", icon: "\uf108" },
+    { id: "audio", title: "Audio", icon: "\uf028" },
+    { id: "network", title: "Network", icon: "\uf1eb" },
+    { id: "bluetooth", title: "Bluetooth", icon: "\uf294" },
+    { id: "power", title: "Power", icon: "\uf0e7" },
 
     // System
-    { id: "idle", title: "Idle & Lock", icon: "\uf023", source: "~/.config/omarchy/shell.json" },
-    { id: "datetime", title: "Date & Time", icon: "\uf017", source: "/etc/localtime" },
+    { id: "idle", title: "Idle & Lock", icon: "\uf023" },
+    { id: "datetime", title: "Date & Time", icon: "\uf017" },
 
     // What extends it
-    { id: "plugins", title: "Plugins", icon: "\uf1e6", source: "~/.config/omarchy/shell.json" },
+    { id: "plugins", title: "Plugins", icon: "\uf1e6" },
     { id: "apps", title: "Applications", icon: "\uf085", children: [
-      { id: "apps.defaults", title: "Defaults", source: "~/.config/omarchy/defaults" },
-      { id: "apps.herdr", title: "Herdr", source: "~/.config/herdr/config.toml" },
-      { id: "apps.tmux", title: "Tmux", source: "~/.config/tmux/tmux.conf" },
-      { id: "apps.nvim", title: "Neovim", source: "~/.config/nvim/lua/config/options.lua" }
+      { id: "apps.defaults", title: "Defaults" },
+      { id: "apps.herdr", title: "Herdr" },
+      { id: "apps.tmux", title: "Tmux" },
+      { id: "apps.nvim", title: "Neovim" }
     ] }
   ]
 
@@ -893,7 +893,7 @@ Item {
       for (var c = 0; c < children.length; c++)
         if (children[c].id === id) return children[c]
     }
-    return { title: "", source: "" }
+    return { title: "" }
   }
 
   // Pages live one to a file under sections/; the window only has to know
@@ -1359,7 +1359,8 @@ Item {
               }
 
               Text {
-                text: root.pageHeaderNote !== "" ? root.pageHeaderNote : (root.pageFor(root.pageId).source || "")
+                visible: root.pageHeaderNote !== ""
+                text: root.pageHeaderNote
                 color: root.muted
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption

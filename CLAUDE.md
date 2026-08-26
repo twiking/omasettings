@@ -79,7 +79,7 @@ of the three reports it in its own state as `installed`.
 ## Where each page writes
 
 This app stores almost nothing. Each page writes into whatever owns the
-setting, which is why the sidebar shows the file in the page header:
+setting:
 
 | Page | Lands in |
 | --- | --- |
@@ -589,8 +589,11 @@ under it would carry the same word, the heading goes.
 
 **A control that governs the whole page belongs in the header.** Pages can
 declare `property Component headerControl` and `property string headerNote`;
-the window renders the control beside the page name and the note under it, in
-place of the file path. The Bluetooth adapter switch and its state live there.
+the window renders the control beside the page name and the note under it. The
+header once named the file a page writes to, which was a promise the pages
+could not keep — Displays lands in two files on a laptop, Appearance in
+whatever Omarchy's commands touch — and it said nothing about the setting the
+reader was looking at. The Bluetooth adapter switch and its state live there.
 Anything that governs only part of a page stays a row.
 
 **Lead with what the page is for.** Network opens with the Wi-Fi switch and

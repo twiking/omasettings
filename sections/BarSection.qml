@@ -234,22 +234,13 @@ Ui.SectionBody {
     Repeater {
       model: page.offWidgets
 
-      delegate: Ui.SettingRow {
+      delegate: Ui.WidgetRow {
         required property var modelData
         width: parent.width
+        buttonText: "Enable"
         label: String(modelData.name)
-        description: String(modelData.id)
-
-        Button {
-          anchors.right: parent.right
-          text: "Enable"
-          bordered: true
-          foreground: Ui.Palette.foreground
-          accent: Ui.Palette.accent
-          fontFamily: Ui.Palette.fontFamily
-          fontSize: Style.font.caption
-          onClicked: page.app.run(["bar", "enable", String(modelData.id)])
-        }
+        detail: String(modelData.id)
+        onTriggered: page.app.run(["bar", "enable", String(modelData.id)])
       }
     }
   }

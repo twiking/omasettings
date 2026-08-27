@@ -19,6 +19,20 @@ BarWidget {
   readonly property bool opened: windowLoader.item ? windowLoader.item.shown : false
 
   function show() { windowLoader.active = true; if (windowLoader.item) windowLoader.item.show() }
+  // Opening on a named page is how a job that had to tear this window down
+  // brings it back where it was: the loader is asynchronous, so the page is
+  // remembered until there is an item to give it to.
+  property string pendingPage: ""
+  function showPage(page) {
+    pendingPage = String(page || "")
+    show()
+    applyPendingPage()
+  }
+  function applyPendingPage() {
+    if (pendingPage === "" || !windowLoader.item) return
+    windowLoader.item.pageId = pendingPage
+    pendingPage = ""
+  }
   function hide() { if (windowLoader.item) windowLoader.item.hide() }
   function open() { show() }
   function close() { hide() }
@@ -33,6 +47,7 @@ BarWidget {
   IpcHandler {
     target: "omasettings"
     function show(): void { root.show() }
+    function showPage(page: string): void { root.showPage(page) }
     function hide(): void { root.hide() }
     function open(): void { root.open() }
     function close(): void { root.close() }
@@ -44,7 +59,10 @@ BarWidget {
     active: false
     asynchronous: true
     source: "SettingsWindow.qml"
-    onLoaded: if (item) item.show()
+    onLoaded: {
+      if (item) item.show()
+      root.applyPendingPage()
+    }
   }
 
   BarIconButton {

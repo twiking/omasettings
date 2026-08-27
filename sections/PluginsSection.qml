@@ -45,14 +45,13 @@ Ui.SectionBody {
     catchUp.restart()
   }
 
-  // The window does close while an update lands, and saying so is the only
-  // honest option: the shell watches the plugins directory with inotifywait
-  // and reloads every plugin widget — this window's host included — on any
-  // file change under it. A git merge is a file change, so no plugin can
-  // update another one and stay on screen. What it can do is come back and
-  // still know what happened.
+  // The window cannot stay up through an update: the shell watches the plugins
+  // directory with inotifywait and reloads every plugin widget — this window's
+  // host included — on any file change under it, and a git merge is one. What
+  // it can do is come back, which the job that outlived it asks for, so the
+  // reader is told to expect the blink rather than left to explain it.
   readonly property string headerNote:
-    "Taking an update reloads the shell's plugins, so this window closes while it lands — reopen it and the plugin will say how it went."
+    "Taking an update reloads the shell's plugins, so this window closes for a moment and comes back here with the result."
 
   // Updating happens without a terminal: upstream's flow is non-interactive
   // with --yes, and the only thing the terminal added was the question this

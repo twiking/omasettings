@@ -167,13 +167,40 @@ self_check() {
 # --yes. Only the asking needed a terminal, and this window has already asked
 # — the row says how many commits are coming and what they say.
 #
-# It does not run as a child of the window, though. Its last act is
-# `omarchy-shell shell rescanPlugins`, which unloads and reloads every
-# plugin's QML — this window included. A child of the window would be killed
-# part-way through its own `git merge`, and the answer would die with the
-# window that asked. So the work is detached, and it says what it did in the
-# cache the page already reads: whoever is looking when it lands sees it, and
-# so does the window that comes back afterwards.
+# It does not run as a child of the window, though. The shell watches the
+# plugins directory with `inotifywait -m -r` and reloads every plugin widget
+# on any change under it — this window's host included — so a `git merge` in
+# there takes the window down while the merge is still running. A child of it
+# would be killed part-way through, and the answer would die with the window
+# that asked. So the work is detached, says what it did in the cache the page
+# reads, and then brings the window back.
+
+# Bringing the window back afterwards. The reload takes it down mid-update, so
+# the job that survived is the only thing left that knows it should return —
+# and it has to wait its turn: the shell may still be tearing down, rebuilding,
+# or (having been asked to rescan) starting the plugins up again. Summoning
+# into that lands on the panel that is going away, so this waits for the shell
+# to answer at all, lets the teardown settle, and then keeps asking.
+reopen_window() {
+  local i
+  for i in $(seq 1 60); do
+    [[ -n $(omarchy-shell shell ping 2>/dev/null) ]] && break
+    sleep 0.5
+  done
+  sleep 0.6
+  for i in $(seq 1 20); do
+    omarchy-shell omasettings showPage plugins >/dev/null 2>&1
+    window_open && return 0
+    sleep 0.5
+  done
+}
+
+# The layer, not the exit code: the IPC call returns nothing either way, and a
+# summon eaten by a dying panel looks exactly like one that worked.
+window_open() {
+  hyprctl layers -j 2>/dev/null | jq -e '..|select(.namespace? == "omasettings")' >/dev/null 2>&1
+}
+
 plugin_update_start() {
   local id=$1
 
@@ -181,7 +208,14 @@ plugin_update_start() {
     '.running = ((.running // {}) | .[$id] = $at) | .last = ((.last // {}) | del(.[$id]))' \
     <<<"$(plugin_updates_cache)" 2>/dev/null | write_update_cache
 
-  setsid bash "$OMASETTINGS_BIN" plugin update-run "$id" >/dev/null 2>&1 &
+  # Whether to come back is decided here, while the window is still up to be
+  # asked. A summon after the fact cannot tell a window that was torn down
+  # from one the reader had already closed, and opening a window nobody asked
+  # for is worse than not returning to one.
+  local reopen=0
+  window_open && reopen=1
+
+  setsid bash "$OMASETTINGS_BIN" plugin update-run "$id" "$reopen" >/dev/null 2>&1 &
   disown 2>/dev/null || true
 
   # The window wants the spinner now, not at the next poll.
@@ -189,7 +223,7 @@ plugin_update_start() {
 }
 
 plugin_update_run() {
-  local id=$1 out rc msg
+  local id=$1 reopen=${2:-0} out rc msg
   out=$(omarchy-plugin-update "$id" --yes 2>&1)
   rc=$?
 
@@ -211,4 +245,9 @@ plugin_update_run() {
            | .changes = ((.changes // {}) | del(.[$id]))
          else . end' \
     <<<"$(plugin_updates_cache)" 2>/dev/null | write_update_cache
+
+  # The verdict is written before the window is asked back, so the page it
+  # opens on already has it.
+  (( reopen == 1 )) && reopen_window
+  return 0
 }

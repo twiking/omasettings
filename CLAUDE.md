@@ -412,8 +412,10 @@ came from, at no extra network cost.
 `reloadPlugins()` on any change under it, which unloads every plugin widget —
 including the bar widget hosting this window. A `git merge` is a change under
 it, so the window goes. Deferring `omarchy-plugin-update`'s own
-`rescanPlugins` does not help; the watcher has already fired. Two things
-follow, and both are the design rather than a workaround:
+`rescanPlugins` does not help; the watcher has already fired. (This also
+bites while testing: a `git` command run by hand inside any plugin directory
+closes the window, so rewind a plugin *before* opening it, not after.) Three
+things follow, and they are the design rather than a workaround:
 
 - **The update is detached** (`setsid`, re-entering as `plugin update-run`).
   A child of the window would be killed part-way through its own merge.
@@ -422,6 +424,15 @@ follow, and both are the design rather than a workaround:
   in flight and picks up an update already running when it is built again, so
   the answer waits for the window to come back rather than dying with it. The
   page says up front that it will close, because it will.
+- **It summons the window back.** The job that outlived the window is the only
+  thing left that knows it should return, so it waits for
+  `omarchy-shell shell ping` to answer, lets the teardown settle, and then
+  calls `omasettings showPage plugins` until the layer is actually there — the
+  IPC call returns nothing either way, and a summon eaten by a dying panel
+  looks exactly like one that worked. Whether to return is decided *before*
+  the update, while the window is still up to be asked: afterwards there is no
+  telling a window that was torn down from one the reader had closed, and
+  opening a window nobody asked for is worse than not returning to one.
 
 The update check fetches every plugin at
 once and prints each verdict as it lands, so spinners retire one at a time

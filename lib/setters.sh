@@ -199,7 +199,7 @@ plugin_cmd() {
     update) plugin_update_start "$id" ;;
     # Not for the window to call: this is the detached half, re-entering to do
     # the work after rescanPlugins has torn the caller down.
-    update-run) plugin_update_run "$id" ;;
+    update-run) plugin_update_run "$id" "${3:-0}" ;;
     *) die "unknown plugin action '$action'" ;;
   esac
 }

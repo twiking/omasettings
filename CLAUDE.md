@@ -400,7 +400,30 @@ believe.
 ## The Plugins page
 
 Add and remove hand off to the Omarchy flows in a terminal, because both ask
-questions and print what they did. The update check fetches every plugin at
+questions and print what they did. **Update does not.** `omarchy-plugin-update
+<id> --yes` is entirely non-interactive — the diff and the confirm are the half
+`--yes` skips — and a terminal opening over this window was the whole of what
+that bought. So the row does the asking instead: how many commits are coming,
+and what the first three of them say, read off the same `FETCH_HEAD` the count
+came from, at no extra network cost.
+
+**A plugin cannot update another plugin and stay on screen.** The shell watches
+`~/.config/omarchy/plugins` with `inotifywait -m -r` and calls
+`reloadPlugins()` on any change under it, which unloads every plugin widget —
+including the bar widget hosting this window. A `git merge` is a change under
+it, so the window goes. Deferring `omarchy-plugin-update`'s own
+`rescanPlugins` does not help; the watcher has already fired. Two things
+follow, and both are the design rather than a workaround:
+
+- **The update is detached** (`setsid`, re-entering as `plugin update-run`).
+  A child of the window would be killed part-way through its own merge.
+- **It reports into the cache, not up its own stdout.** `running` says a
+  spinner is owed, `last` says how it went. The page polls while something is
+  in flight and picks up an update already running when it is built again, so
+  the answer waits for the window to come back rather than dying with it. The
+  page says up front that it will close, because it will.
+
+The update check fetches every plugin at
 once and prints each verdict as it lands, so spinners retire one at a time
 rather than all at the end; the verdicts outlive the sweep in
 `~/.cache/omarchy/omasettings/plugin-updates.json`, since a check costs a

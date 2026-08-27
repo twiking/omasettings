@@ -45,15 +45,25 @@ Ui.SectionBody {
     catchUp.restart()
   }
 
+  // The window does close while an update lands, and saying so is the only
+  // honest option: the shell watches the plugins directory with inotifywait
+  // and reloads every plugin widget — this window's host included — on any
+  // file change under it. A git merge is a file change, so no plugin can
+  // update another one and stay on screen. What it can do is come back and
+  // still know what happened.
+  readonly property string headerNote:
+    "Taking an update reloads the shell's plugins, so this window closes while it lands — reopen it and the plugin will say how it went."
+
   // Updating happens without a terminal: upstream's flow is non-interactive
   // with --yes, and the only thing the terminal added was the question this
   // page has already answered — the row says how many commits are coming and
   // what they say.
   //
-  // The update itself is detached, because upstream ends by reloading every
-  // plugin's QML and this window goes with them. So the page does not own the
-  // work; it watches the cache the work reports into, and picks up an update
-  // already in flight when it is built again.
+  // The work is detached from the window for the same reason: a child process
+  // would be killed part-way through its own git merge when the reload above
+  // arrives. So the page does not own the work; it watches the cache the work
+  // reports into, and picks up an update already in flight when it is built
+  // again.
   property var updating: (app.state.pluginUpdates && app.state.pluginUpdates.running) || ({})
   property var updateResult: (app.state.pluginUpdates && app.state.pluginUpdates.last) || ({})
 
@@ -213,7 +223,10 @@ Ui.SectionBody {
         readonly property var result: page.updateResult[modelData.id]
         // The sweep joins the subjects with a pipe, having taken any out of
         // the subjects themselves, so one line survives its own transport.
-        readonly property string incoming: (page.changes[modelData.id] || "").split("|").join(" · ")
+        // What is coming is worth saying until something has been tried; after
+        // that the outcome is the newer fact and the row says that instead.
+        readonly property string incoming: (updating || result)
+          ? "" : (page.changes[modelData.id] || "").split("|").join(" · ")
 
         width: parent.width
         label: modelData.name

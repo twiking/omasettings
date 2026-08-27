@@ -28,6 +28,9 @@
 set -uo pipefail
 
 OMASETTINGS_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
+# A detached update re-enters here, so this script has to be able to name
+# itself: it is started from the window's own copy, which is not on any PATH.
+OMASETTINGS_BIN="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 
 for module in core store hypr devices monitors shell_config compose plugins menu herdr tmux neovim bindings wifi bluetooth power audio setters state; do
   # shellcheck source=/dev/null

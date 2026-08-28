@@ -192,11 +192,14 @@ plugin_cmd() {
     remove)
       setsid bash -lc "omarchy-launch-floating-terminal-with-presentation $(printf '%q' "omarchy-plugin-remove $(printf '%q' "$id")")" >/dev/null 2>&1 &
       disown 2>/dev/null || true ;;
-    # Updating shows the incoming diff and asks before pulling, so it gets a
-    # terminal of its own too.
-    update)
-      setsid bash -lc "omarchy-launch-floating-terminal-with-presentation $(printf '%q' "omarchy-plugin-update $(printf '%q' "$id")")" >/dev/null 2>&1 &
-      disown 2>/dev/null || true ;;
+    # Updating asks nothing this window has not already asked — the row says
+    # how many commits are coming and what they say — so no terminal. It does
+    # detach, because upstream's last act reloads every plugin's QML and would
+    # otherwise kill the update it started. See plugin_update_start.
+    update) plugin_update_start "$id" ;;
+    # Not for the window to call: this is the detached half, re-entering to do
+    # the work after rescanPlugins has torn the caller down.
+    update-run) plugin_update_run "$id" "${3:-0}" ;;
     *) die "unknown plugin action '$action'" ;;
   esac
 }

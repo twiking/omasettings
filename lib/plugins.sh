@@ -15,8 +15,16 @@ UPDATE_CACHE="${OMASETTINGS_UPDATE_CACHE:-${XDG_CACHE_HOME:-$HOME_DIR/.cache}/om
 # anything else we did not write this second.
 plugin_updates_cache() {
   read_file "$UPDATE_CACHE" \
-    | jq -c '{ checkedAt: (.checkedAt // 0), results: (.results // {}) }' 2>/dev/null && return
-  echo '{"checkedAt":0,"results":{}}'
+    | jq -c --argjson now "$(date +%s)" '
+        { checkedAt: (.checkedAt // 0),
+          results: (.results // {}),
+          changes: (.changes // {}),
+          # An update detached from this window can be killed with the shell
+          # it was started from, and would then spin forever. A marker older
+          # than the longest plausible update is not an update in flight.
+          running: ((.running // {}) | with_entries(select(.value > $now - 600))),
+          last: (.last // {}) }' 2>/dev/null && return
+  echo '{"checkedAt":0,"results":{},"changes":{},"running":{},"last":{}}'
 }
 
 # Same for putting it back: a fresh random sibling, renamed into place, so a
@@ -74,16 +82,32 @@ plugin_updates() {
            timeout "${FETCH_TIMEOUT:-30}" git -C "$repo" fetch -q origin HEAD 2>/dev/null; then
         # The bounds are spelled out rather than shared: this runs in a bash
         # xargs started, which never sourced anything of ours.
-        printf "%s\t%s\n" "$id" \
-          "$(timeout 10 git -C "$repo" rev-list --count HEAD..FETCH_HEAD 2>/dev/null | head -c 32 || echo 0)"
+        # Double quotes on purpose: this whole worker is a single-quoted
+        # string, so a single quote here ends it and the script stops parsing.
+        #
+        # The subjects come off the FETCH_HEAD the count was just taken from,
+        # so saying what is coming costs no second round trip. They stand in
+        # for the diff the terminal used to print: enough to decide with,
+        # short enough to sit on a row.
+        printf "%s\t%s\t%s\n" "$id" \
+          "$(timeout 10 git -C "$repo" rev-list --count HEAD..FETCH_HEAD 2>/dev/null | head -c 32 || echo 0)" \
+          "$(timeout 10 git -C "$repo" log --format=%s -n 3 HEAD..FETCH_HEAD 2>/dev/null \
+             | tr "\t|" "  " | paste -s -d "|" - | head -c 300)"
       else
         printf "%s\t-2\n" "$id"
       fi' _ {}
   } | tee "$out"
 
-  jq -Rn --argjson at "$(date +%s)" '
-    { checkedAt: $at,
-      results: ([inputs | split("\t") | select(length == 2) | { key: .[0], value: (.[1] | tonumber) }] | from_entries) }' \
+  # What an update said about itself outlives a sweep: the sweep is about the
+  # counts, and rebuilding the whole document would throw away the answer the
+  # page is still showing.
+  jq -Rn --argjson at "$(date +%s)" --argjson prev "$(plugin_updates_cache)" '
+    [inputs | split("\t") | select(length >= 2)] as $rows
+    | { checkedAt: $at,
+        results: ([$rows[] | { key: .[0], value: (.[1] | tonumber) }] | from_entries),
+        changes: ([$rows[] | select((.[2] // "") != "") | { key: .[0], value: .[2] }] | from_entries),
+        running: ($prev.running // {}),
+        last: ($prev.last // {}) }' \
     <"$out" 2>/dev/null | write_update_cache
   rm -f "$out"
 }
@@ -134,4 +158,96 @@ self_check() {
     <<<"$(plugin_updates_cache)" 2>/dev/null | write_update_cache
 
   self_update_state
+}
+
+# ---------------------------------------------------------- applying one
+#
+# `omarchy-plugin-update <id> --yes` is entirely non-interactive: the diff and
+# the gum confirm it prints are the *unattended* half of the flow, skipped by
+# --yes. Only the asking needed a terminal, and this window has already asked
+# — the row says how many commits are coming and what they say.
+#
+# It does not run as a child of the window, though. The shell watches the
+# plugins directory with `inotifywait -m -r` and reloads every plugin widget
+# on any change under it — this window's host included — so a `git merge` in
+# there takes the window down while the merge is still running. A child of it
+# would be killed part-way through, and the answer would die with the window
+# that asked. So the work is detached, says what it did in the cache the page
+# reads, and then brings the window back.
+
+# Bringing the window back afterwards. The reload takes it down mid-update, so
+# the job that survived is the only thing left that knows it should return —
+# and it has to wait its turn: the shell may still be tearing down, rebuilding,
+# or (having been asked to rescan) starting the plugins up again. Summoning
+# into that lands on the panel that is going away, so this waits for the shell
+# to answer at all, lets the teardown settle, and then keeps asking.
+reopen_window() {
+  local i
+  for i in $(seq 1 60); do
+    [[ -n $(omarchy-shell shell ping 2>/dev/null) ]] && break
+    sleep 0.5
+  done
+  sleep 0.6
+  for i in $(seq 1 20); do
+    omarchy-shell omasettings showPage plugins >/dev/null 2>&1
+    window_open && return 0
+    sleep 0.5
+  done
+}
+
+# The layer, not the exit code: the IPC call returns nothing either way, and a
+# summon eaten by a dying panel looks exactly like one that worked.
+window_open() {
+  hyprctl layers -j 2>/dev/null | jq -e '..|select(.namespace? == "omasettings")' >/dev/null 2>&1
+}
+
+plugin_update_start() {
+  local id=$1
+
+  jq -c --arg id "$id" --argjson at "$(date +%s)" \
+    '.running = ((.running // {}) | .[$id] = $at) | .last = ((.last // {}) | del(.[$id]))' \
+    <<<"$(plugin_updates_cache)" 2>/dev/null | write_update_cache
+
+  # Whether to come back is decided here, while the window is still up to be
+  # asked. A summon after the fact cannot tell a window that was torn down
+  # from one the reader had already closed, and opening a window nobody asked
+  # for is worse than not returning to one.
+  local reopen=0
+  window_open && reopen=1
+
+  setsid bash "$OMASETTINGS_BIN" plugin update-run "$id" "$reopen" >/dev/null 2>&1 &
+  disown 2>/dev/null || true
+
+  # The window wants the spinner now, not at the next poll.
+  plugin_updates_cache
+}
+
+plugin_update_run() {
+  local id=$1 reopen=${2:-0} out rc msg
+  out=$(omarchy-plugin-update "$id" --yes 2>&1)
+  rc=$?
+
+  # Upstream's own last line is the message worth showing: "Updated x.",
+  # "x is up to date.", or why it refused.
+  msg=$(printf '%s' "$out" | grep -v '^[[:space:]]*$' | tail -n 1 | head -c 400)
+  if [[ -z $msg ]]; then
+    (( rc == 0 )) && msg="Updated." || msg="Update failed."
+  fi
+
+  # A successful update makes the recorded count a lie; the cheapest honest
+  # answer is zero, which is what a fresh check would find anyway.
+  jq -c --arg id "$id" --argjson ok "$(( rc == 0 ? 1 : 0 ))" --arg msg "$msg" \
+     --argjson at "$(date +%s)" '
+       .running = ((.running // {}) | del(.[$id]))
+       | .last = ((.last // {}) | .[$id] = { ok: ($ok == 1), message: $msg, at: $at })
+       | if $ok == 1 then
+           .results = ((.results // {}) | .[$id] = 0)
+           | .changes = ((.changes // {}) | del(.[$id]))
+         else . end' \
+    <<<"$(plugin_updates_cache)" 2>/dev/null | write_update_cache
+
+  # The verdict is written before the window is asked back, so the page it
+  # opens on already has it.
+  (( reopen == 1 )) && reopen_window
+  return 0
 }

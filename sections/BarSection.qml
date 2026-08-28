@@ -155,9 +155,15 @@ Ui.SectionBody {
                 accent: Ui.Palette.accent
                 fontFamily: Ui.Palette.fontFamily
                 fontSize: Style.font.caption
+                // The move goes first and the buttons close after it. Closing
+                // them empties this Repeater's model, which destroys this
+                // delegate and invalidates the context every id in here is
+                // resolved through — `page` included, so the line that did the
+                // work came after the line that took away its ability to do it,
+                // and the move was silently dropped.
                 onClicked: {
-                  widgetRow.choosing = false
                   page.app.run(["bar", "move", widgetRow.modelData, modelData])
+                  widgetRow.choosing = false
                 }
               }
             }

@@ -128,6 +128,19 @@ state() {
           left: [($cfg.bar.layout.left // [])[] | .id],
           center: [($cfg.bar.layout.center // [])[] | .id],
           right: [($cfg.bar.layout.right // [])[] | .id]
+        },
+        # The one exception, and only because the page has to show it: a
+        # spacer is nothing but its width, so a row cannot describe itself
+        # without it. Null for every other widget, and in step with the ids
+        # above, since a spacer is named by its place rather than by an id.
+        # The settings of a widget are the keys of its layout entry beside the
+        # id, so the width is read from there and not from a nested object.
+        # (No apostrophes in here: this whole filter is one single-quoted
+        # string, and one would end it.)
+        sizes: {
+          left: [($cfg.bar.layout.left // [])[] | if .id == "omarchy.spacer" then ((.size // 12) | tonumber? // 12) else null end],
+          center: [($cfg.bar.layout.center // [])[] | if .id == "omarchy.spacer" then ((.size // 12) | tonumber? // 12) else null end],
+          right: [($cfg.bar.layout.right // [])[] | if .id == "omarchy.spacer" then ((.size // 12) | tonumber? // 12) else null end]
         }
       },
       idle: {

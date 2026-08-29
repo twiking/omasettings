@@ -32,6 +32,40 @@ bar_widget_section() {
     | ($sections | map(select((($doc.bar.layout[.]) // []) | any(.id == $id))) | first) // ""' 2>/dev/null
 }
 
+# ---------------------------------------------------- addressing an entry
+#
+# A widget is normally named by its id, which is unique — except for the ones
+# whose manifest says `allowMultiple`, the spacer among them. Those have no
+# identity of their own at all: two spacers in a section are the same object
+# twice, and the bar tells them apart by nothing but where they sit. So the
+# edits a spacer needs are addressed by section and place in it, and the id is
+# carried alongside only to be checked, so a page working from a list read a
+# moment ago cannot resize the widget that has since moved into that slot.
+bar_check_section() {
+  case $1 in
+    left | center | right) ;;
+    *) die "expected left, center or right" ;;
+  esac
+}
+
+bar_entry_id_at() {
+  local section=$1 index=$2
+  read_shell_json | jq -r --arg s "$section" --argjson i "$index" \
+    '((.bar.layout[$s] // [])[$i] // {}) | .id // ""' 2>/dev/null
+}
+
+# Every positional edit starts here, so none of them can act on a slot that is
+# not there or no longer holds what the caller thought it did.
+bar_check_at() {
+  local section=$1 index=$2 want=${3:-} found
+  bar_check_section "$section"
+  [[ $index =~ ^[0-9]+$ ]] || die "'$index' is not a place in the bar"
+  found=$(bar_entry_id_at "$section" "$index")
+  [[ -n $found ]] || die "there is no widget $index places into $section"
+  [[ -z $want || $found == "$want" ]] ||
+    die "$section $index holds '$found', not '$want'"
+}
+
 # Move a widget to another section, at the end of it.
 bar_move() {
   local id=$1 target=$2
@@ -77,6 +111,96 @@ bar_shift() {
       else .bar.layout[$section] = ($list | .[$from] as $moved | .[$to] as $displaced
                                           | .[$from] = $displaced | .[$to] = $moved)
       end'
+}
+
+# The same two moves as above, addressed by place rather than by id, which is
+# the only way to say which of several identical widgets is meant. The object
+# moves whole here too.
+bar_move_at() {
+  local section=$1 index=$2 target=$3 id=${4:-}
+  bar_check_at "$section" "$index" "$id"
+  bar_check_section "$target"
+  [[ $section == "$target" ]] && return 0
+
+  edit_shell_json --arg s "$section" --argjson i "$index" --arg t "$target" '
+    .bar.layout[$s][$i] as $widget
+    | .bar.layout[$s] = (.bar.layout[$s] | del(.[$i]))
+    | .bar.layout[$t] = ((.bar.layout[$t] // []) + [$widget])'
+}
+
+bar_shift_at() {
+  local section=$1 index=$2 direction=$3 id=${4:-}
+  bar_check_at "$section" "$index" "$id"
+  case $direction in
+    up | down) ;;
+    *) die "expected up or down" ;;
+  esac
+
+  edit_shell_json --arg s "$section" --argjson i "$index" --arg d "$direction" '
+    (.bar.layout[$s] // []) as $list
+    | ($i + (if $d == "up" then -1 else 1 end)) as $to
+    | if $to < 0 or $to >= ($list | length) then .
+      else .bar.layout[$s] = ($list | .[$i] as $moved | .[$to] as $displaced
+                                    | .[$i] = $displaced | .[$to] = $moved)
+      end'
+}
+
+# ------------------------------------------------------------- the spacer
+#
+# Blank space is the one bar widget you add rather than own: its manifest says
+# `allowMultiple`, so there is no list of spacers you have and none to enable
+# — there is only how many you have put in the bar and how wide each is. That
+# is why it is added and removed here rather than enabled and disabled, and
+# why it is kept out of the Disabled group: nothing is waiting there to come
+# back.
+BAR_SPACER_ID="omarchy.spacer"
+BAR_SPACER_DEFAULT=12
+BAR_SPACER_MAX=400
+
+bar_spacer_size_valid() {
+  [[ $1 =~ ^[0-9]+$ ]] && (( $1 >= 0 && $1 <= BAR_SPACER_MAX ))
+}
+
+bar_spacer_add() {
+  # Passed through empty by the router when the caller said nothing, which is
+  # not the same as unset.
+  local section=$1 size=${2:-}
+  [[ -n $size ]] || size=$BAR_SPACER_DEFAULT
+  bar_check_section "$section"
+  bar_spacer_size_valid "$size" || die "'$size' is not a width in pixels"
+
+  edit_shell_json --arg s "$section" --arg id "$BAR_SPACER_ID" --argjson size "$size" '
+    .bar //= {}
+    | .bar.layout //= {}
+    | .bar.layout[$s] = ((.bar.layout[$s] // []) + [{ id: $id, size: $size }])'
+}
+
+# A widget's settings are its layout entry, every key of it except `id` — so
+# the width is written beside the id and not under a `settings` key of its
+# own. Nested, it arrives at the widget as `settings.settings.size`, which is
+# not a number it can read: it falls back to its default and the width silently
+# does nothing, at every value, which is exactly how that looks from outside.
+#
+# This is the one bar edit that changes an object rather than moving one.
+bar_spacer_size() {
+  local section=$1 index=$2 size=$3
+  bar_check_at "$section" "$index" "$BAR_SPACER_ID"
+  bar_spacer_size_valid "$size" || die "'$size' is not a width in pixels"
+
+  edit_shell_json --arg s "$section" --argjson i "$index" --argjson size "$size" '
+    .bar.layout[$s][$i].size = $size'
+}
+
+# Removal is deletion, with nothing kept: a spacer has no settings worth
+# remembering beyond the width, and no identity to put back. Only a spacer can
+# be removed this way — for anything else, taking it out of the bar is
+# `bar disable`, which keeps the widget's settings and its place.
+bar_spacer_remove() {
+  local section=$1 index=$2
+  bar_check_at "$section" "$index" "$BAR_SPACER_ID"
+
+  edit_shell_json --arg s "$section" --argjson i "$index" '
+    .bar.layout[$s] = ((.bar.layout[$s] // []) | del(.[$i]))'
 }
 
 # --------------------------------------------------------- turning one off
@@ -160,6 +284,17 @@ bar_cmd() {
   case $action in
     move) bar_move "${1:-}" "${2:-}" ;;
     shift) bar_shift "${1:-}" "${2:-}" ;;
+    # The positional forms. The id is optional and only checked, so a stale
+    # list cannot move the widget that has taken that place since.
+    move-at) bar_move_at "${1:-}" "${2:-}" "${3:-}" "${4:-}" ;;
+    shift-at) bar_shift_at "${1:-}" "${2:-}" "${3:-}" "${4:-}" ;;
+    spacer)
+      case ${1:-} in
+        add) bar_spacer_add "${2:-}" "${3:-}" ;;
+        size) bar_spacer_size "${2:-}" "${3:-}" "${4:-}" ;;
+        remove) bar_spacer_remove "${2:-}" "${3:-}" ;;
+        *) die "unknown spacer action '${1:-}'" ;;
+      esac ;;
     enable) bar_enable "${1:-}" ;;
     disable) bar_disable "${1:-}" ;;
     hidden) bar_hidden ;;

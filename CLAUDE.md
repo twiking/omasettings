@@ -380,6 +380,23 @@ widget's **whole object**, never rebuild it from its id: a widget keeps its own
 settings in that same object, and half the bar would lose its configuration the
 first time it was reordered.
 
+**A widget's settings are the keys of its entry beside the id** — the bar hands
+a widget every key of its layout entry except `id`, so a width is written
+`{ "id": "omarchy.spacer", "size": 60 }`, not under a `settings` object. Nested,
+it arrives as `settings.settings.size`, the widget reads nothing there and
+falls back to its default, and the setting does nothing at *every* value. From
+outside that is indistinguishable from a widget that does not work at all —
+which is the wrong conclusion to reach, and an expensive one: the fix is to
+check `entrySettings` in the bar's own `BarModel.js` before blaming the widget.
+
+**A spacer is named by its place, not its id.** Its manifest sets
+`allowMultiple`, so two spacers in a section are the same id twice and the bar
+tells them apart by position alone. `bar move-at`, `shift-at` and the
+`bar spacer` commands therefore take a section and an index, and carry the id
+only to be checked against what is actually in that slot — a page acting on a
+list read a moment ago must not resize whatever has moved into it since. The
+by-id forms remain for the widgets that are unique.
+
 **Disabling a widget is ours to do, not Omarchy's.** A widget is in
 `.bar.layout` or it is not — that is the whole of its enabled state — and
 `omarchy plugin disable` says so by removing the entry. It removes only the

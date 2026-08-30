@@ -316,15 +316,68 @@ Ui.SectionBody {
         }
       }
 
-      // Under the section it adds to, because which section is the whole of
-      // the question — one row here says it, where three buttons somewhere
-      // else would have had to ask it again.
-      Ui.ActionRow {
-        width: parent.width
-        label: "Add spacer"
-        description: "Blank space, as wide as you set it. Add as many as you like."
-        buttonText: "Add"
-        onTriggered: page.app.run(["bar", "spacer", "add", sectionGroup.sectionKey])
+    }
+  }
+
+  // One row rather than one under each section: three of these said the same
+  // thing three times, and where a spacer goes is a question the row can ask
+  // once it is pressed — the same way Move asks it.
+  Ui.SettingGroup {
+    Ui.SettingRow {
+      id: addSpacer
+      width: parent.width
+      label: "Add spacer"
+      description: "Blank space, as wide as you set it. Add as many as you like."
+
+      property bool choosing: false
+      navKeys: [{ key: "↵", label: "Add" }]
+      onNavActivate: addSpacer.choosing = true
+
+      Row {
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Style.space(6)
+
+        Button {
+          visible: !addSpacer.choosing
+          text: "Add"
+          bordered: true
+          foreground: Ui.Palette.foreground
+          accent: Ui.Palette.accent
+          fontFamily: Ui.Palette.fontFamily
+          fontSize: Style.font.caption
+          onClicked: addSpacer.choosing = true
+        }
+
+        Repeater {
+          model: addSpacer.choosing ? ["left", "center", "right"] : []
+          delegate: Button {
+            required property var modelData
+            text: modelData === "left" ? "Left" : modelData === "center" ? "Center" : "Right"
+            bordered: true
+            foreground: Ui.Palette.foreground
+            accent: Ui.Palette.accent
+            fontFamily: Ui.Palette.fontFamily
+            fontSize: Style.font.caption
+            // The work first: closing the buttons destroys this delegate along
+            // with the context every id here resolves through.
+            onClicked: {
+              page.app.run(["bar", "spacer", "add", modelData])
+              addSpacer.choosing = false
+            }
+          }
+        }
+
+        Button {
+          visible: addSpacer.choosing
+          text: ""
+          bordered: true
+          foreground: Ui.Palette.foreground
+          accent: Ui.Palette.accent
+          fontFamily: Ui.Palette.fontFamily
+          fontSize: Style.font.caption
+          onClicked: addSpacer.choosing = false
+        }
       }
     }
   }

@@ -376,6 +376,9 @@ Item {
   readonly property var selfUpdate: state.selfUpdate !== undefined ? state.selfUpdate : ({})
   readonly property int selfBehind: selfUpdate.behind !== undefined ? Number(selfUpdate.behind) : 0
   readonly property string selfId: selfUpdate.id !== undefined ? String(selfUpdate.id) : ""
+  // Read from the manifest, which is where a version is decided; the title
+  // shows nothing until the state arrives rather than a number to correct.
+  readonly property string selfVersion: selfUpdate.version !== undefined ? String(selfUpdate.version) : ""
 
   Process {
     id: selfCheckProcess
@@ -1108,13 +1111,33 @@ Item {
             anchors.margins: Style.spacing.panelPadding
             spacing: Style.space(4)
 
-            Text {
-              text: "OmaSettings"
-              color: root.foreground
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.heading
-              font.bold: true
+            // The version sits beside the name rather than in it: the name is
+            // what the reader looks for, and a number in the same weight and
+            // size would be read as part of it.
+            RowLayout {
+              spacing: Style.space(6)
               Layout.bottomMargin: Style.space(10)
+
+              Text {
+                text: "OmaSettings"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.heading
+                font.bold: true
+                Layout.alignment: Qt.AlignBaseline
+              }
+
+              // Sitting on the same baseline rather than the same top edge:
+              // two sizes aligned by their tops read as two things, and this
+              // is one thing said twice over.
+              Text {
+                visible: root.selfVersion !== ""
+                text: root.selfVersion
+                color: root.muted
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                Layout.alignment: Qt.AlignBaseline
+              }
             }
 
             // Above the menu, because what it filters is the menu as much as

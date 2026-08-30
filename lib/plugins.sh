@@ -124,16 +124,24 @@ self_id() {
   jq -r '.id // empty' "$OMASETTINGS_DIR/manifest.json" 2>/dev/null
 }
 
+# The manifest is the one place a version is written, so it is the one place
+# it is read from: a copy anywhere else is a number that goes stale on the
+# release that forgets it.
+self_version() {
+  jq -r '.version // empty' "$OMASETTINGS_DIR/manifest.json" 2>/dev/null
+}
+
 # What the last sweep — the Plugins page, or self_check below — learned about
 # us. Reading the cache costs nothing, so the corner can be drawn immediately
 # and corrected once the check behind it lands.
 self_update_state() {
-  local id
+  local id version
   id=$(self_id)
-  [[ -n $id ]] || { echo '{"behind":0,"checkedAt":0}'; return; }
+  version=$(self_version)
+  [[ -n $id ]] || { echo '{"behind":0,"checkedAt":0,"version":""}'; return; }
 
-  plugin_updates_cache | jq -c --arg id "$id" '
-    { id: $id, behind: ((.results[$id] // 0)), checkedAt: (.checkedAt // 0) }'
+  plugin_updates_cache | jq -c --arg id "$id" --arg version "$version" '
+    { id: $id, version: $version, behind: ((.results[$id] // 0)), checkedAt: (.checkedAt // 0) }'
 }
 
 # One fetch, ours only, folded into the same cache the Plugins page reads.

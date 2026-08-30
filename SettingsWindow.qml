@@ -711,8 +711,18 @@ Item {
     return value === undefined || value === null ? fallback : value
   }
 
+  // A refresh asked for while one is already out used to be dropped. The read
+  // in flight had left before the write it would have shown, so the second of
+  // two quick presses moved the file and nothing on screen — which reads as a
+  // window that ignored you, not one that was busy. One is owed instead, and
+  // runs when this one lands. Owed, not queued: any number of presses during
+  // a read are answered by a single re-read, since the state is whatever it
+  // is by the time it is asked.
+  property bool refreshOwed: false
+
   function refresh() {
-    if (stateProc.running) return
+    if (stateProc.running) { refreshOwed = true; return }
+    refreshOwed = false
     stateProc.command = ["bash", root.helperPath, "state"]
     stateProc.running = true
   }
@@ -746,6 +756,7 @@ Item {
         }
       }
     }
+    onRunningChanged: if (!running && root.refreshOwed) root.refresh()
   }
 
   Process {

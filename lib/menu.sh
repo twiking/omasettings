@@ -60,8 +60,19 @@ jsonc_to_json() {
 
 # User extensions override defaults under the same id, the way the menu itself
 # merges them.
+# Parsed once per process. A state read asks for five groups — browser,
+# terminal, editor, DNS, agents — and each one was re-reading and re-merging
+# both menu files: the definition cannot change underneath a single read, and
+# four fifths of that work bought nothing. It was the largest single cost in
+# a state read, and every button in the window pays for a state read.
+MENU_ENTRIES_CACHE=""
+
 menu_entries() {
-  jq -c -s '.[0] * .[1]' <(jsonc_to_json "$MENU_DEFAULTS") <(jsonc_to_json "$MENU_USER") 2>/dev/null || echo '{}'
+  [[ -n $MENU_ENTRIES_CACHE ]] && { printf '%s\n' "$MENU_ENTRIES_CACHE"; return; }
+  MENU_ENTRIES_CACHE=$(jq -c -s '.[0] * .[1]' \
+    <(jsonc_to_json "$MENU_DEFAULTS") <(jsonc_to_json "$MENU_USER") 2>/dev/null) || MENU_ENTRIES_CACHE=""
+  [[ -n $MENU_ENTRIES_CACHE ]] || MENU_ENTRIES_CACHE='{}'
+  printf '%s\n' "$MENU_ENTRIES_CACHE"
 }
 
 # Every direct child of a menu id, in menu order: the entries OmaSettings

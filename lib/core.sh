@@ -27,6 +27,47 @@ capture() {
   timeout "$OMASETTINGS_READ_TIMEOUT" "$@" 2>/dev/null | head -c "$OMASETTINGS_READ_MAX"
 }
 
+# ---------------------------------------------------------- asked together
+#
+# A state read is two dozen independent questions put to the system — the
+# theme, the plugins, the network, the battery, the keyboard — and nearly all
+# of its time is spent waiting for each answer rather than working out any of
+# them. Asked one after another they took two and a half seconds. Asked
+# together they take as long as the slowest one alone.
+#
+# This is not a nicety. Every button in the window waits for a state read
+# before anything on screen moves, so it is the difference between a window
+# that answers and one that thinks about it.
+#
+# Two rules keep it safe. **Only reads go in here** — anything that writes runs
+# before the block, or two of them race for the same file. And **a producer
+# must not depend on another one's output**: what is derived from several
+# answers is derived after they are all in.
+par_begin() {
+  PAR_DIR=$(mktemp -d) || return 1
+}
+
+# The name is the answer's; the rest is the question. A producer that fails
+# leaves an empty file, which par_get reads as the fallback.
+par_run() {
+  local name=$1
+  shift
+  ( "$@" >"$PAR_DIR/$name" 2>/dev/null ) &
+}
+
+par_wait() { wait; }
+
+par_get() {
+  local file=$PAR_DIR/$1
+  [[ -s $file ]] && cat "$file" && return
+  printf '%s' "${2:-}"
+}
+
+par_end() {
+  [[ -n ${PAR_DIR:-} ]] && rm -rf "$PAR_DIR"
+  PAR_DIR=""
+}
+
 # Same bounds, but the tool's own complaint is what the caller is after: a
 # validator that rejects a write has to be able to say why.
 capture_err() {

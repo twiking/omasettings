@@ -43,7 +43,7 @@ unset module
 # here rather than to any one producer.
 main() {
 case ${1:-state} in
-  state) state ;;
+  state) shift; state "$@" ;;
   set) shift; set_key "$@" ;;
   reset) shift; setting_reset "${1:-}" ;;
   plugin) shift; plugin_cmd "$@" ;;

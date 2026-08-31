@@ -731,8 +731,103 @@ Item {
   // the world once it settles rather than guessing what changed.
   function run(args) {
     root.busy = true
+    root.lastArgs = args
     applyProc.command = ["bash", root.helperPath].concat(args)
     applyProc.running = true
+  }
+
+  // ---------------- what a change is worth re-reading ----------------------
+  //
+  // A click used to be answered by re-reading everything: the theme, the
+  // plugins, the battery, bluetoothctl — for moving a widget one place up.
+  // Which parts a command can have changed is knowable, and it is knowable
+  // *here*, from the command itself, rather than at the two hundred and eighty
+  // places that call this. A page cannot forget to declare what it changed if
+  // it never declares anything.
+  //
+  // Under-naming is safe by construction: the whole document is read a beat
+  // behind every one of these, so a command whose effects are wider than its
+  // slices leaves the window a moment late, never wrong. Anything not named
+  // here — reset, a menu flow, whatever is added next — waits for that read
+  // and is simply as fast as it was before.
+  property var lastArgs: []
+
+  function slicesFor(args) {
+    if (!args || args.length === 0) return []
+    switch (String(args[0])) {
+      case "bar": return ["bar"]
+      case "plugin": return ["plugins", "pluginUpdates", "selfUpdate"]
+      case "keys": return ["bindings"]
+      case "compose": return ["compose"]
+      case "devices": return ["devices", "hyprChanged"]
+      case "herdr": return ["herdr", "hyprChanged"]
+      case "tmux": return ["tmux", "hyprChanged"]
+      case "nvim": return ["nvim", "hyprChanged"]
+      case "wifi": return ["wifi"]
+      case "bluetooth": return ["bluetooth"]
+      case "audio": return ["audio"]
+      case "power": return ["power"]
+      case "set": return slicesForKey(args.length > 1 ? args[1] : "")
+    }
+    return []
+  }
+
+  // `set` is the one command that is many: what it touches is named by its
+  // key. Every setting also carries whether it now differs from what it was,
+  // which is why the changed list comes along with all of them.
+  function slicesForKey(key) {
+    var name = String(key || "")
+    if (name.indexOf("bar-") === 0) return ["bar", "hyprChanged"]
+    if (name.indexOf("idle-") === 0) return ["idle", "hyprChanged"]
+    if (name.indexOf("monitor") === 0) return ["monitors", "hyprChanged"]
+    if (name.indexOf("herdr:") === 0) return ["herdr", "hyprChanged"]
+    if (name.indexOf("tmux:") === 0) return ["tmux", "hyprChanged"]
+    if (name.indexOf("nvim:") === 0) return ["nvim", "hyprChanged"]
+    if (name === "font") return ["font", "hyprChanged"]
+    if (name === "text-scale") return ["textScale", "hyprChanged"]
+    if (name === "nightlight") return ["nightlight"]
+    // A theme moves more than it is asked to — colours, fonts, the bar — so
+    // it is left to the whole read rather than guessed at in parts.
+    if (name === "theme") return []
+    return ["hypr", "hyprChanged"]
+  }
+
+  function refreshSlices(names) {
+    if (!names || names.length === 0) return
+    if (sliceProc.running) { sliceOwed = names; return }
+    sliceOwed = []
+    sliceProc.command = ["bash", root.helperPath, "state"].concat(names)
+    sliceProc.running = true
+  }
+
+  property var sliceOwed: []
+
+  Process {
+    id: sliceProc
+    stdout: StdioCollector {
+      waitForEnd: true
+      // The keys that came back replace the ones on the window; everything
+      // else stays as it was. A fresh object, because assigning the same one
+      // back tells no binding anything.
+      onStreamFinished: {
+        try {
+          var part = JSON.parse(text)
+          if (!part || typeof part !== "object") return
+          var next = {}
+          for (var k in root.state) next[k] = root.state[k]
+          for (var j in part) next[j] = part[j]
+          root.state = next
+          root.loaded = true
+        } catch (e) {
+          // The whole document is already on its way; it will say the same.
+        }
+      }
+    }
+    onRunningChanged: if (!running && root.sliceOwed.length > 0) {
+      var owed = root.sliceOwed
+      root.sliceOwed = []
+      root.refreshSlices(owed)
+    }
   }
 
   function set(key, value) { run(["set", key, String(value)]) }
@@ -767,8 +862,13 @@ Item {
     }
     onRunningChanged: if (!running) {
       root.busy = false
+      // What the change was about, answered now; everything else a beat
+      // later. The wait used to come first, so a click that had already
+      // landed sat there for 400ms before the window even asked what it did.
+      root.refreshSlices(root.slicesFor(root.lastArgs))
       // Theme and font switches ripple through other processes; re-reading a
-      // beat later picks up settled values rather than mid-switch ones.
+      // beat later picks up settled values rather than mid-switch ones — and
+      // catches anything the slices above did not name.
       settleTimer.restart()
     }
   }

@@ -147,7 +147,10 @@ Ui.SectionBody {
 
           width: parent.width
           label: isSpacer ? "Spacer" : page.widgetName(modelData)
-          description: isSpacer ? effective + " px" : modelData
+          // The width was the description while there was nowhere else to
+          // say it. The slider reads it out now, so the row says what every
+          // other row in the list says: which widget this is.
+          description: modelData
 
           // The width is the only thing a spacer has, so the cursor edits it
           // directly rather than making the reader reach for the buttons.
@@ -293,27 +296,39 @@ Ui.SectionBody {
             }
           }
 
-          // The width stays on the right, where every other value in this
-          // window is: it is what the setting is worth, not something you do
-          // to the row.
+          // The width is read and set the way every other number in this
+          // window is: the slider fills the control side of the row and says
+          // what it is worth beside it, the same shape NumberRow gives a
+          // setting on any other page. It is a value, not something you do to
+          // the row, so it stays on the right while the controls lead.
           Row {
-            anchors.right: parent.right
-            spacing: Style.space(6)
+            width: parent.width
+            visible: widgetRow.isSpacer && !widgetRow.choosing
+            spacing: Style.space(10)
 
-            // A width is a quantity, and a quantity is dragged rather than
-            // clicked towards: at four pixels a press, 200px was fifty
-            // presses. Written when the drag ends, like every other slider
-            // here, so a drag across the row is one write and not a hundred.
+            // Written when the drag ends, like every other slider here, so
+            // crossing the row is one write rather than a hundred.
             PanelSlider {
+              id: widthSlider
+              width: parent.width - widthReadout.width - Style.space(10)
               anchors.verticalCenter: parent.verticalCenter
-              visible: widgetRow.isSpacer && !widgetRow.choosing
-              width: Style.space(160)
               integer: true
               step: 2
               minimum: 0
               maximum: 400
               value: widgetRow.effective
               onReleased: function(next) { widgetRow.setSize(next) }
+            }
+
+            Text {
+              id: widthReadout
+              anchors.verticalCenter: parent.verticalCenter
+              width: Style.space(76)
+              horizontalAlignment: Text.AlignRight
+              text: (widthSlider.dragging ? Math.round(widthSlider.liveValue) : widgetRow.effective) + " px"
+              color: Ui.Palette.muted
+              font.family: Ui.Palette.fontFamily
+              font.pixelSize: Style.font.caption
             }
           }
         }

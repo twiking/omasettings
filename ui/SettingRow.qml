@@ -107,9 +107,31 @@ Item {
     visible: settingRow.current
   }
 
+  // A slot before the name, for a control that decides what the row *is*
+  // rather than what its setting is worth — which section a widget belongs
+  // to, say. Those read as part of the name, so they sit with it rather than
+  // across the row among the controls.
+  //
+  // It sizes itself from what it holds and is nothing at all when empty, so
+  // every row that puts nothing here is laid out exactly as before. Whatever
+  // goes in must not anchor to it: a child anchored to a parent that measures
+  // its children is a binding loop.
+  property alias leading: leadingHolder.data
+
+  Item {
+    id: leadingHolder
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    implicitWidth: childrenRect.width
+    implicitHeight: childrenRect.height
+    width: implicitWidth
+    height: implicitHeight
+  }
+
   Column {
     id: labelColumn
-    anchors.left: parent.left
+    anchors.left: leadingHolder.right
+    anchors.leftMargin: leadingHolder.width > 0 ? Style.space(12) : 0
     anchors.verticalCenter: parent.verticalCenter
     width: parent.width * 0.5
     spacing: Style.space(2)

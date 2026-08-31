@@ -172,13 +172,32 @@ Ui.SectionBody {
           // section the widget belongs to — rather than setting a value on it,
           // and reading them next to the name is reading the answer next to
           // the question.
+          // Everything you can do to a row sits in front of its name. What a
+          // widget is doing in the bar — which section, which place in it,
+          // whether it is there at all — is what this page is for, so the
+          // controls lead and the name follows them.
           leading: Row {
             spacing: Style.space(6)
 
+            Button {
+              anchors.verticalCenter: parent.verticalCenter
+              visible: !widgetRow.choosing
+              text: "Move"
+              bordered: true
+              foreground: Ui.Palette.foreground
+              accent: Ui.Palette.accent
+              fontFamily: Ui.Palette.fontFamily
+              fontSize: Style.font.caption
+              onClicked: widgetRow.choosing = true
+            }
+
+            // Which section a widget belongs to is one decision, so it is one
+            // button: Move asks, and the two sections it is not in answer.
             Repeater {
               model: widgetRow.choosing ? widgetRow.elsewhere : []
               delegate: Button {
                 required property var modelData
+                anchors.verticalCenter: parent.verticalCenter
                 text: widgetRow.sectionTitle(modelData)
                 bordered: true
                 foreground: Ui.Palette.foreground
@@ -202,41 +221,6 @@ Ui.SectionBody {
                 }
               }
             }
-          }
-
-
-          Row {
-            anchors.right: parent.right
-            spacing: Style.space(6)
-
-            // A width is a quantity, and a quantity is dragged rather than
-            // clicked towards: at four pixels a press, 200px was fifty
-            // presses. Written when the drag ends, like every other slider
-            // here, so a drag across the row is one write and not a hundred.
-            PanelSlider {
-              anchors.verticalCenter: parent.verticalCenter
-              visible: widgetRow.isSpacer && !widgetRow.choosing
-              width: Style.space(160)
-              integer: true
-              step: 2
-              minimum: 0
-              maximum: 400
-              value: widgetRow.effective
-              onReleased: function(next) { widgetRow.setSize(next) }
-            }
-
-            Button {
-              anchors.verticalCenter: parent.verticalCenter
-              visible: !widgetRow.choosing
-              text: "Move"
-              bordered: true
-              foreground: Ui.Palette.foreground
-              accent: Ui.Palette.accent
-              fontFamily: Ui.Palette.fontFamily
-              fontSize: Style.font.caption
-              onClicked: widgetRow.choosing = true
-            }
-
 
             // Asking and then thinking better of it has to be possible.
             Button {
@@ -251,10 +235,8 @@ Ui.SectionBody {
               onClicked: widgetRow.choosing = false
             }
 
-            // Disabling is about the widget rather than where it goes, so it
-            // sits last, after the buttons that place it. A spacer is removed
-            // instead: there is nothing of it to keep, and nothing waiting in
-            // the Disabled group for it to come back to.
+            // A spacer is removed rather than disabled: there is nothing of it
+            // to keep, and nothing waiting in the Disabled group to come back.
             Button {
               anchors.verticalCenter: parent.verticalCenter
               visible: widgetRow.isSpacer && !widgetRow.choosing
@@ -310,6 +292,30 @@ Ui.SectionBody {
                                        "down", String(widgetRow.modelData)])
             }
           }
+
+          // The width stays on the right, where every other value in this
+          // window is: it is what the setting is worth, not something you do
+          // to the row.
+          Row {
+            anchors.right: parent.right
+            spacing: Style.space(6)
+
+            // A width is a quantity, and a quantity is dragged rather than
+            // clicked towards: at four pixels a press, 200px was fifty
+            // presses. Written when the drag ends, like every other slider
+            // here, so a drag across the row is one write and not a hundred.
+            PanelSlider {
+              anchors.verticalCenter: parent.verticalCenter
+              visible: widgetRow.isSpacer && !widgetRow.choosing
+              width: Style.space(160)
+              integer: true
+              step: 2
+              minimum: 0
+              maximum: 400
+              value: widgetRow.effective
+              onReleased: function(next) { widgetRow.setSize(next) }
+            }
+          }
         }
       }
 
@@ -330,15 +336,28 @@ Ui.SectionBody {
       navKeys: [{ key: "↵", label: "Add" }]
       onNavActivate: addSpacer.choosing = true
 
-      // Where it goes is asked in front of the name, like the section buttons
-      // on the rows above, so the same question is asked in the same place.
+      // Everything you can do sits in front of the name here too, so this row
+      // reads like the ones above it: press Add, then say where.
       leading: Row {
         spacing: Style.space(6)
+
+        Button {
+          anchors.verticalCenter: parent.verticalCenter
+          visible: !addSpacer.choosing
+          text: "Add"
+          bordered: true
+          foreground: Ui.Palette.foreground
+          accent: Ui.Palette.accent
+          fontFamily: Ui.Palette.fontFamily
+          fontSize: Style.font.caption
+          onClicked: addSpacer.choosing = true
+        }
 
         Repeater {
           model: addSpacer.choosing ? ["left", "center", "right"] : []
           delegate: Button {
             required property var modelData
+            anchors.verticalCenter: parent.verticalCenter
             text: modelData === "left" ? "Left" : modelData === "center" ? "Center" : "Right"
             bordered: true
             foreground: Ui.Palette.foreground
@@ -353,29 +372,11 @@ Ui.SectionBody {
             }
           }
         }
-      }
-
-
-      Row {
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: Style.space(6)
 
         Button {
-          visible: !addSpacer.choosing
-          text: "Add"
-          bordered: true
-          foreground: Ui.Palette.foreground
-          accent: Ui.Palette.accent
-          fontFamily: Ui.Palette.fontFamily
-          fontSize: Style.font.caption
-          onClicked: addSpacer.choosing = true
-        }
-
-
-        Button {
+          anchors.verticalCenter: parent.verticalCenter
           visible: addSpacer.choosing
-          text: ""
+          text: "\uf00d"
           bordered: true
           foreground: Ui.Palette.foreground
           accent: Ui.Palette.accent

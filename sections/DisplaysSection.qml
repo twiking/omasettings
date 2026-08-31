@@ -109,8 +109,10 @@ Ui.SectionBody {
 
     Ui.TextRow {
       label: "Set up a display that is not connected"
-      description: "Its model, as hyprctl monitors all prints it — like DELL P2723QE — or a connector name like DP-3. What you set is kept for when it arrives."
-      placeholder: "DELL P2723QE"
+      // No real model as the example: a placeholder naming an actual monitor
+      // reads as a value this window detected rather than as an illustration.
+      description: "Its model, as hyprctl monitors all prints it under description, or a connector name like DP-3. What you set is kept for when it arrives."
+      placeholder: "Model, or a connector like DP-3"
       value: ""
       buttonText: "Add Display"
       clearOnCommit: true

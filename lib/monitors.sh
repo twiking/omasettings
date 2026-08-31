@@ -21,10 +21,10 @@
 #
 # So a display is keyed by what it says about itself. Hyprland matches monitor
 # rules on `desc:<description>` as well as on connector name, which is what the
-# hand-written `monitor = desc:Dell Inc. DELL P2723QE 9C3D904, ...` lines in a
+# hand-written `monitor = desc:Dell Inc. DELL U2724D 1A2B3C4, ...` lines in a
 # .conf setup have always used. A key here is therefore:
 #
-#   desc:Dell Inc. DELL P2723QE 9C3D904   — a display with an EDID description
+#   desc:Dell Inc. DELL U2724D 1A2B3C4   — a display with an EDID description
 #   DP-2                                  — the fallback, for a display that
 #                                           reports no description at all
 #
@@ -133,7 +133,7 @@ monitor_live() {
 # before this file knew about descriptions goes on finding its screen.
 #
 # `desc:` is a prefix match, the way Hyprland matches it: a hand-written
-# `desc:Dell Inc. DELL P2723QE` names the display whose full description
+# `desc:Dell Inc. DELL U2724D` names the display whose full description
 # carries a serial the user did not type.
 #
 # $2 is the live list when the caller already has it — one page load asks about
@@ -208,7 +208,7 @@ monitor_config_settings() {
 #
 # `name` is the key — it is what a setting key is built from, so the page keeps
 # calling it the display's name. `label` is what to put on the group, since
-# "desc:Dell Inc. DELL P2723QE 9C3D904" is an identity and not a title.
+# "desc:Dell Inc. DELL U2724D 1A2B3C4" is an identity and not a title.
 monitor_state() {
   monitor_migrate
   jq -c -n \
@@ -480,7 +480,7 @@ monitor_lua_scale() {
 # question: a connector name is what you can read off the back of the machine,
 # but it is also the one thing that will not still mean this screen once
 # something else is in that socket. So a description is taken as well, and
-# preferred — `Dell Inc. DELL P2723QE 9C3D904`, as `hyprctl monitors all`
+# preferred — `Dell Inc. DELL U2724D 1A2B3C4`, as `hyprctl monitors all`
 # prints it, or as much of the front of it as is unique.
 #
 # A connector name that is plugged in right now resolves to that display's
@@ -496,7 +496,7 @@ monitor_remember() {
   else
     local desc=${given#desc:}
     [[ $desc =~ $MONITOR_DESC_RE ]] \
-      || die "'$given' is not a display name, like DP-2, or a model, like DELL P2723QE"
+      || die "'$given' is not a display name, like DP-2, or a model, like DELL U2724D"
     name=$(monitor_key "desc:$desc")
   fi
 

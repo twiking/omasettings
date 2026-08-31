@@ -104,7 +104,7 @@ were.
 **A connector is not a display.** `DP-2` is whichever screen is in that socket:
 the monitor at work and the one at home are both `DP-2`, so settings keyed by
 connector followed the cable instead of the screen. A display is therefore
-keyed by what it says about itself — `desc:Dell Inc. DELL P2723QE 9C3D904`,
+keyed by what it says about itself — `desc:Dell Inc. DELL U2724D 1A2B3C4`,
 which Hyprland matches as a monitor rule the same way the hand-written
 `monitor = desc:...` lines of a `.conf` setup always did. That key is what the
 store is keyed by, what `output` says in the managed Lua, and what a setting

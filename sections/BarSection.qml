@@ -31,6 +31,12 @@ Ui.SectionBody {
   // it, and never sits in the Disabled group waiting to come back.
   readonly property string spacerId: "omarchy.spacer"
 
+  // One width for every row's controls, so the names after them line up down
+  // the whole page. Wide enough for the longest set — two arrows, Move and
+  // Disable — since a row that outgrew it would push its own name out of the
+  // column and undo the point of having one.
+  readonly property real controlsWidth: Style.space(230)
+
   // The bar stores ids; the plugin list is where the names are.
   function widgetName(id) {
     var list = app.plugins
@@ -170,17 +176,44 @@ Ui.SectionBody {
             return key === "left" ? "Left" : key === "center" ? "Center" : "Right"
           }
 
-          // Left, Center and Right sit before the name, not out among the
-          // controls on the right: they answer what this row *is* — which
-          // section the widget belongs to — rather than setting a value on it,
-          // and reading them next to the name is reading the answer next to
-          // the question.
-          // Everything you can do to a row sits in front of its name. What a
-          // widget is doing in the bar — which section, which place in it,
-          // whether it is there at all — is what this page is for, so the
-          // controls lead and the name follows them.
+          // Everything you can do to a row sits in front of its name, in the
+          // order you reach for it: where it sits, then which section, then
+          // whether it is in the bar at all. One width for the lot, so every
+          // name in the list starts in the same place.
+          leadingWidth: page.controlsWidth
           leading: Row {
             spacing: Style.space(6)
+
+            // Its place within the section is a straight nudge.
+            Button {
+              anchors.verticalCenter: parent.verticalCenter
+              visible: !widgetRow.choosing
+              enabled: widgetRow.index > 0
+              opacity: enabled ? 1 : 0.35
+              text: "\uf062"
+              bordered: true
+              foreground: Ui.Palette.foreground
+              accent: Ui.Palette.accent
+              fontFamily: Ui.Palette.fontFamily
+              fontSize: Style.font.caption
+              onClicked: page.app.run(["bar", "shift-at", widgetRow.section, String(widgetRow.index),
+                                       "up", String(widgetRow.modelData)])
+            }
+
+            Button {
+              anchors.verticalCenter: parent.verticalCenter
+              visible: !widgetRow.choosing
+              enabled: widgetRow.index < widgetRow.total - 1
+              opacity: enabled ? 1 : 0.35
+              text: "\uf063"
+              bordered: true
+              foreground: Ui.Palette.foreground
+              accent: Ui.Palette.accent
+              fontFamily: Ui.Palette.fontFamily
+              fontSize: Style.font.caption
+              onClicked: page.app.run(["bar", "shift-at", widgetRow.section, String(widgetRow.index),
+                                       "down", String(widgetRow.modelData)])
+            }
 
             Button {
               anchors.verticalCenter: parent.verticalCenter
@@ -263,37 +296,6 @@ Ui.SectionBody {
               fontSize: Style.font.caption
               onClicked: page.app.run(["bar", "disable", String(widgetRow.modelData)])
             }
-
-            // Its place within the section stays a straight nudge.
-            Button {
-              anchors.verticalCenter: parent.verticalCenter
-              visible: !widgetRow.choosing
-              enabled: widgetRow.index > 0
-              opacity: enabled ? 1 : 0.35
-              text: "\uf062"
-              bordered: true
-              foreground: Ui.Palette.foreground
-              accent: Ui.Palette.accent
-              fontFamily: Ui.Palette.fontFamily
-              fontSize: Style.font.caption
-              onClicked: page.app.run(["bar", "shift-at", widgetRow.section, String(widgetRow.index),
-                                       "up", String(widgetRow.modelData)])
-            }
-
-            Button {
-              anchors.verticalCenter: parent.verticalCenter
-              visible: !widgetRow.choosing
-              enabled: widgetRow.index < widgetRow.total - 1
-              opacity: enabled ? 1 : 0.35
-              text: "\uf063"
-              bordered: true
-              foreground: Ui.Palette.foreground
-              accent: Ui.Palette.accent
-              fontFamily: Ui.Palette.fontFamily
-              fontSize: Style.font.caption
-              onClicked: page.app.run(["bar", "shift-at", widgetRow.section, String(widgetRow.index),
-                                       "down", String(widgetRow.modelData)])
-            }
           }
 
           // The width is read and set the way every other number in this
@@ -346,6 +348,8 @@ Ui.SectionBody {
       width: parent.width
       label: "Add spacer"
       description: "Blank space, as wide as you set it. Add as many as you like."
+      // The same column as the rows above, so this name lines up with theirs.
+      leadingWidth: page.controlsWidth
 
       property bool choosing: false
       navKeys: [{ key: "↵", label: "Add" }]

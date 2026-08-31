@@ -118,13 +118,19 @@ Item {
   // its children is a binding loop.
   property alias leading: leadingHolder.data
 
+  // Rows whose leading controls differ in width — Disable on one, Remove on
+  // the next — would each start their name in a different place, and a column
+  // of names that nearly lines up is worse than one that plainly does not. A
+  // page that leads with controls gives them one width for the whole list.
+  property real leadingWidth: -1
+
   Item {
     id: leadingHolder
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
     implicitWidth: childrenRect.width
     implicitHeight: childrenRect.height
-    width: implicitWidth
+    width: settingRow.leadingWidth >= 0 ? settingRow.leadingWidth : implicitWidth
     height: implicitHeight
   }
 

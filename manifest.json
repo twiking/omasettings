@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.twiking.omasettings",
   "name": "OmaSettings",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "author": "Tobias Wiking",
   "license": "MIT",
   "description": "One window for every Omarchy setting, from Hyprland to your keybindings to tmux. Searchable, and anything you change can be put back.",

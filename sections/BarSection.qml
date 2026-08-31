@@ -34,8 +34,9 @@ Ui.SectionBody {
   // One width for every row's controls, so the names after them line up down
   // the whole page. Wide enough for the longest set — two arrows, Move and
   // Disable — since a row that outgrew it would push its own name out of the
-  // column and undo the point of having one.
-  readonly property real controlsWidth: Style.space(230)
+  // column and undo the point of having one, and no wider than that: the
+  // slack is space between a widget and its own controls.
+  readonly property real controlsWidth: Style.space(200)
 
   // The bar stores ids; the plugin list is where the names are.
   function widgetName(id) {

@@ -208,6 +208,19 @@ Item {
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     width: parent.width * 0.46
-    implicitHeight: childrenRect.height
+    // Measured from what the controls ask for, not from where they ended up.
+    // `childrenRect` is the tempting way to write this and the wrong one: the
+    // row's height is built from this value (see implicitHeight above), and
+    // this holder centres its children against that same height, so reading
+    // their laid-out geometry closes the circle and Qt freezes the row at
+    // whatever height it happened to have. Implicit sizes are what a control
+    // wants before anyone has placed it, so asking for those stays outside
+    // the loop.
+    implicitHeight: {
+      var tallest = 0
+      for (var i = 0; i < children.length; i++)
+        tallest = Math.max(tallest, children[i].implicitHeight)
+      return tallest
+    }
   }
 }

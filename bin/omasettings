@@ -9,7 +9,8 @@
 #   store.sh         OmaSettings' own store of what it has set
 #   hypr.sh          Hyprland options, live and in a generated config
 #   devices.sh       per-device input settings (Hyprland's hl.device)
-#   monitors.sh      displays: resolution and scale, per output
+#   monitors.sh      displays: resolution and scale, per screen (keyed by the
+#                    display's own description, not the connector it is in)
 #   shell_config.sh  ~/.config/omarchy/shell.json
 #   compose.sh       ~/.XCompose
 #   plugins.sh       installed shell plugins

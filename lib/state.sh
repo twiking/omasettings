@@ -276,7 +276,7 @@ state() {
               + entries($audio.inputs; "Input"; "description"; "name")),
       bindings: entries($bindings.items; "Keybindings"; "keys"; "description"),
       plugins: entries($plugins; "Plugins"; "name"; "id"),
-      displays: entries($monitors; "Displays"; "name"; "name") }'''))
+      displays: entries($monitors; "Displays"; "label"; "name") }'''))
 
   jq -cn \
     --argjson cfg "$cfg" \

@@ -11,32 +11,90 @@
 # unplugged and plugged back in, and Hyprland matches its monitor rules again
 # each time. So what is set here lands in the managed Lua like the rest, and a
 # display that is not connected can be configured for the next time it is.
-
+#
+# ------------------------------------------------------ which display is which
+#
+# A connector is not an identity. DP-2 is whichever screen is in that socket:
+# the work monitor at the desk and the one at home are both DP-2, and settings
+# written against the connector followed the cable rather than the screen — a
+# 4K desktop panel handed the laptop dock's scale the moment it was plugged in.
+#
+# So a display is keyed by what it says about itself. Hyprland matches monitor
+# rules on `desc:<description>` as well as on connector name, which is what the
+# hand-written `monitor = desc:Dell Inc. DELL P2723QE 9C3D904, ...` lines in a
+# .conf setup have always used. A key here is therefore:
+#
+#   desc:Dell Inc. DELL P2723QE 9C3D904   — a display with an EDID description
+#   DP-2                                  — the fallback, for a display that
+#                                           reports no description at all
+#
+# The key is what the store is keyed by, what `output` says in the managed Lua,
+# and what a setting key (`monitor:<key>:scale`) names. The connector name is
+# kept alongside it for the page to show, and for the one place that still has
+# to speak connectors: see monitor_lua_scale.
 MONITOR_NAME_RE='^[A-Za-z][A-Za-z0-9]*(-[A-Za-z0-9]+)+$'
+
+# A description goes into Lua as a quoted string and into a setting key that is
+# split on colons, so the two characters that would break either are refused
+# rather than escaped.
+MONITOR_DESC_RE='^[^"\\]+$'
+
+MONITOR_SCHEMA=3
 
 # What an earlier version of this page wrote down.
 #
-# It recorded a scale and the mode it read off the display, then applied both
-# with `hyprctl keyword monitor` — which does nothing on a Lua config. So every
-# entry it left is a setting that never took effect: this machine's store asked
-# for scale 1.80 while both displays ran at 1.6.
+# Schema 2: it recorded a scale and the mode it read off the display, then
+# applied both with `hyprctl keyword monitor` — which does nothing on a Lua
+# config. So every entry it left is a setting that never took effect: this
+# machine's store asked for scale 1.80 while both displays ran at 1.6. Now that
+# these entries are rendered into the managed file, keeping them would apply
+# years-old fiction to someone's screens on the next reload. They are dropped
+# once instead, and the page starts from what the displays are actually doing.
 #
-# Now that these entries are rendered into the managed file, keeping them would
-# apply years-old fiction to someone's screens on the next reload. They are
-# dropped once instead, and the page starts from what the displays are actually
-# doing.
+# Schema 3: entries were keyed by connector name. Those are re-keyed to the
+# description of whatever is in that connector now — the best guess there is,
+# and the same one the user was making when they set it.
 monitor_migrate() {
-  local store
-  store=$(read_store)
-  jq -e '(.monitorsSchema // 0) >= 2' <<<"$store" >/dev/null && return 0
+  local schema
+  schema=$(jq -r '(.monitorsSchema // 0)' <<<"$(read_store)")
+  [[ $schema =~ ^[0-9]+$ ]] || schema=0
+  ((schema >= MONITOR_SCHEMA)) && return 0
+
   # On a .conf setup the keyword worked, so those entries are real settings and
   # not fiction — they are kept, and only the flag is written.
-  [[ -f $HYPR_DIR/hyprland.lua ]] || {
-    edit_store '.monitorsSchema = 2'
-    return 0
-  }
-  edit_store '.monitors = {} | .monitorsSchema = 2
-    | if .written then .written |= with_entries(select(.key | startswith("monitor:") | not)) else . end'
+  if ((schema < 2)) && [[ -f $HYPR_DIR/hyprland.lua ]]; then
+    edit_store '.monitors = {}
+      | if .written then .written |= with_entries(select(.key | startswith("monitor:") | not)) else . end'
+  fi
+
+  ((schema < 3)) && monitor_rekey_to_description
+
+  edit_store '.monitorsSchema = $v' --argjson v "$MONITOR_SCHEMA"
+}
+
+# Connector name → description key, for everything already written down. Only
+# the displays plugged in right now can be re-keyed: nothing else says what was
+# ever in that socket. An entry for a display that is not here keeps its
+# connector key and goes on working as one.
+monitor_rekey_to_description() {
+  local map
+  map=$(jq -c '
+    map(select(.key != .name)) | map({ (.name): .key }) | add // {}' <<<"$(monitor_live)")
+  [[ -z $map || $map == "{}" ]] && return 0
+
+  edit_store '
+    def rekey($k): $map[$k] // $k;
+    .monitors = ((.monitors // {}) | with_entries(.key |= rekey(.)))
+    | if .written then
+        .written |= with_entries(
+          if (.key | startswith("monitor:")) then
+            ((.key | ltrimstr("monitor:")) | split(":")) as $parts
+            | if ($parts | length) >= 2
+              then .key = "monitor:" + rekey($parts[:-1] | join(":")) + ":" + $parts[-1]
+              else .key = "monitor:" + rekey($parts | join(":"))
+              end
+          else . end)
+      else . end' --argjson map "$map"
 }
 
 # What Hyprland reports, including the displays it knows about but has turned
@@ -51,8 +109,10 @@ monitor_live() {
     [ .[] | . as $m
       | ([$m.availableModes[]? | sub("Hz$"; "")]
          | reduce .[] as $x ([]; if index($x) then . else . + [$x] end)) as $modes
+      | ($m.description // "") as $desc
       | { name: $m.name,
-          description: ($m.description // ""),
+          key: (if $desc == "" then $m.name else "desc:" + $desc end),
+          description: $desc,
           disabled: ($m.disabled // false),
           scale: $m.scale,
           width: $m.width,
@@ -68,6 +128,47 @@ monitor_live() {
           connected: true } ]' 2>/dev/null || echo '[]'
 }
 
+# The live display a key names, or `null`. A key matches its own display, and a
+# connector name still matches the display in that socket, so a setting written
+# before this file knew about descriptions goes on finding its screen.
+#
+# `desc:` is a prefix match, the way Hyprland matches it: a hand-written
+# `desc:Dell Inc. DELL P2723QE` names the display whose full description
+# carries a serial the user did not type.
+#
+# $2 is the live list when the caller already has it — one page load asks about
+# every display, and `hyprctl monitors all` is not free.
+monitor_find() {
+  local key=$1 live=${2:-}
+  [[ -n $live ]] || live=$(monitor_live)
+  jq -c --arg n "$key" '
+    def matches($e):
+      $e.key == $n
+      or $e.name == $n
+      or (($n | startswith("desc:")) and $e.description != ""
+          and ($e.description | startswith($n[5:])));
+    (map(select(matches(.))) | first) // null' <<<"$live"
+}
+
+# The key this window should file a display under, given whatever it was handed:
+# a connector name, a partial description, or a key already. A display that is
+# not connected cannot be resolved, so what was typed stands as the key.
+monitor_key() {
+  local found
+  found=$(monitor_find "$1" "${2:-}")
+  [[ $found == null ]] && { printf '%s\n' "$1"; return 0; }
+  jq -r '.key' <<<"$found"
+}
+
+# The connector a key is plugged into, or nothing. Only for talking to things
+# that deal in connectors — Hyprland itself takes the key.
+monitor_output_name() {
+  local found
+  found=$(monitor_find "$1" "${2:-}")
+  [[ $found == null ]] && return 0
+  jq -r '.name' <<<"$found"
+}
+
 # Their own hl.monitor lines. Read, never written: a display already set up in
 # monitors.lua would otherwise read as unconfigured here, and a resolution
 # picked from this page would silently fight the line they wrote.
@@ -75,11 +176,17 @@ monitor_live() {
 # One call per line is what Omarchy's own template writes, and all that is
 # read: a table split over several lines is left to say nothing rather than be
 # half understood. The global rule (`output = ""`) is not a display.
+#
+# Their output string is put through monitor_key, so a rule they wrote against
+# DP-2 and one this window wrote against the description of the screen in DP-2
+# are recognised as being about the same display.
 monitor_config_settings() {
-  local file line name mode scale out='{}'
+  local file line name mode scale live out='{}'
+  live=$(monitor_live)
   while IFS= read -r line; do
     name=$(sed -nE 's/.*output *= *"([^"]+)".*/\1/p' <<<"$line")
     [[ -n $name ]] || continue
+    name=$(monitor_key "$name" "$live")
     mode=$(sed -nE 's/.*mode *= *"([^"]+)".*/\1/p' <<<"$line")
     scale=$(sed -nE 's/.*scale *= *([0-9]+(\.[0-9]+)?).*/\1/p' <<<"$line")
     out=$(jq -c --arg n "$name" --arg m "$mode" --arg s "$scale" \
@@ -98,6 +205,10 @@ monitor_config_settings() {
 # window has settings for, and the ones their own config names. A display you
 # own is not always plugged in, so the ones that are not are listed too rather
 # than losing their settings the moment they are unplugged.
+#
+# `name` is the key — it is what a setting key is built from, so the page keeps
+# calling it the display's name. `label` is what to put on the group, since
+# "desc:Dell Inc. DELL P2723QE 9C3D904" is an identity and not a title.
 monitor_state() {
   monitor_migrate
   jq -c -n \
@@ -107,9 +218,17 @@ monitor_state() {
     def entry($name; $live):
       ($stored[$name] // {}) as $ours
       | ($configured[$name] // {}) as $theirs
+      | ($live.description // (if ($name | startswith("desc:")) then $name[5:] else "" end)) as $desc
       | { name: $name,
+          output: ($live.name // ""),
+          description: $desc,
+          # The description alone: the connector has a row of its own, and a
+          # description out of Hyprland is long enough without it. No
+          # apostrophe in this comment: the whole filter is one shell string.
+          label: (if $desc != "" then $desc
+                  elif $live != null then $live.name
+                  else $name end),
           connected: ($live != null),
-          description: ($live.description // ""),
           disabled: ($live.disabled // false),
           modes: ($live.modes // []),
           width: $live.width,
@@ -121,11 +240,11 @@ monitor_state() {
           scale: ($ours.scale // $live.scale // $theirs.scale // 1),
           settings: $ours,
           configured: $theirs };
-    ($live | map(.name)) as $connected
+    ($live | map(.key)) as $connected
     | ($connected + (($stored | keys) + ($configured | keys) | sort | unique)
        | reduce .[] as $n ([]; if index($n) then . else . + [$n] end)) as $names
     | [ $names[] as $n
-        | entry($n; ($live | map(select(.name == $n)) | first)) ]'
+        | entry($n; ($live | map(select(.key == $n)) | first)) ]'
 }
 
 # The Lua table a display's settings make, shared by the live apply and the
@@ -158,18 +277,20 @@ monitor_apply_live() {
 # keeps something else, so the window would show a resolution the screen is
 # not running. The list the display itself reports is the check.
 monitor_mode_supported() {
-  local name=$1 mode=$2
+  local name=$1 mode=$2 found
   [[ $mode == preferred ]] && return 0
-  jq -e --arg n "$name" --arg m "$mode" '
-    map(select(.name == $n)) | first
-    | if . == null then true else (.modes | index($m) != null) end' \
-    <<<"$(monitor_live)" >/dev/null
+  found=$(monitor_find "$name")
+  [[ $found == null ]] && return 0
+  jq -e --arg m "$mode" '.modes | index($m) != null' <<<"$found" >/dev/null
 }
 
 monitor_set() {
   local name=$1 field=$2 value=$3 json
   [[ -n $name ]] || die "no display given"
   monitor_migrate
+  # Whatever the caller named the display, the store speaks keys: a rule filed
+  # under DP-2 would be handed to the next screen in that socket.
+  name=$(monitor_key "$name")
 
   case $field in
     mode)
@@ -213,9 +334,10 @@ monitor_set() {
 # own rule places every display with `position = "auto"`, so leaving it out is
 # what keeps the arrangement it already had.
 monitor_in_force() {
-  jq -c --arg n "$1" '
-    map(select(.name == $n)) | first
-    | if . == null then {} else { mode: .mode, scale: .scale } end' <<<"$(monitor_live)"
+  local found
+  found=$(monitor_find "$1")
+  [[ $found == null ]] && { echo '{}'; return 0; }
+  jq -c '{ mode: .mode, scale: .scale }' <<<"$found"
 }
 
 # Putting one back writes the value the display had and then drops the rule:
@@ -224,6 +346,7 @@ monitor_in_force() {
 # or the display's own EDID — changes later.
 monitor_unset() {
   local name=$1 field=$2 now
+  name=$(monitor_key "$name")
   # What is left has to be a whole rule, and in one write: Hyprland reloads a
   # config file the moment it changes, so a partial rule on disk is applied
   # before anything can fill it back in — which put the display at scale 1.0
@@ -254,15 +377,25 @@ monitor_unset() {
 #
 # Only the scale, and only the internal panel: an external display is nobody
 # else's business, and stays in the managed file alone.
+#
+# This is also the one place that has to write a connector name rather than a
+# description key. The watcher looks the panel's rule up by the output name
+# `omarchy-hyprland-monitor-laptop` prints, so a `desc:` rule in that file is a
+# rule it cannot see — it would read no scale, fall back, and fight us again.
 monitor_internal() {
   command -v omarchy-hyprland-monitor-laptop >/dev/null 2>&1 || return 0
   omarchy-hyprland-monitor-laptop 2>/dev/null
 }
 
 monitor_is_internal() {
-  local internal
+  local internal output
   internal=$(monitor_internal)
-  [[ -n $internal && $1 == "$internal" ]]
+  [[ -n $internal ]] || return 1
+  output=$(monitor_output_name "$1")
+  # A key that resolves to nothing may still be the panel's own connector,
+  # written down before it knew about descriptions.
+  [[ -z $output ]] && output=$1
+  [[ $output == "$internal" ]]
 }
 
 MONITOR_LUA_MARKER="-- omasettings"
@@ -277,6 +410,15 @@ MONITOR_LUA_MARKER="-- omasettings"
 monitor_lua_scale() {
   local name=$1 value=$2 file="$HYPR_DIR/monitors.lua" previous next
   [[ -f $file ]] || return 0
+
+  # The watcher reads this file by connector name, so that is what goes in it —
+  # see the block above. A key that names no connected display cannot be
+  # written here at all.
+  local output
+  output=$(monitor_output_name "$name")
+  [[ -n $output ]] || output=$name
+  [[ $output =~ $MONITOR_NAME_RE ]] || return 0
+  name=$output
 
   previous=$(read_file "$file")
   # The pattern is built here rather than inside awk: a quoted output name in
@@ -334,12 +476,30 @@ monitor_lua_scale() {
   fi
 }
 
-# Configuring a display before it is plugged in: the name is all that is
-# needed, and the settings written against it are what makes it remembered.
+# Configuring a display before it is plugged in. What identifies it is the
+# question: a connector name is what you can read off the back of the machine,
+# but it is also the one thing that will not still mean this screen once
+# something else is in that socket. So a description is taken as well, and
+# preferred — `Dell Inc. DELL P2723QE 9C3D904`, as `hyprctl monitors all`
+# prints it, or as much of the front of it as is unique.
+#
+# A connector name that is plugged in right now resolves to that display's
+# description; one that is not stands as its own key, since nothing here can
+# say what will be in it.
 monitor_remember() {
-  local name=$1
+  local given=$1 name
   monitor_migrate
-  [[ $name =~ $MONITOR_NAME_RE ]] || die "'$name' is not a display name, like DP-2 or HDMI-A-1"
+  [[ -n $given ]] || die "no display given"
+
+  if [[ $given =~ $MONITOR_NAME_RE ]]; then
+    name=$(monitor_key "$given")
+  else
+    local desc=${given#desc:}
+    [[ $desc =~ $MONITOR_DESC_RE ]] \
+      || die "'$given' is not a display name, like DP-2, or a model, like DELL P2723QE"
+    name=$(monitor_key "desc:$desc")
+  fi
+
   edit_store '.monitors = ((.monitors // {}) | (if has($n) then . else .[$n] = {} end))' \
     --arg n "$name"
 }
@@ -349,6 +509,10 @@ monitor_remember() {
 monitor_forget() {
   local name=$1
   [[ -n $name ]] || die "no display given"
+  # Only a key that is actually in the store is resolved: forgetting must be
+  # able to reach an entry whose display is long gone.
+  jq -e --arg n "$name" '(.monitors // {}) | has($n)' <<<"$(read_store)" >/dev/null \
+    || name=$(monitor_key "$name")
   edit_store '.monitors = ((.monitors // {}) | del(.[$n]))
     | if .written then .written |= with_entries(select(.key | startswith("monitor:" + $n + ":") | not)) else . end' \
     --arg n "$name"
@@ -359,8 +523,8 @@ monitor_forget() {
 # What a display is set to now, for the change marks and the way back. A
 # display that is not connected can only answer from what we wrote down.
 monitor_value_now() {
-  local name=$1 field=$2
-  jq -r --arg n "$name" --arg f "$field" '
-    map(select(.name == $n)) | first | if . == null then empty else .[$f] | tostring end' \
-    <<<"$(monitor_live)"
+  local name=$1 field=$2 found
+  found=$(monitor_find "$name")
+  [[ $found == null ]] && return 0
+  jq -r --arg f "$field" 'if has($f) then .[$f] | tostring else empty end' <<<"$found"
 }

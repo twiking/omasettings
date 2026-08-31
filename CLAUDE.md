@@ -101,6 +101,22 @@ was the original bug there — it answers "keyword can't work with non-legacy
 parsers" on stderr while exiting 0, so both settings looked applied and never
 were.
 
+**A connector is not a display.** `DP-2` is whichever screen is in that socket:
+the monitor at work and the one at home are both `DP-2`, so settings keyed by
+connector followed the cable instead of the screen. A display is therefore
+keyed by what it says about itself — `desc:Dell Inc. DELL P2723QE 9C3D904`,
+which Hyprland matches as a monitor rule the same way the hand-written
+`monitor = desc:...` lines of a `.conf` setup always did. That key is what the
+store is keyed by, what `output` says in the managed Lua, and what a setting
+key (`monitor:<key>:scale`) names; a connector name is the fallback, for a
+display that reports no description, and is still accepted as input. Entries
+written against connectors are re-keyed once, to whatever is in that connector
+now (`monitorsSchema` 3).
+
+The one exception is `monitors.lua`, below: the clamshell watcher looks the
+laptop panel up by the connector name `omarchy-hyprland-monitor-laptop` prints,
+so a `desc:` rule there is a rule it cannot see.
+
 **The laptop panel's scale is not ours to keep.** Omarchy watches the internal
 display: while a laptop is docked, `omarchy-hyprland-monitor-clamshell` runs
 every couple of seconds, reads the scale out of `monitors.lua`, and puts the

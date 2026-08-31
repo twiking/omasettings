@@ -276,7 +276,7 @@ render_managed_lua() {
     # scale outlast the cable.
     jq -r '(.monitors // {}) | to_entries[]
       | select(.value != {})
-      | "hl.monitor({\n  output = \"" + .key + "\","
+      | "hl.monitor({\n  output = " + (.key | @json) + ","
         + ([.value | to_entries[]
             | "\n  " + .key + " = "
               + (if (.value | type) == "string" then "\"" + .value + "\"" else (.value | tostring) end) + ","]

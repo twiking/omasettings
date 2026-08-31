@@ -23,24 +23,32 @@ Ui.SectionBody {
     delegate: Ui.SettingGroup {
       required property var modelData
 
+      // The identity a setting is written against: the display's own
+      // description where it has one, so what is set here stays with the screen
+      // rather than with the socket it happened to be in. `label` is what to
+      // call it, since the identity itself reads as machinery.
       readonly property string name: String(modelData.name)
+      readonly property string label: String(modelData.label || modelData.name)
       readonly property bool connected: modelData.connected !== false
       readonly property var settings: modelData.settings || ({})
       readonly property var configured: modelData.configured || ({})
       readonly property var modes: modelData.modes || []
 
       width: parent.width
-      title: name + (connected ? "" : "  (not connected)")
+      title: label + (connected ? "" : "  (not connected)")
       note: !connected
         ? "Kept for the next time this display is plugged in."
         : Object.keys(configured).length > 0 && Object.keys(settings).length === 0
           ? "Set in your own Hyprland config."
           : ""
 
+      // The title says which screen this is. The connector is the part you
+      // cannot tell from that, and the part that changes between docks — so it
+      // is shown, and nothing is written against it.
       Ui.ReadingRow {
-        label: "Model"
-        visible: String(modelData.description || "") !== ""
-        value: String(modelData.description || "")
+        label: "Connector"
+        visible: connected && String(modelData.output || "") !== ""
+        value: String(modelData.output || "")
       }
 
       Ui.PickerRow {
@@ -90,17 +98,19 @@ Ui.SectionBody {
     }
   }
 
-  // Setting up a display that is not plugged in: nothing can list it, so its
-  // name is typed. Hyprland calls them after the socket they arrive on, which
-  // is what `hyprctl monitors all` prints and what goes here.
+  // Setting up a display that is not plugged in: nothing can list it, so it is
+  // typed. Its model is the thing to type — that is what still names this
+  // screen at the next desk, where the connector only says which socket was
+  // free. A connector name is taken too, and becomes the model's identity the
+  // first time the display is actually seen.
   Ui.SettingGroup {
     title: "Another display"
     visible: !searchEmpty
 
     Ui.TextRow {
       label: "Set up a display that is not connected"
-      description: "Its connector name, like DP-3 or HDMI-A-1. What you set is kept for when it arrives."
-      placeholder: "DP-3"
+      description: "Its model, as hyprctl monitors all prints it — like DELL P2723QE — or a connector name like DP-3. What you set is kept for when it arrives."
+      placeholder: "DELL P2723QE"
       value: ""
       buttonText: "Add Display"
       clearOnCommit: true

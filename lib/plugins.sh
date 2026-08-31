@@ -206,7 +206,7 @@ reopen_window() {
 # The layer, not the exit code: the IPC call returns nothing either way, and a
 # summon eaten by a dying panel looks exactly like one that worked.
 window_open() {
-  hyprctl layers -j 2>/dev/null | jq -e '..|select(.namespace? == "omasettings")' >/dev/null 2>&1
+  capture hyprctl layers -j | jq -e '..|select(.namespace? == "omasettings")' >/dev/null 2>&1
 }
 
 plugin_update_start() {
@@ -232,7 +232,12 @@ plugin_update_start() {
 
 plugin_update_run() {
   local id=$1 reopen=${2:-0} out rc msg
-  out=$(omarchy-plugin-update "$id" --yes 2>&1)
+  # Bounded by the tail rather than the head, and deliberately: `head -c`
+  # closes the pipe once it has enough, and the SIGPIPE that follows would
+  # land on a git merge half way through someone's plugin. Reading it all and
+  # keeping the end costs nothing here — the last line is the whole point —
+  # and cannot kill the thing being measured.
+  out=$(omarchy-plugin-update "$id" --yes 2>&1 | tail -c 4096)
   rc=$?
 
   # Upstream's own last line is the message worth showing: "Updated x.",

@@ -57,9 +57,14 @@ par_run() {
 
 par_wait() { wait; }
 
+# Bounded, like every other read here. The answers are ours, written into a
+# directory only this process can see, so there is no name to be swapped
+# underneath them — but they are the output of tools that can say more than
+# anyone expected, and this is the last place their size is ours to limit
+# before the shell that lives as long as the bar parses them.
 par_get() {
   local file=$PAR_DIR/$1
-  [[ -s $file ]] && cat "$file" && return
+  [[ -s $file ]] && head -c "$OMASETTINGS_READ_MAX" "$file" && return
   printf '%s' "${2:-}"
 }
 

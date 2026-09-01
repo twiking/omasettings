@@ -1425,6 +1425,14 @@ Item {
               font.pixelSize: Style.font.caption
             }
 
+            // Two unrelated notices, one under the other: the gap keeps the
+            // update from reading as part of the reset above it.
+            Item {
+              Layout.preferredHeight: Style.space(6)
+              visible: root.changedSettings.length > 0
+                && !root.busy && root.loaded && root.selfBehind > 0
+            }
+
             Column {
               visible: !root.busy && root.loaded && root.selfBehind > 0
               spacing: Style.space(2)

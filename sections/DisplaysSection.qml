@@ -79,6 +79,80 @@ Ui.SectionBody {
         onResetRequested: app.resetSetting("monitor:" + name + ":scale")
       }
 
+      // Four square turns, side by side rather than in a dropdown — the same
+      // reasoning as the resolution list, in reverse: there are only ever four
+      // of these, so opening a menu to find them would be the wasted click.
+      Ui.ChoiceRow {
+        label: "Rotation"
+        visible: connected
+        options: [
+          { value: "0", label: "Normal" },
+          { value: "1", label: "90°" },
+          { value: "2", label: "180°" },
+          { value: "3", label: "270°" }
+        ]
+        value: String(modelData.transform !== undefined ? modelData.transform : 0)
+        onPicked: function(next) { app.set("monitor:" + name + ":transform", next) }
+        changed: app.isChanged("monitor:" + name + ":transform")
+        onResetRequested: app.resetSetting("monitor:" + name + ":transform")
+      }
+
+      // Where a screen goes is only meaningful next to another one, so the
+      // choices are spots against the displays actually in the room —
+      // "Left of <name>" — rather than coordinates nobody arrived here
+      // knowing. Picking one is one write, computed from where that other
+      // screen sits right now, the same way choosing a resolution is.
+      Ui.PickerRow {
+        label: "Position"
+        visible: connected && alignOptions().length > 0
+        description: "Placed against another connected display, edge to edge."
+        value: String(modelData.position || "auto")
+        options: alignOptions()
+        onPicked: function(next) { app.set("monitor:" + name + ":position", next) }
+        changed: app.isChanged("monitor:" + name + ":position")
+        onResetRequested: app.resetSetting("monitor:" + name + ":position")
+      }
+
+      // A display's footprint on the desktop: its native pixels, turned
+      // sideways by a 90/270 rotation, then shrunk by its scale — the same
+      // arithmetic Hyprland itself does to lay it out, done here so Align can
+      // place a screen against an edge it hasn't rendered yet.
+      function logicalFootprint(m) {
+        var w = Number(m.width) || 0, h = Number(m.height) || 0
+        var scale = Number(m.scale) || 1
+        var turned = (Number(m.transform) % 2) === 1
+        return {
+          w: Math.round((turned ? h : w) / scale),
+          h: Math.round((turned ? w : h) / scale)
+        }
+      }
+
+      function alignOptions() {
+        var mine = logicalFootprint(modelData)
+        var out = []
+        for (var i = 0; i < displays.length; i++) {
+          var other = displays[i]
+          if (!other || other.name === name || other.connected === false) continue
+          if (other.x === undefined || other.x === null || other.y === undefined || other.y === null) continue
+          var ox = Number(other.x), oy = Number(other.y)
+          var theirs = logicalFootprint(other)
+          var label = String(other.label || other.name)
+          out.push({ value: (ox - mine.w) + "x" + oy, label: "Left of " + label })
+          out.push({ value: (ox + theirs.w) + "x" + oy, label: "Right of " + label })
+          out.push({ value: ox + "x" + (oy - mine.h), label: "Above " + label })
+          out.push({ value: ox + "x" + (oy + theirs.h), label: "Below " + label })
+        }
+        // The position in force may not be one Align would offer — it could
+        // be centred, or hand-written to an odd number — and a picker showing
+        // none of its options selected reads as unset when it is anything but.
+        var picked = String(modelData.position || "")
+        if (picked !== "" && picked !== "auto" && !out.some(function(o) { return o.value === picked })) {
+          var xy = picked.split("x")
+          out = [{ value: picked, label: xy.length === 2 ? xy[0] + ", " + xy[1] : picked }].concat(out)
+        }
+        return out
+      }
+
       // Only once there is something to forget: for a display sitting in front
       // of you with nothing set, there is nothing this would undo.
       Ui.ActionRow {

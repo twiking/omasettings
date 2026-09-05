@@ -117,8 +117,15 @@ monitor_live() {
           scale: $m.scale,
           width: $m.width,
           height: $m.height,
+          x: $m.x,
+          y: $m.y,
           refreshRate: ($m.refreshRate | floor),
           transform: ($m.transform // 0),
+          # The position format a monitor rule takes, built here once so a
+          # screen and the neighbour Align places it against are read the
+          # same way everywhere else in this file. No apostrophe in this
+          # comment: the whole filter is one shell string.
+          position: "\($m.x)x\($m.y)",
           modes: $modes,
           mode: (($modes
                   | map(select(startswith("\($m.width)x\($m.height)@")))
@@ -181,7 +188,7 @@ monitor_output_name() {
 # DP-2 and one this window wrote against the description of the screen in DP-2
 # are recognised as being about the same display.
 monitor_config_settings() {
-  local file line name mode scale live out='{}'
+  local file line name mode scale position transform live out='{}'
   live=$(monitor_live)
   while IFS= read -r line; do
     name=$(sed -nE 's/.*output *= *"([^"]+)".*/\1/p' <<<"$line")
@@ -189,10 +196,14 @@ monitor_config_settings() {
     name=$(monitor_key "$name" "$live")
     mode=$(sed -nE 's/.*mode *= *"([^"]+)".*/\1/p' <<<"$line")
     scale=$(sed -nE 's/.*scale *= *([0-9]+(\.[0-9]+)?).*/\1/p' <<<"$line")
-    out=$(jq -c --arg n "$name" --arg m "$mode" --arg s "$scale" \
+    position=$(sed -nE 's/.*position *= *"([^"]+)".*/\1/p' <<<"$line")
+    transform=$(sed -nE 's/.*transform *= *([0-9]+).*/\1/p' <<<"$line")
+    out=$(jq -c --arg n "$name" --arg m "$mode" --arg s "$scale" --arg p "$position" --arg t "$transform" \
       '.[$n] = ((.[$n] // {})
         | (if $m == "" then . else .mode = $m end)
-        | (if $s == "" then . else .scale = ($s | tonumber) end))' <<<"$out")
+        | (if $s == "" then . else .scale = ($s | tonumber) end)
+        | (if $p == "" then . else .position = $p end)
+        | (if $t == "" then . else .transform = ($t | tonumber) end))' <<<"$out")
   done < <(for file in "$HYPR_DIR"/*.lua; do
              [[ -f $file ]] || continue
              [[ $file == "$MANAGED_LUA" ]] && continue
@@ -233,11 +244,18 @@ monitor_state() {
           modes: ($live.modes // []),
           width: $live.width,
           height: $live.height,
+          # A disconnected display has no coordinates to give; Align reads
+          # this to place other screens against it, so it only ever offers
+          # displays where these are real numbers.
+          x: $live.x,
+          y: $live.y,
           refreshRate: $live.refreshRate,
           # What is in force: what was set here, else what their config gives
           # it, else what it is actually running.
           mode: ($ours.mode // $live.mode // $theirs.mode // "preferred"),
           scale: ($ours.scale // $live.scale // $theirs.scale // 1),
+          transform: ($ours.transform // $live.transform // $theirs.transform // 0),
+          position: ($ours.position // $live.position // $theirs.position // "auto"),
           settings: $ours,
           configured: $theirs };
     ($live | map(.key)) as $connected
@@ -301,6 +319,17 @@ monitor_set() {
     scale)
       [[ $value =~ ^[0-9]+(\.[0-9]+)?$ ]] || die "'$value' is not a scale"
       json=$value ;;
+    position)
+      # Negative coordinates are real ones: a screen placed above or left of
+      # the origin sits at a negative y or x. "auto" is accepted too, for
+      # handing placement back to Hyprland without going through Reset.
+      [[ $value == auto || $value =~ ^-?[0-9]+x-?[0-9]+$ ]] || die "'$value' is not a position"
+      json=$(jq -Rn --arg v "$value" '$v') ;;
+    transform)
+      # 0-3 only: the menu offers the four square rotations. Hyprland's
+      # flipped variants (4-7) have no control here to reach them from.
+      [[ $value =~ ^[0-3]$ ]] || die "'$value' is not a rotation"
+      json=$value ;;
     *) die "unknown display setting '$field'" ;;
   esac
 
@@ -330,14 +359,31 @@ monitor_set() {
   return 0
 }
 
-# What a display is running, in the shape a rule takes. No position: Omarchy's
-# own rule places every display with `position = "auto"`, so leaving it out is
-# what keeps the arrangement it already had.
+# What a display is running, in the shape a rule takes. Position and
+# transform are left out unless something has already pinned one down:
+# Omarchy's own rule places every display with `position = "auto"`, and most
+# displays are meant to go on reflowing with whatever else gets plugged in
+# beside them.
+#
+# But a monitor rule is not merged with the one before it — see monitor_set —
+# so once a position or rotation is on record, from a hand-written line in
+# monitors.lua or from Align/Rotate on this page, a rule from here that omits
+# it does not leave it alone: the field reverts to auto, or to normal, the
+# moment any other setting on that display is touched. That is what turned
+# "raise the scale" into "the two monitors I rotated and lined up by hand are
+# back to auto" — so a display that already has one on record keeps it, in
+# every write from here, until Reset takes it off on purpose.
 monitor_in_force() {
-  local found
-  found=$(monitor_find "$1")
+  local name=$1 found ours theirs
+  found=$(monitor_find "$name")
   [[ $found == null ]] && { echo '{}'; return 0; }
-  jq -c '{ mode: .mode, scale: .scale }' <<<"$found"
+  ours=$(monitor_settings "$name")
+  theirs=$(jq -c --arg n "$name" '.[$n] // {}' <<<"$(monitor_config_settings)")
+  jq -c --argjson ours "$ours" --argjson theirs "$theirs" '
+    { mode: .mode, scale: .scale }
+    + (if ($ours.position != null) or ($theirs.position != null) then { position: .position } else {} end)
+    + (if ($ours.transform != null) or ($theirs.transform != null) then { transform: .transform } else {} end)
+  ' <<<"$found"
 }
 
 # Putting one back writes the value the display had and then drops the rule:

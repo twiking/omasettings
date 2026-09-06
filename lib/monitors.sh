@@ -104,6 +104,11 @@ monitor_rekey_to_description() {
 # `mode` is the entry from that same list the display is running, not a string
 # built from its width and height: the picker compares what it is set to
 # against the options it offers, and 59.99700 matches none of them.
+
+# The position format a monitor rule takes, built here once so a
+# screen and the neighbour Align places it against are read the
+# same way everywhere else in this file. No apostrophe in this
+# comment: the whole filter is one shell string.
 monitor_live() {
   capture hyprctl -j monitors all | jq -c '
     [ .[] | . as $m
@@ -121,10 +126,6 @@ monitor_live() {
           y: $m.y,
           refreshRate: ($m.refreshRate | floor),
           transform: ($m.transform // 0),
-          # The position format a monitor rule takes, built here once so a
-          # screen and the neighbour Align places it against are read the
-          # same way everywhere else in this file. No apostrophe in this
-          # comment: the whole filter is one shell string.
           position: "\($m.x)x\($m.y)",
           modes: $modes,
           mode: (($modes
@@ -255,7 +256,12 @@ monitor_state() {
           mode: ($ours.mode // $live.mode // $theirs.mode // "preferred"),
           scale: ($ours.scale // $live.scale // $theirs.scale // 1),
           transform: ($ours.transform // $live.transform // $theirs.transform // 0),
-          position: ($ours.position // $live.position // $theirs.position // "auto"),
+          # Unlike mode and scale, a live position is not a fallback worth
+          # having: a connected display always reports real coordinates, so
+          # reading them here would hide "auto" behind whatever Hyprland
+          # happened to lay it out at, and the picker would show "0, 0" for a
+          # display nobody has ever positioned.
+          position: ($ours.position // $theirs.position // "auto"),
           settings: $ours,
           configured: $theirs };
     ($live | map(.key)) as $connected
@@ -381,7 +387,8 @@ monitor_in_force() {
   theirs=$(jq -c --arg n "$name" '.[$n] // {}' <<<"$(monitor_config_settings)")
   jq -c --argjson ours "$ours" --argjson theirs "$theirs" '
     { mode: .mode, scale: .scale }
-    + (if ($ours.position != null) or ($theirs.position != null) then { position: .position } else {} end)
+    + (if ($ours.position != null) or ($theirs.position != null)
+       then { position: ($ours.position // $theirs.position // .position) } else {} end)
     + (if ($ours.transform != null) or ($theirs.transform != null) then { transform: .transform } else {} end)
   ' <<<"$found"
 }
@@ -568,9 +575,25 @@ monitor_forget() {
 
 # What a display is set to now, for the change marks and the way back. A
 # display that is not connected can only answer from what we wrote down.
+#
+# Position is the one field this cannot read straight off the live layout: a
+# connected display always reports real coordinates, auto-placed or not, so
+# doing that here would record "0x0" as the value a Reset puts back — pinning
+# forever a display that was never actually positioned. Resolved the same way
+# monitor_state shows it instead: ours, else theirs, else the literal "auto".
 monitor_value_now() {
   local name=$1 field=$2 found
   found=$(monitor_find "$name")
   [[ $found == null ]] && return 0
+
+  if [[ $field == position ]]; then
+    local ours theirs
+    ours=$(monitor_settings "$name")
+    theirs=$(jq -c --arg n "$name" '.[$n] // {}' <<<"$(monitor_config_settings)")
+    jq -r --argjson ours "$ours" --argjson theirs "$theirs" \
+      '$ours.position // $theirs.position // "auto"' <<<"$found"
+    return
+  fi
+
   jq -r --arg f "$field" 'if has($f) then .[$f] | tostring else empty end' <<<"$found"
 }

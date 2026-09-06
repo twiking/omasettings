@@ -97,11 +97,7 @@ Ui.SectionBody {
         onResetRequested: app.resetSetting("monitor:" + name + ":transform")
       }
 
-      // Where a screen goes is only meaningful next to another one, so the
-      // choices are spots against the displays actually in the room —
-      // "Left of <name>" — rather than coordinates nobody arrived here
-      // knowing. Picking one is one write, computed from where that other
-      // screen sits right now, the same way choosing a resolution is.
+      // Easy approach alligning all monitors relative to another
       Ui.PickerRow {
         label: "Position"
         visible: connected && alignOptions().length > 0
@@ -132,7 +128,10 @@ Ui.SectionBody {
         var out = []
         for (var i = 0; i < displays.length; i++) {
           var other = displays[i]
-          if (!other || other.name === name || other.connected === false) continue
+          // A disabled display still reports x: 0, y: 0 — it just isn't
+          // showing anything there, so aligning against it would overlap
+          // whatever else is on screen.
+          if (!other || other.name === name || other.connected === false || other.disabled === true) continue
           if (other.x === undefined || other.x === null || other.y === undefined || other.y === null) continue
           var ox = Number(other.x), oy = Number(other.y)
           var theirs = logicalFootprint(other)
@@ -142,6 +141,14 @@ Ui.SectionBody {
           out.push({ value: ox + "x" + (oy - mine.h), label: "Above " + label })
           out.push({ value: ox + "x" + (oy + theirs.h), label: "Below " + label })
         }
+        // Nothing to align against yet — an "Automatic" option would sit
+        // alone with no other display to place against, so the whole row
+        // stays hidden until there is a real choice to make.
+        if (out.length === 0) return out
+        // Handing placement back to Hyprland is a choice too, and the one
+        // Reset should be able to land on — so it goes in the list rather
+        // than living only behind Backspace.
+        out = [{ value: "auto", label: "Automatic" }].concat(out)
         // The position in force may not be one Align would offer — it could
         // be centred, or hand-written to an odd number — and a picker showing
         // none of its options selected reads as unset when it is anything but.

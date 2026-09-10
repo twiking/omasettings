@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import qs.Commons
 import qs.Ui
 
@@ -20,12 +21,28 @@ BarWidget {
   // for the window it does not own.
   readonly property bool opened: service ? service.opened : false
 
-  function show() { if (service) service.show() }
-  function showPage(page) { if (service) service.showPage(page) }
-  function hide() { if (service) service.hide() }
+  // A widget hosted by another third-party plugin inherits that host's scoped
+  // shell facade. Omarchy intentionally refuses a cross-plugin serviceFor(),
+  // but the service's public IPC target remains available. Keep the direct
+  // path for a normally placed widget and fall back to IPC only when hosted.
+  function invoke(method, argument) {
+    if (service && typeof service[method] === "function") {
+      if (argument === undefined) service[method]()
+      else service[method](argument)
+      return
+    }
+
+    var command = ["omarchy-shell", "omasettings", method]
+    if (argument !== undefined) command.push(String(argument))
+    Quickshell.execDetached(command)
+  }
+
+  function show() { invoke("show") }
+  function showPage(page) { invoke("showPage", page) }
+  function hide() { invoke("hide") }
   function open() { show() }
   function close() { hide() }
-  function toggle() { if (service) service.toggle() }
+  function toggle() { invoke("toggle") }
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight

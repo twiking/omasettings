@@ -86,6 +86,21 @@ Scope {
   readonly property string dest: Quickshell.env("HOME") + "/.local/share/applications/omasettings.desktop"
   readonly property string marker: "^X-OmaSettings-Managed=true$"
 
+  // Asked of the file this is written in rather than of the host, whose
+  // `manifest.__sourceDir` is private bookkeeping a third-party manifest
+  // arrives without. A URL is percent-encoded and a home directory may hold a
+  // space, so the path is decoded before it is handed to a shell.
+  function localPath(url) {
+    var value = String(url || "")
+    if (value.indexOf("file://") === 0) value = value.substring(7)
+    try {
+      return decodeURIComponent(value)
+    } catch (e) {
+      return value
+    }
+  }
+  readonly property string pluginDir: localPath(Qt.resolvedUrl(".")).replace(/\/$/, "")
+
   // $1 template, $2 destination, $3 marker, $4 icon. Every failure is a quiet
   // exit: a launcher entry is a convenience, and nothing here is worth
   // interrupting the shell over.
@@ -110,14 +125,13 @@ Scope {
   property bool installed: false
 
   // The shell assigns manifest after createObject() has already run
-  // Component.onCompleted, so the paths are built when it arrives rather than
-  // bound ahead of it.
+  // Component.onCompleted, and its arrival is the host saying it has taken the
+  // plugin on.
   onManifestChanged: {
-    var dir = manifest && manifest.__sourceDir
-    if (installed || !dir) return
+    if (installed || !manifest) return
     installed = true
     Quickshell.execDetached(["sh", "-c", installScript, "sh",
-                             dir + "/omasettings.desktop", dest, marker, dir + "/icon.png"])
+                             pluginDir + "/omasettings.desktop", dest, marker, pluginDir + "/icon.png"])
   }
 
   // Reached on disable and on remove alike: omarchy-plugin-remove disables

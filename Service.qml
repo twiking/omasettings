@@ -86,22 +86,39 @@ Scope {
   readonly property string dest: Quickshell.env("HOME") + "/.local/share/applications/omasettings.desktop"
   readonly property string marker: "^X-OmaSettings-Managed=true$"
 
-  // $1 template, $2 destination, $3 marker, $4 icon. Every failure is a quiet
-  // exit: a launcher entry is a convenience, and nothing here is worth
-  // interrupting the shell over.
+  // Asked of the file this is written in rather than of the host, whose
+  // `manifest.__sourceDir` is private bookkeeping a third-party manifest
+  // arrives without. A URL is percent-encoded and a home directory may hold a
+  // space, so the path is decoded before it is handed to a shell.
+  function localPath(url) {
+    var value = String(url || "")
+    if (value.indexOf("file://") === 0) value = value.substring(7)
+    try {
+      return decodeURIComponent(value)
+    } catch (e) {
+      return value
+    }
+  }
+  readonly property string pluginDir: localPath(Qt.resolvedUrl(".")).replace(/\/$/, "")
+
+  // $1 template, $2 destination, $3 marker, $4 icon. An entry that is not ours
+  // or not needed is a quiet exit: a launcher entry is a convenience, and
+  // nothing here is worth interrupting the shell over. Being unable to write
+  // one is a different thing and says so, because the entry went missing for
+  // eleven releases and a silent script is why nobody noticed.
   // The destination is a predictable path in a directory anyone on the machine
   // could have written to first, so nothing here writes through a name it did
   // not create: a symlink at either path is left alone rather than followed,
   // and the rendered entry is built in a fresh random sibling.
   readonly property string installScript:
-      '[ -f "$1" ] || exit 0\n'
+      '[ -f "$1" ] || { echo "no template at $1" >&2; exit 1; }\n'
     + '[ -L "$2" ] && exit 0\n'
     + 'if [ -e "$2" ] && ! grep -q "$3" "$2"; then exit 0; fi\n'
-    + 'mkdir -p "${2%/*}" || exit 0\n'
-    + 'tmp=$(mktemp "$2.omasettings.XXXXXX") || exit 0\n'
-    + 'sed "s|@ICON@|$4|" "$1" >"$tmp" || { rm -f "$tmp"; exit 0; }\n'
+    + 'mkdir -p "${2%/*}" || exit 1\n'
+    + 'tmp=$(mktemp "$2.omasettings.XXXXXX") || exit 1\n'
+    + 'sed "s|@ICON@|$4|" "$1" >"$tmp" || { rm -f "$tmp"; exit 1; }\n'
     + 'chmod 644 "$tmp"\n'
-    + 'if cmp -s "$tmp" "$2"; then rm -f "$tmp"; else mv -f "$tmp" "$2"; fi\n'
+    + 'if cmp -s "$tmp" "$2"; then rm -f "$tmp"; else mv -f "$tmp" "$2" || exit 1; fi\n'
 
   readonly property string removeScript:
       '[ -L "$1" ] && exit 0\n'
@@ -109,15 +126,28 @@ Scope {
 
   property bool installed: false
 
+  // Run rather than detached, so a failure has somewhere to be heard. Only the
+  // first line is kept: for mkdir and mktemp that line is the reason, and the
+  // rest is noise the journal is better off without.
+  Process {
+    id: installProc
+    stderr: StdioCollector { id: installError; waitForEnd: true }
+    onExited: function(code) {
+      if (code === 0) return
+      var why = installError.text.trim().split("\n")[0] || "sh exited " + code
+      console.warn("omasettings: no launcher entry: " + why)
+    }
+  }
+
   // The shell assigns manifest after createObject() has already run
-  // Component.onCompleted, so the paths are built when it arrives rather than
-  // bound ahead of it.
+  // Component.onCompleted, and its arrival is the host saying it has taken the
+  // plugin on.
   onManifestChanged: {
-    var dir = manifest && manifest.__sourceDir
-    if (installed || !dir) return
+    if (installed || !manifest) return
     installed = true
-    Quickshell.execDetached(["sh", "-c", installScript, "sh",
-                             dir + "/omasettings.desktop", dest, marker, dir + "/icon.png"])
+    installProc.command = ["sh", "-c", installScript, "sh",
+                           pluginDir + "/omasettings.desktop", dest, marker, pluginDir + "/icon.png"]
+    installProc.running = true
   }
 
   // Reached on disable and on remove alike: omarchy-plugin-remove disables

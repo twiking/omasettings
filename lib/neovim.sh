@@ -83,7 +83,10 @@ nvim_write() {
   local previous
   previous=$(read_file "$NVIM_OPTIONS")
 
-  awk -v key="$key" -v line="vim.opt.$key = $formatted" '
+  # `awk -v` expands backslash escapes in the value it is given, which would
+  # undo the escaping applied above. ENVIRON does not.
+  omasettings_line="vim.opt.$key = $formatted" awk -v key="$key" '
+    BEGIN { line = ENVIRON["omasettings_line"] }
     {
       lines[NR] = $0
       if ($0 !~ /^[ \t]*--/ && $0 ~ "^[ \t]*vim\\.(opt|o)\\." key "[ \t]*=") last = NR

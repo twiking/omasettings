@@ -246,6 +246,7 @@ Ui.SectionBody {
           // One spinner per plugin, spinning only while that plugin's own
           // fetch is still out.
           Text {
+            textFormat: Text.PlainText
             anchors.verticalCenter: parent.verticalCenter
             visible: pluginRow.busy
             text: "󰑐"

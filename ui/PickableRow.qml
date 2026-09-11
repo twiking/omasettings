@@ -46,6 +46,7 @@ Item {
 
   Text {
     id: glyphText
+    textFormat: Text.PlainText
     anchors.left: parent.left
     anchors.leftMargin: Style.space(10)
     anchors.verticalCenter: parent.verticalCenter
@@ -58,6 +59,7 @@ Item {
   }
 
   Text {
+    textFormat: Text.PlainText
     anchors.left: glyphText.visible ? glyphText.right : parent.left
     anchors.leftMargin: Style.space(10)
     anchors.right: detailText.left
@@ -73,6 +75,7 @@ Item {
 
   Text {
     id: detailText
+    textFormat: Text.PlainText
     anchors.right: parent.right
     anchors.rightMargin: Style.space(10)
     anchors.verticalCenter: parent.verticalCenter

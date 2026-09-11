@@ -80,6 +80,7 @@ Ui.SectionBody {
     // Saying so before the button is pressed, rather than after the old
     // binding is gone.
     Text {
+      textFormat: Text.PlainText
       readonly property var clash: bindingFor(keysField.text)
 
       width: parent.width
@@ -114,6 +115,7 @@ Ui.SectionBody {
     }
 
     Text {
+      textFormat: Text.PlainText
       width: parent.width
       visible: !app.searching
       text: app.visibleBindings.length + " of " + (app.bindings.items !== undefined ? app.bindings.items.length : 0)

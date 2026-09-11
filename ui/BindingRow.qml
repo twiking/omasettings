@@ -55,6 +55,7 @@ Item {
 
   Text {
     id: keysText
+    textFormat: Text.PlainText
     anchors.left: parent.left
     anchors.leftMargin: Style.space(8)
     anchors.verticalCenter: parent.verticalCenter
@@ -67,6 +68,7 @@ Item {
   }
 
   Text {
+    textFormat: Text.PlainText
     anchors.left: parent.left
     anchors.leftMargin: parent.width * 0.32
     anchors.verticalCenter: parent.verticalCenter
@@ -79,6 +81,7 @@ Item {
   }
 
   Text {
+    textFormat: Text.PlainText
     anchors.left: parent.left
     anchors.leftMargin: parent.width * 0.65
     anchors.verticalCenter: parent.verticalCenter

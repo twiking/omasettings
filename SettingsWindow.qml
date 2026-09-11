@@ -1251,6 +1251,7 @@ Item {
               Layout.bottomMargin: Style.space(10)
 
               Text {
+                textFormat: Text.PlainText
                 text: "OmaSettings"
                 color: root.foreground
                 font.family: root.fontFamily
@@ -1263,6 +1264,7 @@ Item {
               // two sizes aligned by their tops read as two things, and this
               // is one thing said twice over.
               Text {
+                textFormat: Text.PlainText
                 visible: root.selfVersion !== ""
                 text: root.selfVersion
                 color: root.muted
@@ -1348,6 +1350,7 @@ Item {
                     spacing: Style.space(10)
 
                     Text {
+                      textFormat: Text.PlainText
                       anchors.verticalCenter: parent.verticalCenter
                       visible: !modelData.indented
                       text: modelData.icon
@@ -1358,6 +1361,7 @@ Item {
                     }
 
                     Text {
+                      textFormat: Text.PlainText
                       anchors.verticalCenter: parent.verticalCenter
                       text: modelData.title
                       color: root.foreground
@@ -1368,6 +1372,7 @@ Item {
 
                     // How much of what you typed is in there.
                     Text {
+                      textFormat: Text.PlainText
                       anchors.verticalCenter: parent.verticalCenter
                       visible: root.searching && modelData.matches > 0
                       text: modelData.matches
@@ -1380,6 +1385,7 @@ Item {
                   // Chevron only on parents, pointing the way the branch will
                   // move when clicked.
                   Text {
+                    textFormat: Text.PlainText
                     anchors.right: parent.right
                     anchors.rightMargin: Style.space(10)
                     anchors.verticalCenter: parent.verticalCenter
@@ -1413,6 +1419,7 @@ Item {
               spacing: Style.space(2)
 
               Text {
+                textFormat: Text.PlainText
                 text: root.changedSettings.length === 1
                   ? "1 setting changed" : root.changedSettings.length + " settings changed"
                 color: root.muted
@@ -1439,6 +1446,7 @@ Item {
             // when this window is itself behind its remote. "Ready" was none
             // of those — it reported that nothing was happening.
             Text {
+              textFormat: Text.PlainText
               visible: root.busy || !root.loaded
               text: root.busy ? "Applying…" : "Loading…"
               color: root.muted
@@ -1459,6 +1467,7 @@ Item {
               spacing: Style.space(2)
 
               Text {
+                textFormat: Text.PlainText
                 text: "\uf0aa  Update available"
                 color: root.accent
                 font.family: root.fontFamily
@@ -1467,6 +1476,7 @@ Item {
 
               Text {
                 id: updateLink
+                textFormat: Text.PlainText
                 text: root.selfBehind === 1 ? "1 commit behind · update"
                   : root.selfBehind + " commits behind · update"
                 color: updateMouse.containsMouse ? root.accent : root.muted
@@ -1514,6 +1524,7 @@ Item {
               spacing: Style.space(2)
 
               Text {
+                textFormat: Text.PlainText
                 text: root.pageFor(root.pageId).title
                 color: root.foreground
                 font.family: root.fontFamily
@@ -1522,6 +1533,7 @@ Item {
               }
 
               Text {
+                textFormat: Text.PlainText
                 visible: root.pageHeaderNote !== ""
                 text: root.pageHeaderNote
                 color: root.muted
@@ -1566,6 +1578,7 @@ Item {
           }
 
           Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             Layout.margins: Style.spacing.panelPadding
             Layout.topMargin: 0
@@ -1615,6 +1628,7 @@ Item {
               spacing: Style.space(5)
 
               Text {
+                textFormat: Text.PlainText
                 text: modelData.key
                 color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.75)
                 font.family: root.fontFamily
@@ -1622,6 +1636,7 @@ Item {
               }
 
               Text {
+                textFormat: Text.PlainText
                 text: modelData.label
                 color: root.muted
                 font.family: root.fontFamily

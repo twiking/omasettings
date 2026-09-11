@@ -9,6 +9,7 @@ SettingRow {
   property string value: ""
 
   Text {
+    textFormat: Text.PlainText
     anchors.right: parent.right
     text: readingRow.value
     color: Local.Palette.muted

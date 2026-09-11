@@ -45,6 +45,7 @@ Item {
 
   Text {
     id: nameText
+    textFormat: Text.PlainText
     anchors.left: actionButton.right
     anchors.leftMargin: Style.space(12)
     anchors.verticalCenter: parent.verticalCenter
@@ -57,6 +58,7 @@ Item {
   // Beside the name rather than across the page: what it is called and what it
   // is called in the config are one answer.
   Text {
+    textFormat: Text.PlainText
     anchors.left: nameText.right
     anchors.leftMargin: Style.space(12)
     anchors.right: parent.right

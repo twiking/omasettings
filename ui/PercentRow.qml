@@ -60,6 +60,7 @@ SettingRow {
 
     Text {
       id: percentReadout
+      textFormat: Text.PlainText
       anchors.verticalCenter: parent.verticalCenter
       width: Style.space(76)
       horizontalAlignment: Text.AlignRight

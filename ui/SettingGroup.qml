@@ -45,6 +45,7 @@ Column {
   visible: !searchEmpty
 
   Text {
+    textFormat: Text.PlainText
     visible: group.title !== ""
     text: group.title
     color: Local.Palette.foreground
@@ -54,6 +55,7 @@ Column {
   }
 
   Text {
+    textFormat: Text.PlainText
     visible: group.note !== ""
     x: group.indent
     width: group.width - group.indent

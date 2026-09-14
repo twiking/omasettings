@@ -62,6 +62,7 @@ SettingRow {
 
     Text {
       id: minutesReadout
+      textFormat: Text.PlainText
       anchors.verticalCenter: parent.verticalCenter
       width: Style.space(76)
       horizontalAlignment: Text.AlignRight

@@ -61,6 +61,7 @@ Ui.SectionBody {
         implicitHeight: Style.spacing.controlHeight
 
         Text {
+          textFormat: Text.PlainText
           anchors.left: parent.left
           anchors.verticalCenter: parent.verticalCenter
           width: parent.width * 0.45
@@ -72,6 +73,7 @@ Ui.SectionBody {
         }
 
         Text {
+          textFormat: Text.PlainText
           anchors.left: parent.left
           anchors.leftMargin: parent.width * 0.47
           anchors.verticalCenter: parent.verticalCenter

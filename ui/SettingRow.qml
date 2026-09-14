@@ -151,6 +151,7 @@ Item {
       // (reset) floating above the name it belongs to. Both sit on the
       // name's baseline instead, so the three read as one line.
       Text {
+        textFormat: Text.PlainText
         anchors.baseline: titleText.baseline
         visible: settingRow.changed
         text: "\u25cf"
@@ -161,6 +162,7 @@ Item {
 
       Text {
         id: titleText
+        textFormat: Text.PlainText
         text: settingRow.label
         color: Local.Palette.foreground
         font.family: Local.Palette.fontFamily
@@ -169,6 +171,7 @@ Item {
 
       Text {
         id: resetLink
+        textFormat: Text.PlainText
         anchors.baseline: titleText.baseline
         visible: settingRow.changed
         text: "(reset)"
@@ -189,6 +192,7 @@ Item {
     }
 
     Text {
+      textFormat: Text.PlainText
       visible: settingRow.description !== ""
       width: parent.width
       text: settingRow.description

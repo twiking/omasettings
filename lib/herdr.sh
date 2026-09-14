@@ -113,9 +113,11 @@ herdr_write() {
   local previous
   previous=$(read_file "$HERDR_CONFIG")
 
-  awk -v table="$table" -v name="$name" -v line="$name = $formatted" '
+  # `awk -v` expands backslash escapes in the value it is given, which would
+  # undo the escaping applied above. ENVIRON does not.
+  omasettings_line="$name = $formatted" awk -v table="$table" -v name="$name" '
     function trim(v) { gsub(/^[ \t]+|[ \t]+$/, "", v); return v }
-    BEGIN { section = ""; done = 0; lastInTable = 0 }
+    BEGIN { section = ""; done = 0; lastInTable = 0; line = ENVIRON["omasettings_line"] }
     {
       lines[NR] = $0
       current = $0

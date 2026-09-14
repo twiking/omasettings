@@ -18,12 +18,36 @@ keys_normalise() {
   tr 'a-z' 'A-Z' <<<"$1" | sed -E 's/[[:space:]]*\+[[:space:]]*/ + /g; s/[[:space:]]+/ + /g; s/(\+ ){2,}/+ /g; s/^ *| *$//g'
 }
 
-keys_lua_quote() {
-  # Lua long-string escapes are not worth the corner cases; quote plainly.
-  sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' <<<"$1"
-}
-
 bindings_store() { read_store | jq -c '.bindings // {added: [], disabled: []}'; }
+
+BINDINGS_SCHEMA=1
+
+# Schema 1: keys, descriptions and commands were written down Lua-escaped,
+# because the Lua renderer pasted them between bare quotes. The .conf renderer
+# reads the same fields, where that escaping is wrong — and `awk -v` happened
+# to strip it back off on the way out, so both formats came out right by
+# accident. Escaping now happens where the Lua is built, so what is stored is
+# the value as typed, and what an older version wrote is unescaped once. The
+# old escaping doubled backslashes and then prefixed quotes, so undoing it in
+# that order is exact.
+bindings_migrate() {
+  local schema
+  schema=$(jq -r '(.bindingsSchema // 0)' <<<"$(read_store)")
+  # A flag we cannot read is not a reason to transform again: re-running
+  # the unescape would halve every backslash a second time.
+  [[ $schema =~ ^[0-9]+$ ]] || return 0
+  ((schema >= BINDINGS_SCHEMA)) && return 0
+
+  edit_bindings '
+    def unescape: if type == "string"
+      then gsub("\\\\\""; "\"") | gsub("\\\\\\\\"; "\\") else . end;
+    if .bindings then
+      .bindings.added = ((.bindings.added // [])
+          | map(.keys |= unescape | .description |= unescape | .command |= unescape))
+      | .bindings.disabled = ((.bindings.disabled // []) | map(unescape))
+    else . end
+    | .bindingsSchema = $v' --argjson v "$BINDINGS_SCHEMA"
+}
 
 render_bindings() {
   local store target begin_line body
@@ -35,8 +59,9 @@ render_bindings() {
 
   if [[ $target == *.lua ]]; then
     body=$(jq -r '
-      ((.disabled // [])[] | "hl.unbind(\"" + . + "\")"),
-      ((.added // [])[] | "o.bind(\"" + .keys + "\", \"" + .description + "\", \"" + .command + "\")")
+      ((.disabled // [])[] | "hl.unbind(" + (. | @json) + ")"),
+      ((.added // [])[] | "o.bind(" + (.keys | @json) + ", " + (.description | @json)
+        + ", " + (.command | @json) + ")")
     ' <<<"$store")
   else
     body=$(jq -r '
@@ -48,8 +73,10 @@ render_bindings() {
   backup_once "$target"
 
   # The block is rewritten whole; everything outside it is copied through.
-  awk -v begin_marker="$BINDINGS_BEGIN" -v end_marker="$BINDINGS_END" -v body="$body" '
-    BEGIN { inside = 0; seen = 0 }
+  # `awk -v` expands backslash escapes in the value it is given, which would
+  # undo the escaping applied above. ENVIRON does not.
+  omasettings_body="$body" awk -v begin_marker="$BINDINGS_BEGIN" -v end_marker="$BINDINGS_END" '
+    BEGIN { inside = 0; seen = 0; body = ENVIRON["omasettings_body"] }
     # With nothing left to generate the block goes away entirely, rather
     # than leaving a pair of markers around nothing.
     $0 == begin_marker { inside = 1; seen = 1; if (body != "") { print; print body } next }
@@ -134,6 +161,7 @@ bindings_state() {
 }
 
 keys_cmd() {
+  bindings_migrate
   local action=${1:-} keys=${2:-} description=${3:-} command=${4:-}
   case $action in
     list) bindings_state ;;
@@ -142,9 +170,6 @@ keys_cmd() {
       [[ -n $keys ]] || die "no key combination given"
       [[ -n $command ]] || die "no command given"
       [[ -n $description ]] || description="Custom"
-      keys=$(keys_lua_quote "$keys")
-      description=$(keys_lua_quote "$description")
-      command=$(keys_lua_quote "$command")
       # Adding over an existing binding has to unbind it first, or Hyprland
       # keeps the one it already had.
       edit_bindings '

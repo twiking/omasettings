@@ -103,11 +103,14 @@ plugin_updates() {
   # page is still showing.
   jq -Rn --argjson at "$(date +%s)" --argjson prev "$(plugin_updates_cache)" '
     [inputs | split("\t") | select(length >= 2)] as $rows
-    | { checkedAt: $at,
-        results: ([$rows[] | { key: .[0], value: (.[1] | tonumber) }] | from_entries),
-        changes: ([$rows[] | select((.[2] // "") != "") | { key: .[0], value: .[2] }] | from_entries),
-        running: ($prev.running // {}),
-        last: ($prev.last // {}) }' \
+    | ([$rows[] | .[0]] as $ids
+      | ([$rows[] | { key: .[0], value: (.[1] | tonumber) }] | from_entries) as $results
+      | { checkedAt: $at,
+          results: $results,
+          changes: ([$rows[] | select((.[2] // "") != "") | { key: .[0], value: .[2] }] | from_entries),
+          running: ($prev.running // {} | with_entries(select(.key as $k | $ids | index($k)))),
+          last: ($prev.last // {} | with_entries(select(.key as $k | $ids | index($k)))
+                | with_entries(select(.value.ok == true or ($results[.key] // 0) != 0))) })' \
     <"$out" 2>/dev/null | write_update_cache
   rm -f "$out"
 }

@@ -362,6 +362,20 @@ moved is worse than one that stays where it was opened. This machine has one
 monitor, so the choice is verified by what it resolves rather than by where
 it lands.
 
+## How large it opens
+
+The card is nine tenths of the screen it opened on, capped at
+`Style.space(1400)` by `Style.space(900)`. The percentage is what makes it
+feel like a window rather than a dialog on a laptop; the cap is what keeps it
+one on a 49" ultrawide, where nine tenths of 5120 px puts the sidebar a
+thousand pixels from the row it selects and stretches every line of text past
+what is comfortable to read.
+
+The caps are in `Style.space` units rather than raw pixels because the sidebar
+beside them is `Style.space(220)`: a fixed pixel cap would squeeze the content
+column as the text size grows. Below the caps nothing changed, so every screen
+that was already comfortable is untouched.
+
 ## Rows that are not settings
 
 A device, a network and a binding are lists of things rather than one setting

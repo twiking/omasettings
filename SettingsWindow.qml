@@ -1101,9 +1101,16 @@ Item {
     Rectangle {
       id: card
       anchors.centerIn: parent
-      // Nine tenths of the screen it is on, whatever screen that is.
-      width: Math.round(window.width * 0.9)
-      height: Math.round(window.height * 0.9)
+      // Nine tenths of the screen it is on, up to a point. On a 32:9 display
+      // nine tenths is a metre of sparse text: the sidebar sits thousands of
+      // pixels from the rows it selects, and the content column runs far past
+      // a readable line length. The caps go through Style.space because the
+      // sidebar beside them already tracks the text size, and every screen
+      // small enough for the 90% to be the lower number is left alone.
+      readonly property int maxWidth: Style.space(1400)
+      readonly property int maxHeight: Style.space(900)
+      width: Math.min(Math.round(window.width * 0.9), maxWidth)
+      height: Math.min(Math.round(window.height * 0.9), maxHeight)
       color: root.background
       radius: Style.cornerRadius
       border.width: 1

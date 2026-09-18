@@ -145,6 +145,43 @@ bar_shift_at() {
       end'
 }
 
+# The whole of a section at once, addressed by the places its widgets hold now
+# rather than by their ids, for the same reason the two edits above are: two
+# spacers in a section are the same id twice, and only where they sit tells
+# them apart.
+#
+# What is asked for is a permutation of 0..n-1 — every place named exactly
+# once — so an order that dropped a widget or named one twice is refused here
+# rather than written and noticed later. The caller works out the order; this
+# only decides whether it is one.
+bar_reorder() {
+  local section=${1:-}
+  shift || true
+  bar_check_section "$section"
+
+  local count
+  count=$(read_shell_json | jq --arg s "$section" '(.bar.layout[$s] // []) | length')
+  (($# > 0)) || die "no order given"
+  (($# == count)) || die "$section holds $count widgets, and $# places were named"
+
+  local place
+  for place in "$@"; do
+    [[ $place =~ ^[0-9]+$ ]] || die "'$place' is not a place in the bar"
+  done
+
+  local order
+  order=$(printf '%s\n' "$@" | jq -cs 'map(tonumber)')
+  jq -en --argjson order "$order" --argjson n "$count" \
+    '($order | sort) == [range($n)]' >/dev/null ||
+    die "every place from 0 to $((count - 1)) has to be named exactly once"
+
+  # One write for the whole section, and the entries move whole: a sort done
+  # as a run of single shifts would write the file once per step and leave the
+  # bar redrawing a list that is halfway to where it is going.
+  edit_shell_json --arg s "$section" --argjson order "$order" '
+    .bar.layout[$s] = ((.bar.layout[$s] // []) as $list | [$order[] | $list[.]])'
+}
+
 # ------------------------------------------------------------- the spacer
 #
 # Blank space is the one bar widget you add rather than own: its manifest says
@@ -288,6 +325,8 @@ bar_cmd() {
     # list cannot move the widget that has taken that place since.
     move-at) bar_move_at "${1:-}" "${2:-}" "${3:-}" "${4:-}" ;;
     shift-at) bar_shift_at "${1:-}" "${2:-}" "${3:-}" "${4:-}" ;;
+    # A whole section in one go: the places, in the order they should end up in.
+    reorder) bar_reorder "$@" ;;
     spacer)
       case ${1:-} in
         add) bar_spacer_add "${2:-}" "${3:-}" ;;

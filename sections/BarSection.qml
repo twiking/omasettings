@@ -32,11 +32,11 @@ Ui.SectionBody {
   readonly property string spacerId: "omarchy.spacer"
 
   // One width for every row's controls, so the names after them line up down
-  // the whole page. Wide enough for the longest set — two arrows, Move and
-  // Disable — since a row that outgrew it would push its own name out of the
-  // column and undo the point of having one, and no wider than that: the
-  // slack is space between a widget and its own controls.
-  readonly property real controlsWidth: Style.space(200)
+  // the whole page. Wide enough for the longest set — the place field, two
+  // arrows, Move and Disable — since a row that outgrew it would push its own
+  // name out of the column and undo the point of having one, and no wider
+  // than that: the slack is space between a widget and its own controls.
+  readonly property real controlsWidth: Style.space(256)
 
   // The bar stores ids; the plugin list is where the names are.
   function widgetName(id) {
@@ -125,6 +125,101 @@ Ui.SectionBody {
       title: modelData.title
       note: page.widgets(modelData.key).length === 0 ? "Nothing here yet." : ""
 
+      // ---------------- ordering by number ---------------------------------
+      //
+      // Every row shows the place it holds, as a number you can type over.
+      // Nothing moves while you type: the numbers are a description of where
+      // the section should end up, and Apply is where it is asked for. Moving
+      // a widget from the end of a long section to the front is one number
+      // and one press here, rather than a row of arrow clicks with the bar
+      // redrawing itself between each of them.
+      //
+      // What was typed is kept here rather than on the rows: a refresh
+      // rebuilds every row in the section, and a number typed into one of
+      // them has to outlive that.
+      property var typed: ({})
+
+      function typedAt(index) {
+        var value = typed[index]
+        return value === undefined ? "" : String(value)
+      }
+
+      // A number equal to the place the row already holds is not a change,
+      // and is dropped rather than staged — otherwise typing a number and
+      // typing it back would leave a section waiting to be applied that has
+      // nothing to say.
+      function stage(index, value) {
+        var next = {}
+        for (var key in typed) next[key] = typed[key]
+        if (String(value) === "") delete next[index]
+        else next[index] = String(value)
+        typed = next
+      }
+
+      function clearTyped() { typed = ({}) }
+
+      // The numbers describe the list as it stands, by the places its widgets
+      // hold now — so a list that changed under them leaves them describing
+      // something that is no longer there: an arrow pressed, a widget
+      // disabled, the bar edited from somewhere else entirely. They go when it
+      // does. A re-read that says the same thing is not a change and leaves a
+      // half-typed section alone.
+      readonly property string signature: page.widgets(sectionGroup.sectionKey).join("\u0000")
+      onSignatureChanged: sectionGroup.clearTyped()
+
+      // The order the numbers add up to, as the places the widgets hold now.
+      //
+      // A number is where that widget should *end up*, so it is an insertion
+      // and not a sort key. Sorting was the first thing tried here and it is
+      // wrong in the one case the field exists for: giving the last of
+      // twenty-three widgets the number 1 sorted it against a row that
+      // already held 1, the tie went to the row that was there first, and the
+      // widget landed second — every time, one place short of where it was
+      // sent, at either end of the list.
+      //
+      // So the numbered widgets are lifted out, the rest close ranks in the
+      // order they already have, and each numbered one is put back at the
+      // place it was given. Several at once go in ascending order, so each
+      // lands at the place it asks for in the list as the earlier ones have
+      // left it.
+      readonly property var order: {
+        var count = page.widgets(sectionGroup.sectionKey).length
+        var placed = []
+        var out = []
+        for (var i = 0; i < count; i++) {
+          var text = sectionGroup.typedAt(i)
+          var place = Number(text)
+          if (text !== "" && isFinite(place)) placed.push({ index: i, place: place })
+          else out.push(i)
+        }
+        placed.sort(function(a, b) { return a.place === b.place ? a.index - b.index : a.place - b.place })
+        for (var p = 0; p < placed.length; p++) {
+          var at = Math.max(0, Math.min(out.length, Math.round(placed[p].place) - 1))
+          out.splice(at, 0, placed[p].index)
+        }
+        return out
+      }
+
+      readonly property bool reordered: {
+        for (var i = 0; i < sectionGroup.order.length; i++)
+          if (sectionGroup.order[i] !== i) return true
+        return false
+      }
+
+      // One command for the whole section, so what the bar draws next is the
+      // list as it was asked for, rather than a run of single moves it has to
+      // redraw between.
+      function applyOrder() {
+        if (!sectionGroup.reordered) return
+        var args = ["bar", "reorder", sectionGroup.sectionKey]
+        for (var i = 0; i < sectionGroup.order.length; i++)
+          args.push(String(sectionGroup.order[i]))
+        // The work first: clearing the numbers takes the Apply row off the
+        // page, and the button this came from with it.
+        page.app.run(args)
+        sectionGroup.clearTyped()
+      }
+
       Repeater {
         model: page.widgets(modelData.key)
         delegate: Ui.SettingRow {
@@ -159,11 +254,74 @@ Ui.SectionBody {
           // other row in the list says: which widget this is.
           description: modelData
 
+          // What the place field shows: the number typed into it if there is
+          // one, and otherwise the place this row holds, counted from one the
+          // way the reader counts the rows.
+          readonly property string placeText: sectionGroup.typedAt(widgetRow.index) !== ""
+            ? sectionGroup.typedAt(widgetRow.index)
+            : String(widgetRow.index + 1)
+
+          // Enter starts typing into the place field and the row owns every
+          // key until it is done, the same bargain TextRow makes: arrows that
+          // moved the cursor down the page would otherwise be taken out of a
+          // half-typed number.
+          property bool editing: false
+
+          navKeys: widgetRow.editing
+            ? [{ key: "↵", label: "Save" }, { key: "Esc", label: "Cancel" }]
+            : (isSpacer ? [{ key: "↵", label: "Place" }, { key: "←→", label: "Width" }]
+                        : [{ key: "↵", label: "Place" }])
+          navBlocking: widgetRow.editing
+          onCurrentChanged: if (!widgetRow.current && widgetRow.editing) widgetRow.stopEditing()
+
+          onNavActivate: placeField.forceActiveFocus()
+
           // The width is the only thing a spacer has, so the cursor edits it
           // directly rather than making the reader reach for the buttons.
-          navKeys: isSpacer ? [{ key: "←→", label: "Width" }] : []
           onNavStep: function(delta) {
             if (widgetRow.isSpacer) widgetRow.setSize(widgetRow.effective + delta * 4)
+          }
+
+          function stopEditing() {
+            widgetRow.editing = false
+            placeField.deselect()
+            placeField.focus = false
+            widgetRow.navRelease()
+          }
+
+          // A number counts from the keystroke that made it, not from some
+          // later Enter: the Apply row is what says a section has an order
+          // waiting, and a row that appeared only once the field was left
+          // would have the page look like it had ignored what was typed.
+          // Nothing is written either way — Apply is still the only thing
+          // that touches the bar.
+          function stagePlace(text) {
+            var wanted = parseInt(text, 10)
+            if (!isFinite(wanted)) {
+              sectionGroup.stage(widgetRow.index, "")
+              return
+            }
+            sectionGroup.stage(widgetRow.index,
+                               wanted === widgetRow.index + 1 ? "" : String(wanted))
+          }
+
+          // Out of range is clamped rather than refused: asking for place 40
+          // in a section of twelve is asking for the end of it, and a field
+          // that simply refused the number would say nothing about why. It is
+          // clamped once the number is done rather than while it is being
+          // typed, since 4 is on the way to 40 and is a place of its own.
+          function commitPlace(text) {
+            var wanted = parseInt(text, 10)
+            if (!isFinite(wanted)) {
+              placeField.text = widgetRow.placeText
+              return
+            }
+            wanted = Math.max(1, Math.min(widgetRow.total, wanted))
+            widgetRow.stagePlace(String(wanted))
+            // Typing into the field broke the binding that fills it, and a
+            // number that staged nothing leaves that binding nothing to say,
+            // so the field is put back by hand.
+            placeField.text = String(wanted)
           }
 
           // Which section a widget belongs to is one decision, so it is one
@@ -184,6 +342,77 @@ Ui.SectionBody {
           leadingWidth: page.controlsWidth
           leading: Row {
             spacing: Style.space(6)
+
+            // Where this row should end up, as a number. It reads as the
+            // row's place until something is typed into it, so the list is
+            // numbered whether or not anyone is sorting it.
+            TextField {
+              id: placeField
+              anchors.verticalCenter: parent.verticalCenter
+              visible: !widgetRow.choosing
+              width: Style.space(48)
+              horizontalPadding: Style.space(4)
+              horizontalAlignment: TextInput.AlignHCenter
+              text: widgetRow.placeText
+              foreground: Ui.Palette.foreground
+              accent: Ui.Palette.accent
+              font.pixelSize: Style.font.caption
+              hasCursor: widgetRow.current
+              validator: IntValidator { bottom: 1; top: 999 }
+
+              // The number already in the field is the answer to the last
+              // question, not the start of the next one, so entering the
+              // field selects it and the first digit replaces it.
+              property bool fresh: false
+
+              // Clicking straight into the field is editing too: the row has
+              // to hand over the keyboard for it, or the window goes on
+              // reading Up and Down as cursor moves while a number is being
+              // typed.
+              onActiveFocusChanged: {
+                if (!activeFocus) return
+                widgetRow.editing = true
+                placeField.fresh = true
+                placeField.selectAll()
+              }
+
+              // The binding above is broken by the first keystroke, so the
+              // field is put back by hand wherever the number behind it
+              // changes — Apply clearing the section among them.
+              Connections {
+                target: widgetRow
+                function onPlaceTextChanged() { placeField.text = widgetRow.placeText }
+              }
+
+              // Every keystroke, so the Apply row is there as soon as there
+              // is something to apply; the clamp and the tidy-up wait for the
+              // number to be finished.
+              onTextEdited: widgetRow.stagePlace(text)
+              onEditingFinished: widgetRow.commitPlace(text)
+
+              // Enter and Escape are answered here and stopped here: left to
+              // bubble, the window reads Enter as "activate this row" and
+              // drops straight back into the field it just left.
+              Keys.onPressed: function(event) {
+                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                  widgetRow.commitPlace(placeField.text)
+                  widgetRow.stopEditing()
+                  event.accepted = true
+                } else if (event.key === Qt.Key_Escape) {
+                  placeField.text = widgetRow.placeText
+                  widgetRow.stopEditing()
+                  event.accepted = true
+                } else if (placeField.fresh) {
+                  placeField.fresh = false
+                  // A click puts the cursor where it landed and takes the
+                  // selection with it, so what is in the field is cleared
+                  // here rather than left to a selection that may not have
+                  // survived the press. The key itself is not accepted: it
+                  // goes on to the field and is the whole of the new number.
+                  if (event.text.length === 1 && event.text >= " ") placeField.text = ""
+                }
+              }
+            }
 
             // Its place within the section is a straight nudge.
             Button {
@@ -337,6 +566,47 @@ Ui.SectionBody {
         }
       }
 
+      // The numbers are worth nothing until they are asked for, so the row
+      // that asks appears once they say something the section does not
+      // already say, and goes again once they have been acted on or dropped.
+      Ui.SettingRow {
+        id: applyRow
+        width: parent.width
+        visible: sectionGroup.reordered && !applyRow.searchHidden
+        label: "Apply order"
+        description: "Puts every widget you numbered at the place you gave it, in one move."
+        leadingWidth: page.controlsWidth
+        navKeys: [{ key: "↵", label: "Apply" }]
+        onNavActivate: sectionGroup.applyOrder()
+
+        leading: Row {
+          spacing: Style.space(6)
+
+          Button {
+            anchors.verticalCenter: parent.verticalCenter
+            text: "Apply"
+            bordered: true
+            foreground: Ui.Palette.foreground
+            accent: Ui.Palette.accent
+            fontFamily: Ui.Palette.fontFamily
+            fontSize: Style.font.caption
+            onClicked: sectionGroup.applyOrder()
+          }
+
+          // Typing a number and thinking better of it has to be possible
+          // here too, and one press puts the whole section back.
+          Button {
+            anchors.verticalCenter: parent.verticalCenter
+            text: "\uf00d"
+            bordered: true
+            foreground: Ui.Palette.foreground
+            accent: Ui.Palette.accent
+            fontFamily: Ui.Palette.fontFamily
+            fontSize: Style.font.caption
+            onClicked: sectionGroup.clearTyped()
+          }
+        }
+      }
     }
   }
 

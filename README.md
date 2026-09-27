@@ -19,7 +19,7 @@ One window for every Omarchy setting, from Hyprland to your keybindings to tmux.
 - **Compose keys.** Your `~/.XCompose` sequences as a list you can add to and
   remove from.
 - **Input and displays.** Keyboard layout, repeat rate, mouse and touchpad
-  behaviour, per-monitor scale, and one device can differ from the rest.
+  behaviour, cursor size, per-monitor scale, and one device can differ from the rest.
 - **Applications.** Settings for tmux, Herdr and Neovim, written into their
   real configs.
 - **The live stuff.** Audio, network, bluetooth and power, so those widgets can

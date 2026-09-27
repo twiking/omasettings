@@ -468,11 +468,11 @@ hypr_reset() {
   hyprctl reload >/dev/null 2>&1 || true
 }
 
-# ------------------------------------------------- the two that are not keys
+# ----------------------------------------------- the three that are not keys
 #
-# Speed and full opacity are not Hyprland keywords, so they cannot be set or
-# read like the rest. Each is a small piece of Lua written into the managed
-# file, and a value of our own kept beside it saying what to write.
+# Speed, full opacity and cursor size are not Hyprland keywords, so they cannot
+# be set or read like the rest. Each is a small piece of Lua written into the
+# managed file, and a value of our own kept beside it saying what to write.
 #
 # Speed multiplies the animation set Omarchy ships, read from its own source
 # rather than from the running config: reading the live speeds would multiply
@@ -507,10 +507,50 @@ omarchy_animations() {
   grep -oE 'hl\.animation\(\{[^}]*\}\)' "$source"
 }
 
+# Cursor size is an environment variable, read once by each application as it
+# starts. Absent from our store, the size in force is whatever the session was
+# started with, which is what their own `hl.env` gave it at login.
+cursor_size() {
+  local session=${XCURSOR_SIZE:-}
+  [[ $session =~ ^[0-9]+$ ]] || session=24
+  extras_get cursor-size "$session"
+}
+
+# Once our line has been through a login, the session's size is ours, so the
+# way back is the size recorded before the first write.
+cursor_original() {
+  local original
+  original=$(jq -r '(.written // {}) | if has("cursor-size") then .["cursor-size"] else empty end' <<<"$(read_store)")
+  [[ -n $original ]] && printf '%s\n' "$original" || cursor_size
+}
+
+cursor_theme() {
+  local theme=${HYPRCURSOR_THEME:-${XCURSOR_THEME:-}}
+  [[ -n $theme ]] || theme=$(gsettings get org.gnome.desktop.interface cursor-theme 2>/dev/null | tr -d "'")
+  printf '%s\n' "${theme:-default}"
+}
+
+# The env var only reaches what starts after the next login. setcursor resizes
+# the compositor's own cursor now, and GTK follows its setting live, so the
+# change shows without logging out.
+cursor_apply() {
+  local size=$1
+  hyprctl setcursor "$(cursor_theme)" "$size" >/dev/null 2>&1 || true
+  gsettings set org.gnome.desktop.interface cursor-size "$size" 2>/dev/null || true
+}
+
 render_extras_lua() {
-  local speed opaque
+  local speed opaque cursor
   speed=$(extras_get animation-speed 1)
   opaque=$(extras_get opaque-windows false)
+  cursor=$(extras_get cursor-size "")
+
+  if [[ -n $cursor ]]; then
+    echo ""
+    echo "-- Cursor size, for every application started after the next login."
+    echo "hl.env(\"XCURSOR_SIZE\", \"$cursor\")"
+    echo "hl.env(\"HYPRCURSOR_SIZE\", \"$cursor\")"
+  fi
 
   if [[ $opaque == true ]]; then
     echo ""

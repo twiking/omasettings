@@ -25,6 +25,7 @@ setting_current() {
     bar-center-anchor) jq -r '.bar.centerAnchor // ""' <<<"$(read_shell_json)" ;;
     idle-screensaver) jq -r '.idle.screensaver // empty' <<<"$(read_shell_json)" ;;
     idle-lock) jq -r '.idle.lock // empty' <<<"$(read_shell_json)" ;;
+    cursor-size) cursor_size ;;
     *) return 1 ;;
   esac
 }
@@ -135,6 +136,12 @@ set_key_apply() {
     opaque-windows)
       [[ $value == true || $value == false ]] || die "'$value' is not true or false"
       extras_set opaque-windows "$value" false ;;
+    # Back at the size found before the first write, our line goes and their
+    # own config speaks again at the next login.
+    cursor-size)
+      [[ $value =~ ^[0-9]+$ ]] || die "'$value' is not a cursor size"
+      extras_set cursor-size "$value" "$(cursor_original)"
+      cursor_apply "$value" ;;
     theme) [[ -n $value ]] || die "no theme given"; omarchy-theme-set "$value" ;;
     font) [[ -n $value ]] || die "no font given"; omarchy font set "$value" ;;
     text-scale) [[ -n $value ]] || die "no text size given"; omarchy display text size "$value" ;;

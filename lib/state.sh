@@ -22,13 +22,14 @@ state_font() { capture omarchy font current | head -n1; }
 state_textscale() { capture omarchy display text size | grep -oE '[0-9]+(\.[0-9]+)?' | head -n1; }
 state_monitors() { monitor_state 2>/dev/null || echo '[]'; }
 
-# Speed and full opacity are not keywords, so they ride along with the ones
-# that are: the window asks for them the same way and does not have to know
-# the difference.
+# Speed, full opacity and cursor size are not keywords, so they ride along with
+# the ones that are: the window asks for them the same way and does not have to
+# know the difference.
 state_hypr() {
   jq -c --argjson speed "$(extras_get animation-speed 1)" \
     --argjson opaque "$(extras_get opaque-windows false)" \
-    '. + { "animation-speed": $speed, "opaque-windows": $opaque }' <<<"$(hypr_state)"
+    --argjson cursor "$(cursor_size)" \
+    '. + { "animation-speed": $speed, "opaque-windows": $opaque, "cursor-size": $cursor }' <<<"$(hypr_state)"
 }
 
 # Everything this window has a hand in: the Hyprland keys it overrides, the

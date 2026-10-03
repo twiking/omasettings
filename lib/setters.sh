@@ -141,7 +141,19 @@ set_key_apply() {
     nightlight)
       # The toggle script has no absolute set, so only flip when the requested
       # state differs from the live one — repeated clicks stay idempotent.
-      [[ $(nightlight_enabled) == "$value" ]] || omarchy-toggle-nightlight ;;
+      #
+      # Off is two things, because Omarchy's off is only one of them. The toggle
+      # sets 6500, which is still a temperature matrix, while the unfiltered
+      # state is `hyprctl hyprsunset identity` — and identity is not what
+      # `--status` reads: it reports the last temperature *set*, so a shut-off
+      # that only toggles leaves the screen tinted and can leave the row saying
+      # on. Put the record where the reading says off, then drop the filter.
+      if [[ $value == false && $(nightlight_enabled) != "false" ]]; then
+        hyprctl hyprsunset temperature 6500 >/dev/null 2>&1
+        hyprctl hyprsunset identity >/dev/null 2>&1
+      else
+        [[ $(nightlight_enabled) == "$value" ]] || omarchy-toggle-nightlight
+      fi ;;
     bar-position)
       case $value in
         top|bottom|left|right) omarchy bar position "$value" ;;

@@ -107,18 +107,32 @@ Scope {
       '[ -L "$1" ] && exit 0\n'
     + 'grep -q "$2" "$1" 2>/dev/null && rm -f "$1"\n'
 
+  // Where this plugin's own files are. The manifest cannot be asked: the shell
+  // hands third-party plugins a scrubbed copy with `__sourceDir` deleted
+  // (shell.qml publicPluginManifest), which quietly turned the entry below into
+  // a no-op on every host with no log line to show for it. Resolving a file
+  // that ships beside this one works wherever the plugin was installed.
+  readonly property string sourceDir: {
+    var url = String(Qt.resolvedUrl("omasettings.desktop"))
+    if (url.indexOf("file://") !== 0) return ""
+    try { url = decodeURIComponent(url.substring(7)) } catch (error) { return "" }
+    return url.replace(/\/[^/]*$/, "")
+  }
+
   property bool installed: false
 
-  // The shell assigns manifest after createObject() has already run
-  // Component.onCompleted, so the paths are built when it arrives rather than
-  // bound ahead of it.
-  onManifestChanged: {
-    var dir = manifest && manifest.__sourceDir
-    if (installed || !dir) return
+  function installEntry() {
+    if (installed || sourceDir === "") return
     installed = true
     Quickshell.execDetached(["sh", "-c", installScript, "sh",
-                             dir + "/omasettings.desktop", dest, marker, dir + "/icon.png"])
+                             sourceDir + "/omasettings.desktop", dest, marker, sourceDir + "/icon.png"])
   }
+
+  // The paths no longer wait on the hand-over, so the entry is in place as soon
+  // as this half of the plugin exists — and the manifest arriving again is
+  // still a free retry.
+  Component.onCompleted: installEntry()
+  onManifestChanged: installEntry()
 
   // Reached on disable and on remove alike: omarchy-plugin-remove disables
   // first, so the service is torn down while the entry is still ours.

@@ -1,0 +1,4 @@
+# The tests import nothing beyond the standard library and pytest itself —
+# fakes, JSON handling and subprocess calls are all stdlib. Pinned to what
+# this suite was last verified against.
+pytest==9.1.1

@@ -11,8 +11,12 @@ wifi_device() {
 }
 
 wifi_saved() {
-  capture nmcli -t -f NAME,TYPE con show \
-    | awk -F: '$NF ~ /wireless/ { name = $0; sub(/:[^:]*$/, "", name); print name }'
+  if [[ -x /home/jfarr/.local/bin/omarchy-wifi-helper ]]; then
+    capture /home/jfarr/.local/bin/omarchy-wifi-helper list-saved
+  else
+    capture nmcli -t -f NAME,TYPE con show \
+      | awk -F: '$NF ~ /wireless/ { name = $0; sub(/:[^:]*$/, "", name); print name }'
+  fi
 }
 
 # Access points, strongest first, one row per network rather than one per
@@ -132,20 +136,13 @@ wifi_cmd() {
     connect)
       [[ -n $ssid ]] || die "no network given"
       local output
-      # A passphrase on our own command line is readable by every process on
-      # the machine, so the window hands it over on stdin instead and says so
-      # with this flag rather than passing the secret itself.
       if [[ $password == --password-stdin ]]; then
         IFS= read -r password || password=""
       fi
       if [[ -n $password ]]; then
-        # --ask reads the passphrase from stdin, so it never appears in the
-        # process list the way `nmcli ... password <secret>` would.
-        output=$(printf '%s\n' "$password" | timeout 45 nmcli --ask dev wifi connect "$ssid" 2>&1)
-      elif wifi_saved | grep -qxF "$ssid"; then
-        output=$(timeout 45 nmcli con up id "$ssid" 2>&1)
+        output=$(printf '%s\n' "$password" | timeout 45 /home/jfarr/.local/bin/omarchy-wifi-helper connect "$ssid" --password-stdin 2>&1) || die "${output#Error: }"
       else
-        output=$(timeout 45 nmcli dev wifi connect "$ssid" 2>&1)
+        output=$(timeout 45 /home/jfarr/.local/bin/omarchy-wifi-helper connect "$ssid" 2>&1) || die "${output#Error: }"
       fi
       grep -qiE '^error|failed' <<<"$output" && die "${output#Error: }"
       true ;;
@@ -158,10 +155,10 @@ wifi_cmd() {
       local device
       device=$(wifi_device)
       [[ -n $device ]] || die "no Wi-Fi device"
-      nmcli dev disconnect "$device" >/dev/null 2>&1 || die "could not disconnect" ;;
+      /home/jfarr/.local/bin/omarchy-wifi-helper disconnect "$device" >/dev/null 2>&1 || die "could not disconnect" ;;
     forget)
       [[ -n $ssid ]] || die "no network given"
-      nmcli con delete id "$ssid" >/dev/null 2>&1 || die "no saved network called '$ssid'" ;;
+      /home/jfarr/.local/bin/omarchy-wifi-helper forget "$ssid" >/dev/null 2>&1 || die "no saved network called '$ssid'" ;;
     *) die "unknown wifi action '$action'" ;;
   esac
 }

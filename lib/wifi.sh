@@ -10,13 +10,89 @@ wifi_device() {
     | awk -F: '$2 == "wifi" { print $1; exit }'
 }
 
+# Saved wireless profiles as `UUID<TAB>NAME`, with `nmcli -t`'s `\\` and `\:`
+# escapes undone so SSIDs containing colons survive intact.
+wifi_profiles() {
+  capture nmcli -t -f UUID,NAME,TYPE con show \
+    | awk '
+      {
+        n = 0
+        field = ""
+        delete fields
+        for (i = 1; i <= length($0); i++) {
+          c = substr($0, i, 1)
+          if (c == "\\") { i++; field = field substr($0, i, 1); continue }
+          if (c == ":") { fields[++n] = field; field = ""; continue }
+          field = field c
+        }
+        fields[++n] = field
+        if (fields[3] ~ /wireless/ && fields[1] != "" && fields[2] != "") {
+          printf "%s\t%s\n", fields[1], fields[2]
+        }
+      }
+    '
+}
+
+# Saved wireless network names. NetworkManager appends " 1", " 2" to a profile
+# name when it re-creates a connection for an existing SSID, so emit both the
+# profile name and its base SSID when a numbered duplicate exists.
 wifi_saved() {
-  if [[ -x /home/jfarr/.local/bin/omarchy-wifi-helper ]]; then
-    capture /home/jfarr/.local/bin/omarchy-wifi-helper list-saved
-  else
-    capture nmcli -t -f NAME,TYPE con show \
-      | awk -F: '$NF ~ /wireless/ { name = $0; sub(/:[^:]*$/, "", name); print name }'
+  local helper
+  helper=$(command -v omarchy-wifi-helper 2>/dev/null || true)
+  [[ -z $helper && -x ${HOME_DIR:-$HOME}/.local/bin/omarchy-wifi-helper ]] && helper="${HOME_DIR:-$HOME}/.local/bin/omarchy-wifi-helper"
+  if [[ -n $helper ]]; then
+    capture "$helper" list-saved
+    return
   fi
+
+  wifi_profiles \
+    | awk -F'\t' '
+      {
+        print $2
+        base = $2
+        if (sub(/ [0-9]+$/, "", base) && base != "") print base
+      }
+    ' \
+    | awk '!seen[$0]++'
+}
+
+# UUIDs of saved wireless profiles belonging to an SSID, matching either the
+# exact profile name or NetworkManager's numbered duplicate suffix ("<SSID> 1").
+wifi_profile_uuids() {
+  local target=$1
+  [[ -n $target ]] || return 0
+  wifi_profiles \
+    | awk -F'\t' -v s="$target" '
+      $2 == s { print $1; next }
+      {
+        base = $2
+        if (sub(/ [0-9]+$/, "", base) && base == s) print $1
+      }
+    '
+}
+
+# Normalize a saved wireless profile before activation so a stale interface
+# binding (e.g. from a renamed adapter) or duplicate "<SSID> 1" profile does
+# not block `nmcli con up` on multi-homed machines.
+wifi_prepare_profile() {
+  local ssid=$1 primary="" uuid
+  while IFS= read -r uuid; do
+    [[ -n $uuid ]] || continue
+    if [[ -z $primary ]]; then
+      primary=$uuid
+    else
+      nmcli con delete uuid "$uuid" >/dev/null 2>&1 || true
+    fi
+  done < <(wifi_profile_uuids "$ssid")
+
+  [[ -n $primary ]] || return 1
+  nmcli con modify uuid "$primary" \
+    connection.id "$ssid" \
+    connection.interface-name "" \
+    802-11-wireless.mac-address "" \
+    802-11-wireless.cloned-mac-address "permanent" \
+    connection.autoconnect "yes" >/dev/null 2>&1 || true
+  printf '%s\n' "$primary"
 }
 
 # Access points, strongest first, one row per network rather than one per
@@ -113,6 +189,10 @@ wifi_cmd() {
   local action=${1:-} ssid=${2:-} password=${3:-}
   command -v nmcli >/dev/null 2>&1 || die "NetworkManager is not available"
 
+  local helper
+  helper=$(command -v omarchy-wifi-helper 2>/dev/null || true)
+  [[ -z $helper && -x ${HOME_DIR:-$HOME}/.local/bin/omarchy-wifi-helper ]] && helper="${HOME_DIR:-$HOME}/.local/bin/omarchy-wifi-helper"
+
   case $action in
     list) wifi_state ;;
     rescan)
@@ -135,14 +215,36 @@ wifi_cmd() {
       esac ;;
     connect)
       [[ -n $ssid ]] || die "no network given"
-      local output
+      local output device uuid
+      # A passphrase on our own command line is readable by every process on
+      # the machine, so the window hands it over on stdin instead and says so
+      # with this flag rather than passing the secret itself.
       if [[ $password == --password-stdin ]]; then
         IFS= read -r password || password=""
       fi
-      if [[ -n $password ]]; then
-        output=$(printf '%s\n' "$password" | timeout 45 /home/jfarr/.local/bin/omarchy-wifi-helper connect "$ssid" --password-stdin 2>&1) || die "${output#Error: }"
+      if [[ -n $helper ]]; then
+        if [[ -n $password ]]; then
+          output=$(printf '%s\n' "$password" | timeout 45 "$helper" connect "$ssid" --password-stdin 2>&1) || die "${output#Error: }"
+        else
+          output=$(timeout 45 "$helper" connect "$ssid" 2>&1) || die "${output#Error: }"
+        fi
       else
-        output=$(timeout 45 /home/jfarr/.local/bin/omarchy-wifi-helper connect "$ssid" 2>&1) || die "${output#Error: }"
+        device=$(wifi_device)
+        if [[ -n $password ]]; then
+          # Remove any stale or numbered duplicate profiles for this SSID first
+          # so `nmcli --ask dev wifi connect` creates a single clean profile
+          # while still reading the passphrase over stdin rather than argv.
+          while IFS= read -r uuid; do
+            [[ -n $uuid ]] && nmcli con delete uuid "$uuid" >/dev/null 2>&1 || true
+          done < <(wifi_profile_uuids "$ssid")
+          output=$(printf '%s\n' "$password" | timeout 45 nmcli --ask dev wifi connect "$ssid" ${device:+ifname "$device"} 2>&1)
+          wifi_prepare_profile "$ssid" >/dev/null 2>&1 || true
+        elif uuid=$(wifi_prepare_profile "$ssid"); then
+          output=$(timeout 45 nmcli con up uuid "$uuid" ${device:+ifname "$device"} 2>&1)
+        else
+          output=$(timeout 45 nmcli dev wifi connect "$ssid" ${device:+ifname "$device"} 2>&1)
+          wifi_prepare_profile "$ssid" >/dev/null 2>&1 || true
+        fi
       fi
       grep -qiE '^error|failed' <<<"$output" && die "${output#Error: }"
       true ;;
@@ -155,10 +257,28 @@ wifi_cmd() {
       local device
       device=$(wifi_device)
       [[ -n $device ]] || die "no Wi-Fi device"
-      /home/jfarr/.local/bin/omarchy-wifi-helper disconnect "$device" >/dev/null 2>&1 || die "could not disconnect" ;;
+      if [[ -n $helper ]]; then
+        "$helper" disconnect "$device" >/dev/null 2>&1 || die "could not disconnect"
+      else
+        nmcli dev disconnect "$device" >/dev/null 2>&1 || die "could not disconnect"
+      fi ;;
     forget)
       [[ -n $ssid ]] || die "no network given"
-      /home/jfarr/.local/bin/omarchy-wifi-helper forget "$ssid" >/dev/null 2>&1 || die "no saved network called '$ssid'" ;;
+      if [[ -n $helper ]]; then
+        "$helper" forget "$ssid" >/dev/null 2>&1 || die "no saved network called '$ssid'"
+      else
+        local uuid deleted=0
+        while IFS= read -r uuid; do
+          [[ -n $uuid ]] || continue
+          if nmcli con delete uuid "$uuid" >/dev/null 2>&1; then
+            deleted=1
+          fi
+        done < <(wifi_profile_uuids "$ssid")
+        if (( ! deleted )); then
+          nmcli con delete id "$ssid" >/dev/null 2>&1 || die "no saved network called '$ssid'"
+        fi
+      fi ;;
     *) die "unknown wifi action '$action'" ;;
   esac
 }
+

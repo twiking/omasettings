@@ -542,3 +542,33 @@ render_extras_lua() {
       }' <<<"$line"
   done
 }
+
+# ---------------------------------------------------- a lone window's shape
+#
+# Omarchy's Super+Ctrl+Backspace: a state file that makes a single window keep
+# a shape instead of filling a wide screen, and no file for Fill. Omarchy's
+# toggle only knows Square, so Fill and Square go through it, and the shortcut
+# and this row go on flipping the same file. The other shapes are that file
+# with another ratio, in the same form, since Omarchy has no command for them.
+ASPECT_FLAG="$HOME_DIR/.local/state/omarchy/toggles/hypr/single-window-aspect-ratio.lua"
+
+window_shape() {
+  [[ -f $ASPECT_FLAG ]] || { echo fill; return; }
+  local ratio
+  ratio=$(sed -n 's/.*single_window_aspect_ratio *= *{ *\([0-9]*\) *, *\([0-9]*\).*/\1:\2/p' "$ASPECT_FLAG" | head -n1)
+  echo "${ratio:-1:1}"
+}
+
+window_shape_set() {
+  local shape=${1:-}
+  case $shape in
+    fill) OMARCHY_PATH=${OMARCHY_PATH:-/usr/share/omarchy} omarchy-hyprland-toggle single-window-aspect-ratio off >/dev/null ;;
+    1:1) OMARCHY_PATH=${OMARCHY_PATH:-/usr/share/omarchy} omarchy-hyprland-toggle single-window-aspect-ratio on >/dev/null ;;
+    4:3|3:2|16:9)
+      mkdir -p "${ASPECT_FLAG%/*}" || die "cannot create ${ASPECT_FLAG%/*}"
+      printf -- '-- Avoid overly wide single-window layouts on wide screens.\nhl.config({\n  layout = {\n    single_window_aspect_ratio = { %s, %s },\n  },\n})\n' \
+        "${shape%:*}" "${shape#*:}" | write_file "$ASPECT_FLAG" managed || die "failed to write $ASPECT_FLAG"
+      hyprctl reload >/dev/null ;;
+    *) die "'$shape' is not fill, 1:1, 4:3, 3:2 or 16:9" ;;
+  esac
+}

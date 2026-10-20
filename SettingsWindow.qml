@@ -72,6 +72,7 @@ Item {
   property string lastError: ""
 
   readonly property var hypr: state.hypr !== undefined ? state.hypr : ({})
+  readonly property string windowShape: state.windowShape !== undefined ? String(state.windowShape) : "fill"
   readonly property var barState: state.bar !== undefined ? state.bar : ({})
   readonly property var idleState: state.idle !== undefined ? state.idle : ({})
   readonly property var monitors: state.monitors !== undefined ? state.monitors : []
@@ -795,6 +796,7 @@ Item {
   // which is why the changed list comes along with all of them.
   function slicesForKey(key) {
     var name = String(key || "")
+    if (name === "single-window-shape") return ["windowShape"]
     if (name.indexOf("bar-") === 0) return ["bar", "hyprChanged"]
     if (name.indexOf("idle-") === 0) return ["idle", "hyprChanged"]
     if (name.indexOf("monitor") === 0) return ["monitors", "hyprChanged"]

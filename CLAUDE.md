@@ -153,6 +153,7 @@ setting:
 | Compose Keys | `~/.XCompose` |
 | Herdr, Tmux, Neovim | their own configs, edited in place |
 | Displays | `~/.config/hypr/omasettings.lua`, applied with `hyprctl eval` — plus `monitors.lua` for the laptop panel's scale |
+| Layout's "A lone window's shape" | Omarchy's toggle file, `~/.local/state/omarchy/toggles/hypr/single-window-aspect-ratio.lua`, through `omarchy-hyprland-toggle` for Fill and Square |
 | Audio, Network, Bluetooth, Power | nowhere — live system state, owned by PipeWire, NetworkManager, BlueZ and power-profiles-daemon |
 
 A display is the one thing here worth writing down as well as applying: it is
@@ -324,6 +325,20 @@ window inside `state.hypr` so a page asks for them like anything else.
   tags every window and fades it to 0.985, which multiplies with the opacity
   sliders, so without this 100% renders at 98.5%. The managed file loads last,
   so the rule lands after the one it is undoing.
+
+## A lone window's shape
+
+Super+Ctrl+Backspace is Omarchy's: `omarchy-hyprland-toggle
+single-window-aspect-ratio` copies a 1:1 file into the toggles directory or
+deletes it, and Hyprland loads whatever is there. The row drives that command
+for Fill and Square, so the shortcut and the row flip one file and never fight.
+4:3, 3:2 and 16:9 have no Omarchy command, so `window_shape_set` writes that
+file itself in the same form.
+
+It writes Omarchy's state file and not our managed Lua on purpose: a
+`single_window_aspect_ratio` in the file that loads last would win over the
+toggle, and the shortcut would stop doing anything. The row is not marked as
+changed, because the shortcut changes it too.
 
 ## Keyboard values that will not compile
 

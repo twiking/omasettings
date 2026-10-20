@@ -113,6 +113,7 @@ state_slice() {
     themes) jq -cn --argjson v "$(state_themes)" '{ themes: $v }' ;;
     fonts) jq -cn --argjson v "$(state_fonts)" '{ fonts: $v }' ;;
     nightlight) jq -cn --argjson v "$(nightlight_enabled)" '{ nightlight: $v }' ;;
+    windowShape) jq -cn --arg v "$(window_shape)" '{ windowShape: $v }' ;;
 
     hypr) jq -cn --argjson v "$(state_hypr)" '{ hypr: $v }' ;;
     hyprChanged) jq -cn --argjson v "$(state_changed)" '{ hyprChanged: $v }' ;;
@@ -314,12 +315,14 @@ state() {
     --argjson power "${power:-{\}}" \
     --argjson audio "${audio:-{\}}" \
     --arg textScale "${textscale:-1}" \
+    --arg windowShape "$(window_shape)" \
     '{
       theme: $theme,
       themes: $themes,
       font: $font,
       fonts: $fonts,
       nightlight: $nightlight,
+      windowShape: $windowShape,
       textScale: (($textScale | tonumber?) // 1),
       bar: '"$BAR_STATE_JQ"',
       idle: {

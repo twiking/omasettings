@@ -157,6 +157,7 @@ set_key_apply() {
       else
         [[ $(nightlight_enabled) == "$value" ]] || omarchy-toggle-nightlight
       fi ;;
+    single-window-shape) window_shape_set "$value" ;;
     bar-position)
       case $value in
         top|bottom|left|right) omarchy bar position "$value" ;;

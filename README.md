@@ -14,7 +14,8 @@ One window for every Omarchy setting, from Hyprland to your keybindings to tmux.
 - **Find anything.** Type "blur" or "gaps" and every setting that touches it
   appears with its current value, whatever file it normally lives in.
 - **Look and feel.** Theme, font, text size, gaps, borders, rounding, opacity,
-  blur, shadows, animations and their speed, window group tabs, tiling layout.
+  blur, shadows, animations and their speed, window group tabs, tiling layout,
+  and the shape a lone window keeps on a wide screen.
 - **The bar.** Position, transparency, which widgets sit where, and which
   plugins are enabled, plus add, remove and update them.
 - **Workspaces.** Bind an application to a workspace or a display, open it

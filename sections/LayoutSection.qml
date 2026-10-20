@@ -31,6 +31,23 @@ Ui.SectionBody {
       changed: app.isChanged("layout")
       onResetRequested: app.resetSetting("layout")
     }
+
+    // Omarchy's Super+Ctrl+Backspace, plus the shapes it has no key for. Not
+    // marked as changed: the shortcut flips it too, so "changed here" would
+    // be a guess.
+    Ui.ChoiceRow {
+      label: "A lone window's shape"
+      description: "Keeps a single window from stretching across a wide screen. Super+Ctrl+Backspace turns Square on and off."
+      value: app.windowShape
+      options: [
+        { value: "fill", label: "Fill" },
+        { value: "1:1", label: "Square" },
+        { value: "4:3", label: "4:3" },
+        { value: "3:2", label: "3:2" },
+        { value: "16:9", label: "16:9" }
+      ]
+      onPicked: function(next) { app.run(["set", "single-window-shape", next]) }
+    }
   }
 
   Ui.SettingGroup {

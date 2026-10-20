@@ -380,6 +380,28 @@ The height cap is 1000 rather than 900 because of the sidebar: at 900 its
 twenty-odd pages no longer fit on a 1350-point-high screen, the last row sat
 against the "settings changed" footer, and an expanded parent scrolled.
 
+## Overlay or window
+
+The window opens as an overlay by default, and as an ordinary toplevel when
+`openAs` is `"window"` on our own entry in `shell.json` — the way a widget keeps
+its settings, not in the store, which only remembers what to put back.
+`omasettings set open-as` writes it; `Service.qml` reads it straight from the
+file, because the choice has to be known before the window is built.
+
+**One card, two hosts.** The card is parented into the overlay's `PanelWindow`
+or into a `FloatingWindow` built by `floatLoader`. Three traps:
+
+- **Move the card before dropping the window.** Destroying a window destroys
+  what is parented to it, which would be every page. `closeWindowHost()` puts
+  the card back in the overlay first.
+- **Build the window for each opening.** Once the compositor has closed a
+  `FloatingWindow` (Super+W), making it visible again does not bring it back.
+- **A toplevel's class is always `org.quickshell`.** Rules match the title,
+  which is why it is fixed at `OmaSettings`.
+
+Screen pinning applies to the overlay only; Hyprland places a window. The
+post-update summon checks for either form (`window_open` in `lib/plugins.sh`).
+
 ## Rows that are not settings
 
 A device, a network and a binding are lists of things rather than one setting
@@ -610,7 +632,10 @@ hyprctl layers -j | jq -e '..|select(.namespace?=="omasettings")' >/dev/null \
   && wtype "/" && wtype "blur"
 ```
 
-Skip that check and the keystrokes go to the terminal you are working in. Two
+Skip that check and the keystrokes go to the terminal you are working in. In
+window mode there is no layer: check the focused client instead,
+`hyprctl activewindow -j | jq -e '.title == "OmaSettings"'`, since a tiled
+window does not take the keyboard just by opening. Two
 things close the window out from under a test: `Escape` with nothing focused,
 and `toggle` when it is already open. `Escape` only clears the search when the
 search box has focus.

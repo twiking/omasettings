@@ -206,10 +206,12 @@ reopen_window() {
   done
 }
 
-# The layer, not the exit code: the IPC call returns nothing either way, and a
-# summon eaten by a dying panel looks exactly like one that worked.
+# The surface, not the exit code: the IPC call returns nothing either way, and a
+# summon eaten by a dying panel looks exactly like one that worked. Opened as an
+# overlay it is a layer; opened as a window it is a client like any other.
 window_open() {
-  capture hyprctl layers -j | jq -e '..|select(.namespace? == "omasettings")' >/dev/null 2>&1
+  capture hyprctl layers -j | jq -e '..|select(.namespace? == "omasettings")' >/dev/null 2>&1 && return 0
+  capture hyprctl clients -j | jq -e '.[]|select(.class == "org.quickshell" and .title == "OmaSettings")' >/dev/null 2>&1
 }
 
 plugin_update_start() {

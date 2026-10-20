@@ -54,6 +54,16 @@ omarchy plugin add https://github.com/twiking/omasettings.git --enable
 Click the gear in the bar to open the window, or find it in the launcher as
 OmaSettings.
 
+It opens over everything by default. To have it open as an ordinary window
+instead, one Hyprland tiles, floats and closes like any app, click the window
+icon in the top-right corner, or pick **Open OmaSettings as: Window** on the
+Plugins page. The choice is remembered. The window is titled `OmaSettings`, so
+a rule can float it:
+
+```lua
+o.window({ class = "^org\\.quickshell$", title = "^OmaSettings$" }, { float = true, size = { 1024, 768 } })
+```
+
 ## How it writes
 
 Your config files are never parsed and rewritten, since that is how a settings

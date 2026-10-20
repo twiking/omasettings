@@ -37,7 +37,12 @@ Scope {
   // not cost it anything.
   readonly property bool opened: windowLoader.item ? windowLoader.item.shown : false
 
-  function show() { windowLoader.active = true; if (windowLoader.item) windowLoader.item.show() }
+  function show() {
+    windowLoader.active = true
+    if (!windowLoader.item) return
+    if (!windowLoader.item.shown) windowLoader.item.windowed = root.openAsWindow
+    windowLoader.item.show()
+  }
   // Opening on a named page is how a job that had to tear this window down
   // brings it back where it was: the loader is asynchronous, so the page is
   // remembered until there is an item to give it to.
@@ -76,9 +81,45 @@ Scope {
     asynchronous: true
     source: Qt.resolvedUrl("SettingsWindow.qml")
     onLoaded: {
-      if (item) item.show()
+      if (item) {
+        item.windowed = root.openAsWindow
+        item.show()
+      }
       root.applyPendingPage()
     }
+  }
+
+  // ---------------- overlay or window ---------------------------------------
+  //
+  // Read straight out of shell.json rather than from the helper's state: the
+  // choice has to be known before the window is built, and the state read is
+  // the slow part of opening it. It lives on our own entry, like a widget's
+  // settings, and is only ever written by `omasettings set open-as`.
+  readonly property string shellJsonPath: Quickshell.env("OMARCHY_SHELL_JSON")
+    || (Quickshell.env("HOME") + "/.config/omarchy/shell.json")
+  property bool openAsWindow: false
+
+  function readOpenAs(text) {
+    var found = false
+    function visit(node) {
+      if (found || node === null || typeof node !== "object") return
+      if (node.id === "io.github.twiking.omasettings" && node.openAs !== undefined) {
+        openAsWindow = node.openAs === "window"
+        found = true
+        return
+      }
+      for (var key in node) visit(node[key])
+    }
+    try { visit(JSON.parse(text)) } catch (e) { return }
+    if (!found) openAsWindow = false
+  }
+
+  FileView {
+    path: root.shellJsonPath
+    watchChanges: true
+    printErrors: false
+    onFileChanged: reload()
+    onLoaded: root.readOpenAs(text())
   }
 
   // ---------------- launcher entry -----------------------------------------

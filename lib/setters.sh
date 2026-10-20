@@ -135,6 +135,13 @@ set_key_apply() {
     opaque-windows)
       [[ $value == true || $value == false ]] || die "'$value' is not true or false"
       extras_set opaque-windows "$value" false ;;
+    # Kept on our own entry in shell.json, the way a widget keeps its settings,
+    # rather than in the store, which only remembers what to put back. The entry
+    # can be in the bar or in plugins[], so every object carrying our id gets it.
+    open-as)
+      [[ $value == overlay || $value == window ]] || die "'$value' is not overlay or window"
+      edit_shell_json 'walk(if type == "object" and .id? == $id then .openAs = $v else . end)' \
+        --arg id io.github.twiking.omasettings --arg v "$value" ;;
     theme) [[ -n $value ]] || die "no theme given"; omarchy-theme-set "$value" ;;
     font) [[ -n $value ]] || die "no font given"; omarchy font set "$value" ;;
     text-scale) [[ -n $value ]] || die "no text size given"; omarchy display text size "$value" ;;

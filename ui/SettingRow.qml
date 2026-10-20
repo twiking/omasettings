@@ -91,7 +91,15 @@ Item {
   default property alias control: controlHolder.data
 
   width: parent ? parent.width : 0
-  implicitHeight: Math.max(labelColumn.implicitHeight, controlHolder.implicitHeight)
+
+  // Too narrow for label and control side by side (a tiled window), the
+  // control goes under its label at full width, the way phone settings lay a
+  // row out, rather than squeezing both until the names are cut short.
+  readonly property bool stacked: width > 0 && width < Style.space(600)
+
+  implicitHeight: stacked
+    ? labelColumn.implicitHeight + Style.space(8) + controlHolder.implicitHeight
+    : Math.max(labelColumn.implicitHeight, controlHolder.implicitHeight)
   opacity: enabled ? 1 : 0.45
 
   Rectangle {
@@ -138,8 +146,13 @@ Item {
     id: labelColumn
     anchors.left: leadingHolder.right
     anchors.leftMargin: leadingHolder.width > 0 ? Style.space(12) : 0
-    anchors.verticalCenter: parent.verticalCenter
-    width: parent.width * 0.5
+    // Placed by y rather than by anchors switched on and off: an anchor cleared
+    // to undefined after the row had been narrow left the controls a row low.
+    y: settingRow.stacked ? 0 : Math.round((parent.height - height) / 2)
+    // Half the row, unless the control's half is closer than that: the indent
+    // alone can push half the row into the control.
+    width: settingRow.stacked ? parent.width - x
+      : Math.min(parent.width * 0.5, parent.width - controlHolder.width - x - Style.space(12))
     spacing: Style.space(2)
 
     // A setting this window has changed says so on its own title line: the
@@ -151,6 +164,7 @@ Item {
       // (reset) floating above the name it belongs to. Both sit on the
       // name's baseline instead, so the three read as one line.
       Text {
+        id: changedMark
         textFormat: Text.PlainText
         anchors.baseline: titleText.baseline
         visible: settingRow.changed
@@ -163,6 +177,11 @@ Item {
       Text {
         id: titleText
         textFormat: Text.PlainText
+        // What is left of the line after the mark and the (reset), so a long
+        // name is cut short rather than running under the control.
+        width: Math.min(implicitWidth, labelColumn.width
+          - (settingRow.changed ? changedMark.implicitWidth + resetLink.implicitWidth + Style.space(12) : 0))
+        elide: Text.ElideRight
         text: settingRow.label
         color: Local.Palette.foreground
         font.family: Local.Palette.fontFamily
@@ -210,8 +229,9 @@ Item {
   Item {
     id: controlHolder
     anchors.right: parent.right
-    anchors.verticalCenter: parent.verticalCenter
-    width: parent.width * 0.46
+    y: settingRow.stacked ? labelColumn.implicitHeight + Style.space(8)
+      : Math.round((parent.height - height) / 2)
+    width: settingRow.stacked ? parent.width - labelColumn.x : parent.width * 0.46
     // Measured from what the controls ask for, not from where they ended up.
     // `childrenRect` is the tempting way to write this and the wrong one: the
     // row's height is built from this value (see implicitHeight above), and

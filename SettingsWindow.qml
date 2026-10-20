@@ -20,7 +20,14 @@ Item {
   id: root
 
   // ---------------- window lifecycle ---------------------------------------
-  readonly property bool shown: window.visible
+  property bool isOpen: false
+  readonly property bool shown: isOpen
+
+  // Opened over everything (the overlay), or as an ordinary window the
+  // compositor tiles, floats and closes like any application's. The service
+  // sets it from shell.json before each opening; the header button flips it
+  // while open.
+  property bool windowed: false
 
   // While the search box is being typed into it owns the keyboard, the same
   // way an open dropdown or a field being edited does.
@@ -43,12 +50,50 @@ Item {
 
   function show() {
     openedOn = focusedScreen()
-    window.visible = true
+    isOpen = true
+    if (windowed) openWindowHost()
     refresh()
     if (!selfCheckProcess.running) selfCheckProcess.running = true
   }
-  function hide() { window.visible = false }
+  function hide() {
+    isOpen = false
+    closeWindowHost()
+  }
   function close() { hide() }
+
+  // The card is one item with two possible hosts. It is moved back into the
+  // overlay before the window is dropped: destroying a window destroys what is
+  // parented to it, and that would be every page.
+  function openWindowHost() {
+    if (!floatLoader.active) floatLoader.active = true
+    else placeCard()
+  }
+  function closeWindowHost() {
+    card.parent = window.contentItem
+    floatLoader.active = false
+  }
+  function placeCard() {
+    card.parent = windowed && floatLoader.item ? floatLoader.item.contentItem : window.contentItem
+    Qt.callLater(function() { keyScope.forceActiveFocus() })
+  }
+
+  // The header button: switches the window in front of you and remembers the
+  // choice for next time, so trying it once is also how it is set.
+  function setOpenAs(mode) {
+    var toWindow = mode === "window"
+    if (toWindow !== windowed && isOpen) {
+      if (toWindow) {
+        windowed = true
+        openWindowHost()
+      } else {
+        closeWindowHost()
+        windowed = false
+      }
+    } else {
+      windowed = toWindow
+    }
+    run(["set", "open-as", toWindow ? "window" : "overlay"])
+  }
 
   // ---------------- palette ------------------------------------------------
   // Settings tracks the foundational palette rather than a themable surface of
@@ -1074,7 +1119,7 @@ Item {
   // menu and the bar panels do it.
   PanelWindow {
     id: window
-    visible: false
+    visible: root.isOpen && !root.windowed
     // A layer surface goes to whichever screen it is given, and given none it
     // goes to the first one — so on two monitors the settings could open on
     // the one you are not looking at. Chosen when it opens rather than bound:
@@ -1108,14 +1153,15 @@ Item {
       // pixels from the rows it selects, and the content column runs far past
       // a readable line length. The caps go through Style.space because the
       // sidebar beside them already tracks the text size, and every screen
-      // small enough for the 90% to be the lower number is left alone.
+      // small enough for the 90% to be the lower number is left alone. In a
+      // window, all of it, with the compositor drawing the edge.
       readonly property int maxWidth: Style.space(1400)
       readonly property int maxHeight: Style.space(1000)
-      width: Math.min(Math.round(window.width * 0.9), maxWidth)
-      height: Math.min(Math.round(window.height * 0.9), maxHeight)
+      width: root.windowed ? parent.width : Math.min(Math.round(window.width * 0.9), maxWidth)
+      height: root.windowed ? parent.height : Math.min(Math.round(window.height * 0.9), maxHeight)
       color: root.background
-      radius: Style.cornerRadius
-      border.width: 1
+      radius: root.windowed ? 0 : Style.cornerRadius
+      border.width: root.windowed ? 0 : 1
       border.color: root.hairline
 
       // The card is not the scrim: a click that lands on it stays on it.
@@ -1602,11 +1648,27 @@ Item {
             }
 
             Loader {
-              anchors.right: parent.right
-              anchors.rightMargin: Style.spacing.panelPadding
+              anchors.right: openAsButton.left
+              anchors.rightMargin: Style.space(12)
               anchors.verticalCenter: parent.verticalCenter
               sourceComponent: bodyLoader.item && bodyLoader.item.headerControl
                 ? bodyLoader.item.headerControl : null
+            }
+
+            // How this window itself opens, on every page because it is about
+            // the window rather than the page. It offers the other form, the
+            // way a pop-out button does, and the choice sticks.
+            Button {
+              id: openAsButton
+              anchors.right: parent.right
+              anchors.rightMargin: Style.spacing.panelPadding
+              anchors.verticalCenter: parent.verticalCenter
+              iconText: root.windowed ? "\uf065" : "\uf2d0"
+              iconSize: Style.font.title
+              foreground: root.muted
+              fontFamily: root.fontFamily
+              tooltipText: root.windowed ? "Open over everything instead" : "Open as a window"
+              onClicked: root.setOpenAs(root.windowed ? "overlay" : "window")
             }
           }
 
@@ -1715,6 +1777,25 @@ Item {
 
   // The bar's centre section is anchored on a widget id; offer the ids the
   // user actually has in their bar rather than a hardcoded list.
+  // The other host for the card. Built for each opening and dropped on close:
+  // once the compositor has closed a window (Super+W), making it visible again
+  // does not bring it back. No scrim and nothing to click past; the title is
+  // fixed so a window rule can match it, and 4:3 is its size when floating.
+  Loader {
+    id: floatLoader
+    active: false
+    sourceComponent: FloatingWindow {
+      title: "OmaSettings"
+      color: root.background
+      implicitWidth: 1024
+      implicitHeight: 768
+      minimumSize: Qt.size(720, 540)
+      visible: true
+      onVisibleChanged: if (!visible) Qt.callLater(root.hide)
+    }
+    onLoaded: root.placeCard()
+  }
+
   function barWidgetIds() {
     var ids = []
     if (!plugins) return ids

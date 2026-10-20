@@ -167,6 +167,19 @@ Ui.SectionBody {
   }
 
   Ui.SettingGroup {
+    Ui.ChoiceRow {
+      label: "Open OmaSettings as"
+      description: "A window tiles and floats like any app and stays open beside what you're changing. The overlay sits over everything and closes when you click outside it."
+      value: app.windowed ? "window" : "overlay"
+      options: [
+        { value: "overlay", label: "Overlay" },
+        { value: "window", label: "Window" }
+      ]
+      onPicked: function(next) { app.setOpenAs(next) }
+    }
+  }
+
+  Ui.SettingGroup {
     Ui.ActionRow {
       label: "Add plugin"
       description: "Install a plugin from a git URL"

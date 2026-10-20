@@ -4,7 +4,7 @@ import qs.Ui
 import "." as Local
 
 // A duration stored in seconds but edited in whole minutes.
-SettingRow {
+Local.SettingRow {
   id: minutesRow
   property int seconds: 0
   signal committed(int mins)

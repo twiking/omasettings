@@ -4,7 +4,7 @@ import qs.Ui
 import "." as Local
 
 // A 0–1 value shown as a percentage.
-SettingRow {
+Local.SettingRow {
   id: percentRow
   property real value: 1
   signal committed(real next)

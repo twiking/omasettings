@@ -6,7 +6,7 @@ import "." as Local
 // A short list of choices shown side by side rather than hidden behind a
 // dropdown: when there are only a handful and their names are short, seeing
 // them all is faster than opening a list to find out what they are.
-SettingRow {
+Local.SettingRow {
   id: choiceRow
 
   property var options: []

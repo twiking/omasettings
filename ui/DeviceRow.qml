@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import "." as Local
 
@@ -112,7 +113,7 @@ Item {
       visible: deviceRow.battery >= 0
       text: deviceRow.battery + "%"
       // A device about to die is worth noticing before it dies.
-      color: deviceRow.battery <= 20 ? Color.urgent : Local.Palette.muted
+      color: deviceRow.battery <= 20 ? Commons.Color.urgent : Local.Palette.muted
       font.family: Local.Palette.fontFamily
       font.pixelSize: Style.font.caption
     }

@@ -4,7 +4,7 @@ import qs.Ui
 import "." as Local
 
 // A value the page reports but does not set.
-SettingRow {
+Local.SettingRow {
   id: readingRow
   property string value: ""
 

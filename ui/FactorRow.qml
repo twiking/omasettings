@@ -4,7 +4,7 @@ import qs.Ui
 import "." as Local
 
 // A multiplier such as a display scale or scroll speed, in steps of 0.05.
-SettingRow {
+Local.SettingRow {
   id: factorRow
   property real value: 1
   property real minimum: 0.1

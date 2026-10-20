@@ -4,7 +4,7 @@ import qs.Ui
 import "." as Local
 
 // A whole number on a slider, written only when the drag ends.
-SettingRow {
+Local.SettingRow {
   id: numberRow
   property int value: 0
   property int from: 0

@@ -32,6 +32,19 @@ Ui.SectionBody {
       onResetRequested: app.resetSetting("accel-profile")
     }
 
+    Ui.NumberRow {
+      label: "Cursor size"
+      description: "Some applications keep their old size until they restart."
+      from: 16
+      to: 128
+      step: 8
+      suffix: "px"
+      value: Number(app.hyprValue("cursor-size", 24))
+      onCommitted: function(next) { app.setHypr("cursor-size", next) }
+      changed: app.isChanged("cursor-size")
+      onResetRequested: app.resetSetting("cursor-size")
+    }
+
     Ui.PickerRow {
       label: "Focus follows mouse"
       value: String(app.hyprValue("follow-mouse", 1))

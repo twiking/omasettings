@@ -195,8 +195,8 @@ the setting takes the whole block. An external display needs none of this.
 changed and put it back: `hypr` and `hyprOriginal` (Hyprland keys we override
 and what they were), `written` (pre-change values for settings living in other
 people's configs), `devices`, `monitors`, `bindings`, and `extras` (animation
-speed, full opacity). Delete the store and nothing you configured is lost —
-only the memory of which parts came from here.
+speed, full opacity, cursor size). Delete the store and nothing you configured
+is lost — only the memory of which parts came from here.
 
 ## Prefer Omarchy's commands to reimplementing them
 
@@ -308,12 +308,13 @@ Three things this will not forgive:
   A key written before any of this existed has no original at all, and stays
   marked until reset once.
 
-## The two that are not keywords
+## The three that are not keywords
 
-Speed and full opacity cannot be set or read like the rest, because Hyprland
-has neither. Each is a piece of Lua written into the managed file, with a
-value of our own in `.extras` saying what to write, and both ride into the
-window inside `state.hypr` so a page asks for them like anything else.
+Speed, full opacity and cursor size cannot be set or read like the rest,
+because Hyprland has none of them as a keyword. Each is a piece of Lua written
+into the managed file, with a value of our own in `.extras` saying what to
+write, and all three ride into the window inside `state.hypr` so a page asks
+for them like anything else.
 
 - **Speed** multiplies the animation set Omarchy ships, read from
   `default/hypr/looknfeel.lua` rather than from the running config: reading
@@ -324,6 +325,14 @@ window inside `state.hypr` so a page asks for them like anything else.
   tags every window and fades it to 0.985, which multiplies with the opacity
   sliders, so without this 100% renders at 98.5%. The managed file loads last,
   so the rule lands after the one it is undoing.
+- **Cursor size** is an environment variable, read by each application once
+  as it starts, so `hl.env` in the managed file only reaches what starts
+  after the next login. `hyprctl setcursor` and GTK's `cursor-size` carry it
+  to the compositor and GTK at once. Nothing can ask Hyprland which size its
+  config set, so without a value of ours the page shows the session's
+  `XCURSOR_SIZE` — what their own `hl.env` gave it at login. After a login
+  with our line that is our size, so the way back is the size recorded in
+  `.written` before the first write, like any value in someone else's config.
 
 ## Keyboard values that will not compile
 

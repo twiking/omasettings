@@ -1483,11 +1483,18 @@ Item {
               visible: root.changedSettings.length > 0 && !root.busy && root.loaded
             }
 
+            // Held to the sidebar's width and wrapped: at its natural width the
+            // notice is wider than the sidebar, and the layout would stretch
+            // the search box and every menu row out past the edge to match.
             Column {
               visible: !root.busy && root.loaded
               spacing: Style.space(2)
+              Layout.fillWidth: true
+              Layout.minimumWidth: 0
 
               Text {
+                width: parent.width
+                wrapMode: Text.Wrap
                 textFormat: Text.PlainText
                 text: "\uf0aa  OmaSettings is now OmaControl"
                 color: root.accent
@@ -1496,6 +1503,8 @@ Item {
               }
 
               Text {
+                width: parent.width
+                wrapMode: Text.Wrap
                 textFormat: Text.PlainText
                 text: "Install OmaControl · your settings come along"
                 color: successorMouse.containsMouse ? root.accent : root.muted

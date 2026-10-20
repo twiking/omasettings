@@ -3,7 +3,7 @@ import qs.Commons
 import qs.Ui
 import "." as Local
 
-SettingRow {
+Local.SettingRow {
   id: switchRow
   property bool checked: false
   signal requested(bool next)

@@ -5,6 +5,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Wayland
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import "ui" as Ui
 
@@ -56,8 +57,8 @@ Item {
   readonly property color foreground: Ui.Palette.foreground
   // Popup surfaces are allowed to be translucent; a window full of text is
   // not, so the same colour is taken at full opacity.
-  readonly property color background: Qt.rgba(Color.popups.background.r, Color.popups.background.g, Color.popups.background.b, 1)
-  readonly property color accent: Color.accent
+  readonly property color background: Qt.rgba(Commons.Color.popups.background.r, Commons.Color.popups.background.g, Commons.Color.popups.background.b, 1)
+  readonly property color accent: Commons.Color.accent
   readonly property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.6)
   readonly property color hairline: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.16)
   readonly property string fontFamily: Style.font.family
@@ -1643,7 +1644,7 @@ Item {
             Layout.topMargin: 0
             visible: root.lastError !== ""
             text: root.lastError
-            color: Color.urgent
+            color: Commons.Color.urgent
             wrapMode: Text.WordWrap
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption

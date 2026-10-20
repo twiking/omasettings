@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell.Io
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import "../ui" as Ui
 
@@ -91,7 +92,7 @@ Ui.SectionBody {
           (String(clash.description) !== "" ? String(clash.description) : "something else") +
           ". Adding this replaces it."
         : ""
-      color: Color.urgent
+      color: Commons.Color.urgent
       font.family: Ui.Palette.fontFamily
       font.pixelSize: Style.font.caption
     }

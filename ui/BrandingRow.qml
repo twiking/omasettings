@@ -5,7 +5,7 @@ import "." as Local
 
 // Three ways to set one piece of branding, the way the menu offers them:
 // type it, point at an image, or put the shipped one back.
-SettingRow {
+Local.SettingRow {
   id: brandingRow
   // "text", "image" or "default" — the caller decides what each one runs.
   signal chose(string variant)

@@ -3,7 +3,7 @@ import qs.Commons
 import qs.Ui
 import "." as Local
 
-SettingRow {
+Local.SettingRow {
   id: textRow
   property string value: ""
   property string placeholder: ""

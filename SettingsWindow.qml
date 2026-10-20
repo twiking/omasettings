@@ -1327,6 +1327,10 @@ Item {
               id: sidebarScroll
               Layout.fillWidth: true
               Layout.fillHeight: true
+              // The same breath the search box leaves above the menu: when
+              // the menu is long enough to scroll, its last row otherwise sits
+              // hard against the notices in the corner.
+              Layout.bottomMargin: Style.space(10)
               clip: true
               contentWidth: width
               contentHeight: sidebarMenu.implicitHeight
@@ -1432,12 +1436,15 @@ Item {
             // What this window has changed, and the way to undo the lot. Only
             // when there is something to undo — a button that mostly does
             // nothing teaches you to ignore it.
-            Column {
+            ColumnLayout {
+              Layout.fillWidth: true
               visible: root.changedSettings.length > 0
               spacing: Style.space(2)
 
               Text {
                 textFormat: Text.PlainText
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
                 text: root.changedSettings.length === 1
                   ? "1 setting changed" : root.changedSettings.length + " settings changed"
                 color: root.muted
@@ -1465,6 +1472,7 @@ Item {
             // of those — it reported that nothing was happening.
             Text {
               textFormat: Text.PlainText
+              Layout.fillWidth: true
               visible: root.busy || !root.loaded
               text: root.busy ? "Applying…" : "Loading…"
               color: root.muted
@@ -1483,12 +1491,19 @@ Item {
               visible: root.changedSettings.length > 0 && !root.busy && root.loaded
             }
 
-            Column {
+            // A layout rather than a Column, and the lines wrap: a Column
+            // takes its width from its longest line, and a line longer than
+            // the sidebar made the whole sidebar lay out at that width —
+            // search box and selected row ran past the divider into the page.
+            ColumnLayout {
+              Layout.fillWidth: true
               visible: !root.busy && root.loaded
               spacing: Style.space(2)
 
               Text {
                 textFormat: Text.PlainText
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
                 text: "\uf0aa  OmaSettings is now OmaControl"
                 color: root.accent
                 font.family: root.fontFamily
@@ -1497,6 +1512,8 @@ Item {
 
               Text {
                 textFormat: Text.PlainText
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
                 text: "Install OmaControl · your settings come along"
                 color: successorMouse.containsMouse ? root.accent : root.muted
                 font.family: root.fontFamily
@@ -1521,12 +1538,15 @@ Item {
               visible: !root.busy && root.loaded && root.selfBehind > 0
             }
 
-            Column {
+            ColumnLayout {
+              Layout.fillWidth: true
               visible: !root.busy && root.loaded && root.selfBehind > 0
               spacing: Style.space(2)
 
               Text {
                 textFormat: Text.PlainText
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
                 text: "\uf0aa  Update available"
                 color: root.accent
                 font.family: root.fontFamily
@@ -1536,6 +1556,8 @@ Item {
               Text {
                 id: updateLink
                 textFormat: Text.PlainText
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
                 text: root.selfBehind === 1 ? "1 commit behind · update"
                   : root.selfBehind + " commits behind · update"
                 color: updateMouse.containsMouse ? root.accent : root.muted

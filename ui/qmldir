@@ -4,6 +4,7 @@ ActionRow 1.0 ActionRow.qml
 BindingRow 1.0 BindingRow.qml
 BrandingRow 1.0 BrandingRow.qml
 ChoiceRow 1.0 ChoiceRow.qml
+CursorThemeGrid 1.0 CursorThemeGrid.qml
 DeviceRow 1.0 DeviceRow.qml
 FactorRow 1.0 FactorRow.qml
 MinutesRow 1.0 MinutesRow.qml

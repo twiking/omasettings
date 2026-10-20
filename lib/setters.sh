@@ -167,6 +167,8 @@ set_key_apply() {
         true|false|toggle) omarchy bar transparent "$value" ;;
         *) die "bad bar transparency '$value'" ;;
       esac ;;
+    pointer-theme) pointer_set_theme "$value" ;;
+    pointer-size) pointer_set_size "$value" ;;
     bar-center-anchor)
       [[ -n $value ]] || die "no widget id given"
       edit_shell_json '.bar = ((.bar // {}) | .centerAnchor = $id)' --arg id "$value" ;;
@@ -258,6 +260,7 @@ setting_reset() {
   # the device back to the global setting, so there is nothing to write back.
   if [[ $key == animation-speed ]]; then extras_set animation-speed 1 1; return; fi
   if [[ $key == opaque-windows ]]; then extras_set opaque-windows false false; return; fi
+  if [[ $key == pointer-theme || $key == pointer-size ]]; then extras_set "$key" "" ""; pointer_apply_live; return; fi
 
   if [[ $key == device:* ]]; then
     local rest=${key#device:} name option

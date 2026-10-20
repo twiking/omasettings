@@ -128,6 +128,7 @@ state_slice() {
     tmux) jq -cn --argjson v "$(tmux_state)" '{ tmux: $v }' ;;
     nvim) jq -cn --argjson v "$(nvim_state)" '{ nvim: $v }' ;;
     bindings) jq -cn --argjson v "$(bindings_state)" '{ bindings: $v }' ;;
+    pointer) jq -cn --argjson v "$(pointer_state)" '{ pointer: $v }' ;;
     workspaces) jq -cn --argjson v "$(workspaces_state)" '{ workspaces: $v }' ;;
     devices) jq -cn --argjson v "$(devices_state)" '{ devices: $v }' ;;
     wifi) jq -cn --argjson v "$(wifi_state)" '{ wifi: $v }' ;;
@@ -218,6 +219,7 @@ state() {
   par_run bluetooth bluetooth_state
   par_run power power_state
   par_run audio audio_state
+  par_run pointer pointer_state
   # The half of the search index that comes from the section sources. The
   # other half is the state itself, and is put together once it is all in.
   par_run searchsources search_index
@@ -255,6 +257,7 @@ state() {
   bluetooth=$(par_get bluetooth '{}')
   power=$(par_get power '{}')
   audio=$(par_get audio '{}')
+  pointer=$(par_get pointer '{}')
   local searchsources
   searchsources=$(par_get searchsources '{}')
   par_end
@@ -313,6 +316,7 @@ state() {
     --argjson bluetooth "${bluetooth:-{\}}" \
     --argjson power "${power:-{\}}" \
     --argjson audio "${audio:-{\}}" \
+    --argjson pointer "${pointer:-{\}}" \
     --arg textScale "${textscale:-1}" \
     '{
       theme: $theme,
@@ -349,6 +353,7 @@ state() {
       bluetooth: $bluetooth,
       power: $power,
       audio: $audio,
+      pointer: $pointer,
       iconFonts: $iconFonts
     }'
 }

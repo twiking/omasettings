@@ -383,6 +383,7 @@ Item {
   // Whether this window is itself behind its remote. The cached answer draws
   // the corner at once; the check behind it corrects the cache a moment later.
   readonly property var selfUpdate: state.selfUpdate !== undefined ? state.selfUpdate : ({})
+  readonly property var pointer: state.pointer !== undefined ? state.pointer : ({})
   readonly property int selfBehind: selfUpdate.behind !== undefined ? Number(selfUpdate.behind) : 0
   readonly property string selfId: selfUpdate.id !== undefined ? String(selfUpdate.id) : ""
   // Read from the manifest, which is where a version is decided; the title
@@ -776,6 +777,7 @@ Item {
       case "wifi": return ["wifi"]
       case "bluetooth": return ["bluetooth"]
       case "audio": return ["audio"]
+      case "pointer": return ["pointer"]
       case "power": return ["power"]
       case "set": return slicesForKey(args.length > 1 ? args[1] : "")
     }
@@ -804,6 +806,7 @@ Item {
     if (name === "font") return ["font", "hyprChanged"]
     if (name === "text-scale") return ["textScale", "hyprChanged"]
     if (name === "nightlight") return ["nightlight"]
+    if (name.indexOf("pointer-") === 0) return ["pointer", "hypr", "hyprChanged"]
     // A theme moves more than it is asked to — colours, fonts, the bar — so
     // it is left to the whole read rather than guessed at in parts.
     if (name === "theme") return []

@@ -495,6 +495,27 @@ seconds, and — the part that actually misleads — every page rendered the
 fallbacks written into its rows rather than the values Hyprland holds. If a
 page shows suspiciously round numbers, suspect that before suspecting the page.
 
+## Pointer style
+
+The pointer's theme and size are extras, `pointer-theme` and `pointer-size`,
+rendered into the managed Lua as `hl.env` lines for the next login and
+switched on screen with `hyprctl setcursor`; GTK apps get `gsettings` too.
+Nothing is rendered until a theme is picked, because a size alone would
+override the session's size and leave its theme. Putting the theme back
+drops both lines and hands the pointer to whatever set it before, a
+hand-written `cursor.lua` included, which our file outranks while set.
+
+The themes are read by `lib/cursors.py`, not bash: a card needs the theme's
+shapes, which live in Xcursor files only Python here can parse, written out
+as PNGs under `~/.cache/omarchy/omasettings/cursors`. A shape a theme leaves
+out comes from the theme it inherits from, as libXcursor does it. Fetching
+uses `curl` and `bsdtar` against pinned release URLs, and only a folder with
+a `cursors/` inside is moved into `~/.local/share/icons`.
+
+Cursor Accent, another plugin, applies its own pointer when the shell starts
+or the theme changes. The page says so when it is installed rather than
+fighting it.
+
 ## The bar layout
 
 `bar move` and `bar shift` edit `.bar.layout` in `shell.json`. Both move the

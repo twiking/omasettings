@@ -47,6 +47,58 @@ Ui.SectionBody {
     }
   }
 
+  // The pointer itself. Picked by looking, so each theme is a card of its
+  // shapes; size beside it. Both are extras, written into the managed Lua.
+  Ui.SettingGroup {
+    title: "Pointer style"
+    note: app.pointer.cursorAccent === true
+      ? "Cursor Accent is installed and applies its own pointer when the shell starts or the theme changes. Set it to the system default to keep the one picked here."
+      : ""
+
+    Ui.CursorThemeGrid {
+      themes: app.pointer.themes || []
+      current: String(app.pointer.theme || "")
+      onPicked: function(themeId) { app.run(["set", "pointer-theme", themeId]) }
+    }
+
+    Ui.ChoiceRow {
+      label: "Size"
+      value: String(app.pointer.size || 24)
+      options: (app.pointer.sizes || [24, 32, 40, 48, 64]).map(function(size) {
+        return { value: String(size), label: size + " px" }
+      })
+      onPicked: function(next) { app.run(["set", "pointer-size", next]) }
+      changed: app.isChanged("pointer-size")
+      onResetRequested: app.resetSetting("pointer-size")
+    }
+
+    Ui.ActionRow {
+      visible: app.isChanged("pointer-theme")
+      label: "Pointer theme"
+      description: "Picked here. Putting it back leaves the pointer to whatever set it before."
+      buttonText: "Put back"
+      onTriggered: app.resetSetting("pointer-theme")
+    }
+  }
+
+  // Themes that can be fetched, from each project's pinned release, into
+  // ~/.local/share/icons. Only the ones not installed yet are listed.
+  Ui.SettingGroup {
+    title: "Get more pointers"
+    visible: !searchEmpty && (app.pointer.downloads || []).some(function(d) { return !d.installed })
+
+    Repeater {
+      model: (app.pointer.downloads || []).filter(function(d) { return !d.installed })
+
+      Ui.ActionRow {
+        required property var modelData
+        label: modelData.name
+        buttonText: "Get"
+        onTriggered: app.run(["pointer", "fetch", String(modelData.index)])
+      }
+    }
+  }
+
   Ui.SettingGroup {
     title: "Touchpad"
 

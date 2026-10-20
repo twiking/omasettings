@@ -33,7 +33,7 @@ OMASETTINGS_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
 # itself: it is started from the window's own copy, which is not on any PATH.
 OMASETTINGS_BIN="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 
-for module in core store hypr devices monitors workspaces shell_config compose plugins menu herdr tmux neovim bindings wifi bluetooth power audio successor setters state; do
+for module in core store hypr devices monitors workspaces shell_config compose plugins menu herdr tmux neovim bindings wifi bluetooth power audio pointer successor setters state; do
   # shellcheck source=/dev/null
   source "$OMASETTINGS_LIB/$module.sh"
 done
@@ -61,6 +61,7 @@ case ${1:-state} in
   bluetooth) shift; bluetooth_cmd "$@" ;;
   power) shift; power_cmd "$@" ;;
   audio) shift; audio_cmd "$@" ;;
+  pointer) shift; pointer_cmd "$@" ;;
   successor) shift; successor_cmd "$@" ;;
   menu) shift; [[ ${1:-} == run ]] || die "usage: omasettings menu run <entry-id>"; menu_run "${2:-}" ;;
   *)

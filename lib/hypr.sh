@@ -527,6 +527,8 @@ render_extras_lua() {
     echo 'o.window(".*", { opacity = "1.0 1.0" })'
   fi
 
+  render_pointer_lua
+
   [[ $speed == 1 || -z $speed ]] && return 0
   echo ""
   echo "-- Animation speed: Omarchy's own set, every speed multiplied by $speed."
